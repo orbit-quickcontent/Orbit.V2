@@ -1,0 +1,66 @@
+# ── Dependencies ──────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ── Next.js build outputs ─────────────────────────────────────
+.next/
+out/
+build/
+dist/
+
+# ── TypeScript build info ─────────────────────────────────────
+*.tsbuildinfo
+
+# ── Environment variables ─────────────────────────────────────
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# ── Package manager lock files (keep package.json, ignore locks) ─
+# Uncomment if you want to ignore lock files:
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# ── OS / editor artifacts ─────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ── Local Databases ───────────────────────────────────────────
+*.db
+*.sqlite*
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Firebase / GCP credentials ────────────────────────────────
+*-firebase-adminsdk-*.json
+serviceAccountKey.json
+firebase-debug.log
+
+# ── Uploads / tmp storage (local dev only) ────────────────────
+backend/uploads/
+dashboard-web-app/public/upload/
+editor-web-app/public/upload/
+scratch/
+
+# ── Flutter / Android build ───────────────────────────────────
+partner-mobile-app/android/.gradle/
+partner-mobile-app/android/app/build/
+partner-mobile-app/build/
+partner-mobile-app/.dart_tool/
+partner-mobile-app/.flutter-plugins
+partner-mobile-app/.flutter-plugins-dependencies
+
+# ── General Build Outputs ─────────────────────────────────────
+Build_APKs/
+*.apk
