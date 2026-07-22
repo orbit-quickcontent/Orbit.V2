@@ -5,6 +5,7 @@ import SwiftUI
 struct GradientButton: View {
     let text: String
     let onClick: () -> Void
+    var enabled: Bool = true
     
     var body: some View {
         Button(action: onClick) {
@@ -14,9 +15,10 @@ struct GradientButton: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
-                .background(Theme.orbitGradient)
+                .background(enabled ? Theme.orbitGradient : LinearGradient(gradient: Gradient(colors: [Color.gray, Color.gray]), startPoint: .leading, endPoint: .trailing))
                 .cornerRadius(12)
         }
+        .disabled(!enabled)
     }
 }
 
@@ -27,7 +29,7 @@ struct OrbitHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.title)
+                .font(.title2)
                 .bold()
                 .foregroundColor(.white)
             if let subtitle = subtitle {
@@ -41,301 +43,492 @@ struct OrbitHeader: View {
     }
 }
 
-// ─── Screen: Login ───────────────────────────────────────────────────────────
+// ─── Screen 1: Login & OTP Verification ──────────────────────────────────────
 
 struct LoginView: View {
     let onLoginSuccess: (String) -> Void
-    @State private var email = ""
+    @State private var emailOrPhone = ""
     @State private var otp = ""
     @State private var step = 1 // 1: Send OTP, 2: Verify OTP
+    @State private var isLoading = false
+    @State private var errorMessage: String? = nil
+    @State private var timerSeconds = 30
+    
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
     var body: some View {
-        VStack {
-            Spacer()
-            
-            Text("ORBIT")
-                .font(.system(size: 36, weight: .black))
-                .foregroundColor(Theme.orbitCyan)
-                .tracking(4)
-            Text("Cinematic UGC Shoots")
-                .font(.subheadline)
-                .foregroundColor(Theme.secondaryText)
-                .padding(.bottom, 40)
-            
-            VStack {
-                if step == 1 {
-                    Text("Welcome Back")
-                        .font(.title3)
-                        .bold()
-                        .padding(.bottom, 4)
-                    Text("Enter your email to request OTP")
-                        .font(.caption)
-                        .foregroundColor(Theme.secondaryText)
-                        .padding(.bottom, 16)
-                    
-                    TextField("Email Address", text: $email)
-                        .padding()
-                        .background(Theme.background)
-                        .cornerRadius(8)
+        ScrollView {
+            VStack(spacing: 24) {
+                Spacer().frame(height: 40)
+                
+                // Brand Header Logo
+                ZStack {
+                    Circle()
+                        .fill(Theme.orbitGradient)
+                        .frame(width: 64, height: 64)
+                    Text("O")
+                        .font(.system(size: 32, weight: .black))
                         .foregroundColor(.white)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                    
-                    Spacer().frame(height: 16)
-                    
-                    GradientButton(text: "Send OTP") {
-                        step = 2
-                    }
-                } else {
-                    Text("Verify Email")
-                        .font(.title3)
-                        .bold()
-                        .padding(.bottom, 4)
-                    Text("OTP sent to \(email)")
-                        .font(.caption)
-                        .foregroundColor(Theme.secondaryText)
-                        .padding(.bottom, 16)
-                    
-                    TextField("One-Time Password", text: $otp)
-                        .padding()
-                        .background(Theme.background)
-                        .cornerRadius(8)
-                        .foregroundColor(.white)
-                        .keyboardType(.numberPad)
-                    
-                    Spacer().frame(height: 16)
-                    
-                    GradientButton(text: "Submit OTP") {
-                        onLoginSuccess("mock_token_123")
-                    }
-                    
-                    Button("Go Back") {
-                        step = 1
-                    }
-                    .font(.caption)
-                    .foregroundColor(Theme.secondaryText)
-                    .padding(.top, 16)
                 }
+                
+                VStack(spacing: 4) {
+                    Text("ORBIT")
+                        .font(.system(size: 36, weight: .black))
+                        .foregroundColor(Theme.orbitCyan)
+                        .tracking(6)
+                    Text("Cinematic UGC & Event Shoots")
+                        .font(.subheadline)
+                        .foregroundColor(Theme.secondaryText)
+                }
+                
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundColor(Theme.destructive)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Theme.destructive.opacity(0.15))
+                        .cornerRadius(8)
+                }
+                
+                VStack(alignment: .leading, spacing: 16) {
+                    if step == 1 {
+                        Text("Client Sign In")
+                            .font(.title3)
+                            .bold()
+                            .foregroundColor(.white)
+                        Text("Enter your email or phone number to receive a secure OTP")
+                            .font(.caption)
+                            .foregroundColor(Theme.secondaryText)
+                        
+                        TextField("Email or Mobile Number", text: $emailOrPhone)
+                            .padding()
+                            .background(Theme.background)
+                            .cornerRadius(10)
+                            .foregroundColor(.white)
+                            .keyboardType(.emailAddress)
+                            .autocapitalization(.none)
+                        
+                        GradientButton(text: isLoading ? "Sending OTP..." : "Send Security OTP", onClick: {
+                            if emailOrPhone.isEmpty {
+                                errorMessage = "Please enter your email or phone number."
+                                return
+                            }
+                            step = 2
+                        }, enabled: !isLoading)
+                    } else {
+                        Text("Verify Security OTP")
+                            .font(.title3)
+                            .bold()
+                            .foregroundColor(.white)
+                        Text("One-Time Code sent to \(emailOrPhone)")
+                            .font(.caption)
+                            .foregroundColor(Theme.secondaryText)
+                        
+                        TextField("6-Digit OTP Code", text: $otp)
+                            .padding()
+                            .background(Theme.background)
+                            .cornerRadius(10)
+                            .foregroundColor(.white)
+                            .keyboardType(.numberPad)
+                        
+                        GradientButton(text: isLoading ? "Verifying..." : "Verify & Sign In", onClick: {
+                            if otp.count < 4 {
+                                errorMessage = "Please enter a valid OTP code."
+                                return
+                            }
+                            onLoginSuccess("ios_client_token_\(Date().timeIntervalSince1970)")
+                        }, enabled: !isLoading)
+                        
+                        HStack {
+                            Button("← Back") {
+                                step = 1
+                            }
+                            .font(.caption)
+                            .foregroundColor(Theme.orbitCyan)
+                            
+                            Spacer()
+                            
+                            Text(timerSeconds > 0 ? "Resend in \(timerSeconds)s" : "Resend OTP")
+                                .font(.caption)
+                                .foregroundColor(timerSeconds == 0 ? Theme.orbitCyan : Theme.secondaryText)
+                                .onTapGesture {
+                                    if timerSeconds == 0 { timerSeconds = 30 }
+                                }
+                        }
+                        .padding(.top, 8)
+                    }
+                }
+                .glassCardStyle()
+                
+                Spacer()
             }
-            .glassCardStyle()
-            
-            Spacer()
+            .padding(24)
         }
-        .padding(24)
         .orbitBackground()
+        .onReceive(timer) { _ in
+            if step == 2 && timerSeconds > 0 {
+                timerSeconds -= 1
+            }
+        }
     }
 }
 
-// ─── Screen: Dashboard Home ──────────────────────────────────────────────────
+// ─── Screen 2: Dashboard Home ────────────────────────────────────────────────
 
 struct DashboardHomeView: View {
     let onNavigateToBooking: () -> Void
+    let onNavigateToPackages: () -> Void
+    let onNavigateToTracking: (String) -> Void
+    let onNavigateToProfile: () -> Void
     
     var body: some View {
-        VStack {
-            OrbitHeader(title: "Cinematic Dashboard", subtitle: "Your video projects and bookings")
-            
-            GradientButton(text: "+ New Video Booking", onClick: onNavigateToBooking)
-            
-            Spacer().frame(height: 20)
-            
-            Text("Active Shoots")
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            
-            ScrollView {
-                VStack(spacing: 12) {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Cinematic Edit")
+        ScrollView {
+            VStack(spacing: 20) {
+                // Navbar Header
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Welcome Back,")
+                            .font(.caption)
+                            .foregroundColor(Theme.secondaryText)
+                        Text("Creative Brand Studio")
+                            .font(.headline)
+                            .bold()
+                            .foregroundColor(.white)
+                    }
+                    Spacer()
+                    Button(action: onNavigateToProfile) {
+                        ZStack {
+                            Circle()
+                                .fill(Theme.border)
+                                .frame(width: 40, height: 40)
+                            Text("C")
                                 .font(.headline)
                                 .bold()
-                            Text("Status: SHOOTING")
-                                .font(.caption)
                                 .foregroundColor(Theme.orbitCyan)
                         }
-                        Spacer()
-                        Text("22 July")
-                            .font(.subheadline)
-                            .foregroundColor(Theme.secondaryText)
+                    }
+                }
+                .padding(.bottom, 8)
+                
+                // Action Hero Card
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("CINEMATIC SHOOT ON-DEMAND")
+                        .font(.caption2)
+                        .bold()
+                        .foregroundColor(Theme.orbitCyan)
+                        .tracking(1)
+                    
+                    Text("Book an Expert UGC Videographer")
+                        .font(.title2)
+                        .bold()
+                        .foregroundColor(.white)
+                    
+                    Text("Professional vertical video shoots delivered in 24 hours.")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.8))
+                    
+                    GradientButton(text: "+ Book Video Shoot", onClick: onNavigateToBooking)
+                }
+                .padding(20)
+                .background(LinearGradient(gradient: Gradient(colors: [Theme.orbitPurple, Theme.cardBackground]), startPoint: .topLeading, endPoint: .bottomTrailing))
+                .cornerRadius(16)
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.orbitCyan.opacity(0.4), lineWidth: 1))
+                
+                // Active Shoot Live Status
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Active Shoot Tracker")
+                        .font(.headline)
+                        .bold()
+                        .foregroundColor(.white)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("UGC Brand Reel Shoot")
+                                    .font(.subheadline)
+                                    .bold()
+                                    .foregroundColor(.white)
+                                Text("Booking ID: bk_active_901")
+                                    .font(.caption)
+                                    .foregroundColor(Theme.secondaryText)
+                            }
+                            Spacer()
+                            Text("SHOOTING")
+                                .font(.caption2)
+                                .bold()
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Theme.orbitCyan.opacity(0.2))
+                                .foregroundColor(Theme.orbitCyan)
+                                .cornerRadius(12)
+                        }
+                        
+                        ProgressView(value: 0.45)
+                            .tint(Theme.orbitCyan)
+                            .background(Theme.border)
+                        
+                        HStack {
+                            Text("Assigned: Alex Rivera")
+                                .font(.caption)
+                                .foregroundColor(Theme.secondaryText)
+                            Spacer()
+                            Text("Track Live →")
+                                .font(.caption)
+                                .bold()
+                                .foregroundColor(Theme.orbitCyan)
+                        }
                     }
                     .glassCardStyle()
+                    .onTapGesture {
+                        onNavigateToTracking("bk_active_901")
+                    }
+                }
+                
+                // Packages Preview Horizontal Row
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Production Tiers")
+                            .font(.headline)
+                            .bold()
+                            .foregroundColor(.white)
+                        Spacer()
+                        Button("View All →", action: onNavigateToPackages)
+                            .font(.caption)
+                            .foregroundColor(Theme.orbitCyan)
+                    }
+                    
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 16) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Personalized")
+                                    .font(.headline)
+                                    .bold()
+                                Text("Cinematic event reels & edits")
+                                    .font(.caption)
+                                    .foregroundColor(Theme.secondaryText)
+                                Text("₹1,999")
+                                    .font(.title2)
+                                    .bold()
+                                    .foregroundColor(Theme.orbitCyan)
+                                
+                                GradientButton(text: "Select Tier", onClick: onNavigateToBooking)
+                            }
+                            .frame(width: 220)
+                            .glassCardStyle()
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("UGC Professional")
+                                    .font(.headline)
+                                    .bold()
+                                Text("Dedicated editor & Brand DNA")
+                                    .font(.caption)
+                                    .foregroundColor(Theme.secondaryText)
+                                Text("₹4,999")
+                                    .font(.title2)
+                                    .bold()
+                                    .foregroundColor(Theme.orbitPurple)
+                                
+                                GradientButton(text: "Select Tier", onClick: onNavigateToBooking)
+                            }
+                            .frame(width: 220)
+                            .glassCardStyle()
+                        }
+                    }
                 }
             }
+            .padding(16)
         }
-        .padding(16)
         .orbitBackground()
     }
 }
 
-// ─── Screen: Packages ────────────────────────────────────────────────────────
+// ─── Screen 3: Packages Catalog ──────────────────────────────────────────────
 
 struct PackagesView: View {
     let onSelectPackage: (String) -> Void
     
     var body: some View {
-        VStack {
-            OrbitHeader(title: "Video Packages", subtitle: "Select your production tier")
-            
-            ScrollView {
-                VStack(spacing: 16) {
-                    VStack(alignment: .leading) {
-                        Text("Personalized")
-                            .font(.title2)
+        ScrollView {
+            VStack(spacing: 20) {
+                OrbitHeader(title: "Video Packages", subtitle: "Select your production tier")
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Personalized Tier")
+                            .font(.title3)
                             .bold()
-                        Text("Cinematic event reels & edits")
-                            .font(.subheadline)
-                            .foregroundColor(Theme.secondaryText)
+                        Spacer()
                         Text("₹1,999")
-                            .font(.system(size: 24, weight: .black))
-                            .foregroundColor(Theme.orbitCyan)
-                            .padding(.vertical, 12)
-                        
-                        GradientButton(text: "Book Package") {
-                            onSelectPackage("pkg-personalized")
-                        }
-                    }
-                    .glassCardStyle()
-                    
-                    VStack(alignment: .leading) {
-                        Text("Professional (UGC)")
                             .font(.title2)
                             .bold()
-                        Text("Includes Chat with Editor & Brand customization")
-                            .font(.subheadline)
-                            .foregroundColor(Theme.secondaryText)
-                        Text("₹4,999")
-                            .font(.system(size: 24, weight: .black))
-                            .foregroundColor(Theme.orbitPurple)
-                            .padding(.vertical, 12)
-                        
-                        GradientButton(text: "Book Package") {
-                            onSelectPackage("pkg-professional")
-                        }
+                            .foregroundColor(Theme.orbitCyan)
                     }
-                    .glassCardStyle()
+                    Text("Ideal for solo creators & small events")
+                        .font(.caption)
+                        .foregroundColor(Theme.secondaryText)
+                    
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("✓ 1 Finished Vertical Reel (9:16)").font(.subheadline)
+                        Text("✓ 60 Minutes On-Site Shooting").font(.subheadline)
+                        Text("✓ 24-Hour Express Delivery").font(.subheadline)
+                    }
+                    .padding(.vertical, 8)
+                    
+                    GradientButton(text: "Book Package", onClick: { onSelectPackage("pkg-personalized") })
                 }
+                .glassCardStyle()
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("UGC Professional")
+                            .font(.title3)
+                            .bold()
+                        Spacer()
+                        Text("₹4,999")
+                            .font(.title2)
+                            .bold()
+                            .foregroundColor(Theme.orbitPurple)
+                    }
+                    Text("Complete brand video suite")
+                        .font(.caption)
+                        .foregroundColor(Theme.secondaryText)
+                    
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("✓ 3 High-Converting Master Reels").font(.subheadline)
+                        Text("✓ 2 Hours On-Site Professional Shoot").font(.subheadline)
+                        Text("✓ Brand DNA Integration (Font, Logo)").font(.subheadline)
+                    }
+                    .padding(.vertical, 8)
+                    
+                    GradientButton(text: "Book Package", onClick: { onSelectPackage("pkg-professional") })
+                }
+                .glassCardStyle()
             }
+            .padding(16)
         }
-        .padding(16)
         .orbitBackground()
     }
 }
 
-// ─── Screen: Booking Flow ────────────────────────────────────────────────────
+// ─── Screen 4: Booking Flow ──────────────────────────────────────────────────
 
 struct BookingFlowView: View {
     let packageId: String
     let onBookingComplete: () -> Void
-    @State private var date = ""
-    @State private var slot = ""
+    @State private var date = "2026-08-01"
+    @State private var slot = "10:00 AM - 12:00 PM"
     @State private var location = ""
+    @State private var notes = ""
     
     var body: some View {
-        VStack {
-            OrbitHeader(title: "Configure Shoot", subtitle: "Selected Tier: \(packageId)")
-            
-            VStack(spacing: 12) {
-                TextField("Date (YYYY-MM-DD)", text: $date)
-                    .padding()
-                    .background(Theme.background)
-                    .cornerRadius(8)
-                    .foregroundColor(.white)
+        ScrollView {
+            VStack(spacing: 20) {
+                OrbitHeader(title: "Configure Shoot", subtitle: "Selected Tier: \(packageId.uppercased())")
                 
-                TextField("Time Slot (e.g. 10:00 AM)", text: $slot)
-                    .padding()
-                    .background(Theme.background)
-                    .cornerRadius(8)
-                    .foregroundColor(.white)
-                
-                TextField("Shoot Location Address", text: $location)
-                    .padding()
-                    .background(Theme.background)
-                    .cornerRadius(8)
-                    .foregroundColor(.white)
-                
-                Spacer().frame(height: 12)
-                
-                GradientButton(text: "Pay & Dispatch Shoot", onClick: onBookingComplete)
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("1. Schedule & Address")
+                        .font(.headline)
+                        .bold()
+                    
+                    TextField("Date (YYYY-MM-DD)", text: $date)
+                        .padding()
+                        .background(Theme.background)
+                        .cornerRadius(8)
+                        .foregroundColor(.white)
+                    
+                    TextField("Time Slot (e.g. 10:00 AM)", text: $slot)
+                        .padding()
+                        .background(Theme.background)
+                        .cornerRadius(8)
+                        .foregroundColor(.white)
+                    
+                    TextField("Shoot Location Address", text: $location)
+                        .padding()
+                        .background(Theme.background)
+                        .cornerRadius(8)
+                        .foregroundColor(.white)
+                    
+                    TextField("Special Instructions (Optional)", text: $notes)
+                        .padding()
+                        .background(Theme.background)
+                        .cornerRadius(8)
+                        .foregroundColor(.white)
+                    
+                    Spacer().frame(height: 12)
+                    
+                    GradientButton(text: "Pay & Dispatch Shoot", onClick: onBookingComplete)
+                }
+                .glassCardStyle()
             }
-            .glassCardStyle()
-            
-            Spacer()
+            .padding(16)
         }
-        .padding(16)
         .orbitBackground()
     }
 }
 
-// ─── Screen: Tracking Dashboard ──────────────────────────────────────────────
+// ─── Screen 5: Tracking Dashboard ──────────────────────────────────────────────
 
 struct TrackingView: View {
     let bookingId: String
     
     var body: some View {
-        VStack {
-            OrbitHeader(title: "Shoot Status Tracker", subtitle: "Booking ID: \(bookingId)")
-            
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Booking Status: PAID")
-                    .font(.headline)
-                    .bold()
+        ScrollView {
+            VStack(spacing: 20) {
+                OrbitHeader(title: "Shoot Status Tracker", subtitle: "Booking ID: \(bookingId)")
                 
-                ProgressView(value: 0.2)
-                    .tint(Theme.orbitCyan)
-                    .background(Theme.border)
-                    .scaleEffect(x: 1, y: 2, anchor: .center)
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("• Partner Dispatched: Pending").foregroundColor(Theme.secondaryText)
-                    Text("• Camera Sync: Pending").foregroundColor(Theme.secondaryText)
-                    Text("• Editor Delivery: Pending").foregroundColor(Theme.secondaryText)
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Booking Status: SHOOTING IN PROGRESS")
+                        .font(.headline)
+                        .bold()
+                        .foregroundColor(Theme.orbitCyan)
+                    
+                    ProgressView(value: 0.5)
+                        .tint(Theme.orbitCyan)
+                        .background(Theme.border)
+                        .scaleEffect(x: 1, y: 2, anchor: .center)
+                    
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("✓ Payment Confirmed").foregroundColor(.white)
+                        Text("✓ Partner Assigned & Dispatched").foregroundColor(.white)
+                        Text("• Camera Recording (Active)").foregroundColor(Theme.orbitCyan).bold()
+                        Text("◦ Cloud Video Upload (Pending)").foregroundColor(Theme.secondaryText)
+                        Text("◦ Master Reel Delivery (Pending)").foregroundColor(Theme.secondaryText)
+                    }
                 }
+                .glassCardStyle()
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Assigned Partner")
+                        .font(.headline)
+                        .bold()
+                    
+                    HStack {
+                        ZStack {
+                            Circle()
+                                .fill(Theme.orbitPurple)
+                                .frame(width: 48, height: 48)
+                            Text("AR").bold().foregroundColor(.white)
+                        }
+                        
+                        VStack(alignment: .leading) {
+                            Text("Alex Rivera").bold().foregroundColor(.white)
+                            Text("Rating: 4.9 ★ • iPhone 15 Pro Max").font(.caption).foregroundColor(Theme.secondaryText)
+                        }
+                    }
+                }
+                .glassCardStyle()
             }
-            .glassCardStyle()
-            
-            Spacer()
+            .padding(16)
         }
-        .padding(16)
         .orbitBackground()
     }
 }
 
-// ─── Screen: Profile & Settings ──────────────────────────────────────────────
+// ─── Screen 6: Profile & Settings ────────────────────────────────────────────
 
 struct ProfileView: View {
     let onLogout: () -> Void
-    @State private var name = "Demo Client"
-    @State private var phone = "+91 98765 43210"
-    @State private var font = "Space Grotesk"
-    
-    var body: some View {
-        VStack {
-            OrbitHeader(title: "Brand Profile", subtitle: "Manage brand details & options")
-            
-            VStack(spacing: 12) {
-                TextField("Name", text: $name)
-                    .padding()
-                    .background(Theme.background)
-                    .cornerRadius(8)
-                    .foregroundColor(.white)
-                
-                TextField("Phone Number", text: $phone)
-                    .padding()
-                    .background(Theme.background)
-                    .cornerRadius(8)
-                    .foregroundColor(.white)
-                
-                TextField("Brand Font", text: $font)
-                    .padding()
-                    .background(Theme.background)
-                    .cornerRadius(8)
-                    .foregroundColor(.white)
-                
-                Spacer().frame(height: 24)
-                
-                Button(action: onLogout) {
                     Text("Log Out Session")
                         .font(.headline)
                         .bold()
