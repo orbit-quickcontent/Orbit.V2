@@ -19,19 +19,19 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Gradle Wrapper
+    - name: Setup Gradle Wrapper Version
       run: |
         cd mobile/android-client
-        gradle wrapper || true
+        gradle wrapper --gradle-version 8.5
         cd ../android-partner
-        gradle wrapper || true
+        gradle wrapper --gradle-version 8.5
 
     - name: Build Android Client APK
       run: |
         cd mobile/android-client
-        gradle assembleDebug --no-daemon || ./gradlew assembleDebug --no-daemon
+        ./gradlew assembleDebug --no-daemon
 
     - name: Build Android Partner APK
       run: |
         cd mobile/android-partner
-        gradle assembleDebug --no-daemon || ./gradlew assembleDebug --no-daemon
+        ./gradlew assembleDebug --no-daemon
