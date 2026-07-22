@@ -1,0 +1,36 @@
+name: Android Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: |
+        chmod +x mobile/android-client/gradlew || true
+        chmod +x mobile/android-partner/gradlew || true
+
+    - name: Build Android Client APK
+      run: |
+        cd mobile/android-client
+        ./gradlew assembleDebug --no-daemon
+
+    - name: Build Android Partner APK
+      run: |
+        cd mobile/android-partner
+        ./gradlew assembleDebug --no-daemon
