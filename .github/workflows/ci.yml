@@ -45,17 +45,18 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
-      - name: Grant Gradle permissions
+      - name: Setup Gradle Wrapper
         run: |
-          chmod +x mobile/android-client/gradlew || true
-          chmod +x mobile/android-partner/gradlew || true
+          cd mobile/android-client
+          gradle wrapper || true
+          cd ../android-partner
+          gradle wrapper || true
 
       - name: Build Android Client APK
         run: |
           cd mobile/android-client
-          ./gradlew assembleDebug --no-daemon
+          gradle assembleDebug --no-daemon || ./gradlew assembleDebug --no-daemon
 
       - name: Upload Android Client APK Artifact
         uses: actions/upload-artifact@v4
@@ -66,7 +67,7 @@ jobs:
       - name: Build Android Partner APK
         run: |
           cd mobile/android-partner
-          ./gradlew assembleDebug --no-daemon
+          gradle assembleDebug --no-daemon || ./gradlew assembleDebug --no-daemon
 
       - name: Upload Android Partner APK Artifact
         uses: actions/upload-artifact@v4
