@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.orbitlogic.partner.ui.theme.*
+import com.orbitlogic.core.ui.*
 
 // ─── Custom UI Reusable Components ───────────────────────────────────────────
 
