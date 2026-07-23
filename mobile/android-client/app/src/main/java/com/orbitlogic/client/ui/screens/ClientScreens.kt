@@ -292,48 +292,175 @@ fun DashboardHomeScreen(
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        // Navbar Header
+        // Navbar Greeting Header
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Welcome Back,", color = MutedText, fontSize = 13.sp)
-                Text("Creative Brand Studio", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("Good Morning,", color = MutedText, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text("Creative Studio", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(OrbitBorder)
-                    .clickable { onNavigateToProfile() },
-                contentAlignment = Alignment.Center
-            ) {
-                Text("C", color = OrbitCyan, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(SpaceNavyLight)
+                        .border(1.dp, OrbitBorder, CircleShape)
+                        .clickable { onNavigateToProfile() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("🔔", fontSize = 14.sp)
+                }
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(listOf(OrbitCyan, OrbitPurple)))
+                        .clickable { onNavigateToProfile() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("C", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
             }
         }
 
-        // Action Banner
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Brush.linearGradient(listOf(OrbitPurple, SpaceNavyLight)), shape = RoundedCornerShape(16.dp))
-                .border(1.dp, OrbitCyan.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text("Cinematic Shoot On-Demand", color = OrbitCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("Book an Expert UGC Videographer", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-                Text("Professional vertical video shoots delivered in 24 hours.", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp))
-                
-                GradientButton(
-                    text = "+ Book Video Shoot",
-                    onClick = onNavigateToBooking,
-                    modifier = Modifier.fillMaxWidth()
-                )
+        // ─── Premium Web Brand Editorial Header ─────────────────────────────
+        Column(modifier = Modifier.padding(vertical = 12.dp)) {
+            Text(
+                text = "Shoot",
+                fontSize = 42.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White,
+                letterSpacing = (-1).sp,
+                lineHeight = 42.sp
+            )
+            Text(
+                text = "In Progress.",
+                fontSize = 42.sp,
+                fontWeight = FontWeight.Normal,
+                color = OrbitCyan,
+                letterSpacing = (-1).sp,
+                lineHeight = 42.sp
+            )
+            Text(
+                text = "ORBIT V1.0.4 — PREMIUM ACCESS",
+                fontSize = 9.sp,
+                color = Color.White.copy(alpha = 0.3f),
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // ─── Quick Actions (2x2 Grid — Web Parity) ───────────────────────────
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                // Button 1: BOOK NEW SHOOT
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SpaceNavyLight),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(86.dp)
+                        .border(1.dp, OrbitBorder, RoundedCornerShape(16.dp))
+                        .clickable { onNavigateToBooking() }
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Box(
+                                modifier = Modifier.size(28.dp).clip(CircleShape).background(OrbitCyan),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("+", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                            }
+                        }
+                        Column {
+                            Text("BOOK NEW SHOOT", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                            Text("INSTANT MATCHING", fontSize = 9.sp, color = MutedText, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                // Button 2: TRACK ORDER
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SpaceNavyLight),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(86.dp)
+                        .border(1.dp, OrbitBorder, RoundedCornerShape(16.dp))
+                        .clickable { onNavigateToTracking("bk_active_901") }
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Box(
+                                modifier = Modifier.size(28.dp).clip(CircleShape).background(OrbitPurple),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("DNA", color = Color.White, fontWeight = FontWeight.Black, fontSize = 8.sp)
+                            }
+                        }
+                        Column {
+                            Text("TRACK ORDER", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                            Text("1 ACTIVE", fontSize = 9.sp, color = OrbitCyan, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                // Button 3: RECENT PROJECTS
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SpaceNavyLight),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(86.dp)
+                        .border(1.dp, OrbitBorder, RoundedCornerShape(16.dp))
+                        .clickable { onNavigateToPackages() }
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                        Box(
+                            modifier = Modifier.size(28.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("🎬", fontSize = 12.sp)
+                        }
+                        Column {
+                            Text("RECENT PROJECTS", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                            Text("3 DELIVERED", fontSize = 9.sp, color = MutedText, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                // Button 4: BRAND IDENTITY
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SpaceNavyLight),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(86.dp)
+                        .border(1.dp, OrbitBorder, RoundedCornerShape(16.dp))
+                        .clickable { onNavigateToPackages() }
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                        Box(
+                            modifier = Modifier.size(28.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("⭐", fontSize = 12.sp)
+                        }
+                        Column {
+                            Text("BRAND IDENTITY", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                            Text("ASSETS & DNA", fontSize = 9.sp, color = MutedText, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
         }
 
@@ -449,6 +576,7 @@ fun DashboardHomeScreen(
         }
     }
 }
+
 
 // ─── Screen 3: Packages Catalog ──────────────────────────────────────────────
 

@@ -185,55 +185,125 @@ struct DashboardHomeView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Navbar Header
+                // Greeting Navbar Header
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Welcome Back,")
+                        Text("Good Morning,")
                             .font(.caption)
                             .foregroundColor(Theme.secondaryText)
-                        Text("Creative Brand Studio")
+                        Text("Creative Studio")
                             .font(.headline)
                             .bold()
                             .foregroundColor(.white)
                     }
                     Spacer()
-                    Button(action: onNavigateToProfile) {
-                        ZStack {
-                            Circle()
-                                .fill(Theme.border)
-                                .frame(width: 40, height: 40)
-                            Text("C")
-                                .font(.headline)
-                                .bold()
-                                .foregroundColor(Theme.orbitCyan)
+                    HStack(spacing: 8) {
+                        Button(action: onNavigateToProfile) {
+                            ZStack {
+                                Circle().fill(Theme.cardBackground).frame(width: 36, height: 36)
+                                Text("🔔").font(.caption)
+                            }
+                        }
+                        Button(action: onNavigateToProfile) {
+                            ZStack {
+                                Circle().fill(Theme.orbitGradient).frame(width: 36, height: 36)
+                                Text("C").font(.subheadline).bold().foregroundColor(.white)
+                            }
                         }
                     }
                 }
-                .padding(.bottom, 8)
                 
-                // Action Hero Card
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("CINEMATIC SHOOT ON-DEMAND")
-                        .font(.caption2)
-                        .bold()
-                        .foregroundColor(Theme.orbitCyan)
-                        .tracking(1)
-                    
-                    Text("Book an Expert UGC Videographer")
-                        .font(.title2)
-                        .bold()
+                // Web Brand Editorial Typography Header
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Shoot")
+                        .font(.system(size: 42, weight: .black))
                         .foregroundColor(.white)
-                    
-                    Text("Professional vertical video shoots delivered in 24 hours.")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.8))
-                    
-                    GradientButton(text: "+ Book Video Shoot", onClick: onNavigateToBooking)
+                    Text("In Progress.")
+                        .font(.system(size: 42, weight: .regular))
+                        .italic()
+                        .foregroundColor(Theme.orbitCyan)
+                    Text("ORBIT V1.0.4 — PREMIUM ACCESS")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.white.opacity(0.3))
+                        .tracking(2)
+                        .padding(.top, 6)
                 }
-                .padding(20)
-                .background(LinearGradient(gradient: Gradient(colors: [Theme.orbitPurple, Theme.cardBackground]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                .cornerRadius(16)
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.orbitCyan.opacity(0.4), lineWidth: 1))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // 2x2 Quick Actions Grid
+                VStack(spacing: 10) {
+                    HStack(spacing: 10) {
+                        // Button 1: BOOK NEW SHOOT
+                        VStack(alignment: .leading, spacing: 12) {
+                            ZStack {
+                                Circle().fill(Theme.orbitCyan).frame(width: 28, height: 28)
+                                Text("+").font(.headline).bold().foregroundColor(.black)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("BOOK NEW SHOOT").font(.system(size: 11, weight: .black)).foregroundColor(.white)
+                                Text("INSTANT MATCHING").font(.system(size: 9, weight: .bold)).foregroundColor(Theme.secondaryText)
+                            }
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(height: 86)
+                        .glassCardStyle()
+                        .onTapGesture { onNavigateToBooking() }
+                        
+                        // Button 2: TRACK ORDER
+                        VStack(alignment: .leading, spacing: 12) {
+                            ZStack {
+                                Circle().fill(Theme.orbitPurple).frame(width: 28, height: 28)
+                                Text("DNA").font(.system(size: 8, weight: .black)).foregroundColor(.white)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("TRACK ORDER").font(.system(size: 11, weight: .black)).foregroundColor(.white)
+                                Text("1 ACTIVE").font(.system(size: 9, weight: .bold)).foregroundColor(Theme.orbitCyan)
+                            }
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(height: 86)
+                        .glassCardStyle()
+                        .onTapGesture { onNavigateToTracking("bk_active_901") }
+                    }
+                    
+                    HStack(spacing: 10) {
+                        // Button 3: RECENT PROJECTS
+                        VStack(alignment: .leading, spacing: 12) {
+                            ZStack {
+                                Circle().fill(Color.white.opacity(0.1)).frame(width: 28, height: 28)
+                                Text("🎬").font(.caption)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("RECENT PROJECTS").font(.system(size: 11, weight: .black)).foregroundColor(.white)
+                                Text("3 DELIVERED").font(.system(size: 9, weight: .bold)).foregroundColor(Theme.secondaryText)
+                            }
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(height: 86)
+                        .glassCardStyle()
+                        .onTapGesture { onNavigateToPackages() }
+                        
+                        // Button 4: BRAND IDENTITY
+                        VStack(alignment: .leading, spacing: 12) {
+                            ZStack {
+                                Circle().fill(Color.white.opacity(0.1)).frame(width: 28, height: 28)
+                                Text("⭐").font(.caption)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("BRAND IDENTITY").font(.system(size: 11, weight: .black)).foregroundColor(.white)
+                                Text("ASSETS & DNA").font(.system(size: 9, weight: .bold)).foregroundColor(Theme.secondaryText)
+                            }
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(height: 86)
+                        .glassCardStyle()
+                        .onTapGesture { onNavigateToPackages() }
+                    }
+                }
                 
                 // Active Shoot Live Status
                 VStack(alignment: .leading, spacing: 12) {
