@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -463,7 +464,7 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                         Divider(modifier = Modifier.height(20.dp).width(1.dp).padding(horizontal = 10.dp), color = Color(0xFF27272A))
                         BasicTextField(
                             value = phone,
-                            onValueChange = { if (it.length <= 10) phone = it },
+                            onValueChange = { newValue -> if (newValue.length <= 10) phone = newValue },
                             modifier = Modifier.weight(1f),
                             textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
