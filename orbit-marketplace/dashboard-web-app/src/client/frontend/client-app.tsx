@@ -11,12 +11,13 @@
  * Category: Client UI
  */
 
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, lazy, Suspense, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import { ClientNavbar } from "./client-navbar";
 import { DashboardHome } from "./dashboard-home";
 import { BottomNav } from "./bottom-nav";
+import { OnboardingFlow } from "./onboarding-flow";
 
 // Lazy-load heavy views — they only load when user navigates to them
 const PackageDashboard = lazy(() =>
@@ -43,19 +44,22 @@ function ViewLoader() {
 
 export default function ClientApp() {
   const { currentView, fetchPackages, fetchClientBookings } = useAppStore();
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => { 
     fetchPackages(); 
     fetchClientBookings();
 
-    // Poll every 10 seconds to keep booking status in sync with the server.
-    // This is a fallback for when WebSocket events are missed or the page loads fresh.
     const syncInterval = setInterval(() => {
       fetchClientBookings();
     }, 10000);
 
     return () => clearInterval(syncInterval);
   }, [fetchPackages, fetchClientBookings]);
+
+  if (showOnboarding) {
+    return <OnboardingFlow onComplete={() => setShowOnboarding(false)} />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background relative">
