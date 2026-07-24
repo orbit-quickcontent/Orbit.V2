@@ -3,13 +3,19 @@ package com.orbitlogic.client
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -109,7 +115,7 @@ fun ClientBottomNavigationBar(
         Surface(
             color = Color(0xFF0A0A0E).copy(alpha = 0.92f),
             shape = RoundedCornerShape(28.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(60.dp)
@@ -158,7 +164,7 @@ fun RowScope.BottomNavItem(
                     .height(3.dp)
                     .clip(RoundedCornerShape(2.dp))
                     .background(
-                        androidx.compose.ui.graphics.Brush.horizontalGradient(
+                        Brush.horizontalGradient(
                             listOf(Color(0xFF00F0FF), Color(0xFFA056FF))
                         )
                     )
@@ -176,9 +182,9 @@ fun RowScope.BottomNavItem(
                         .clip(CircleShape)
                         .background(
                             if (isSelected)
-                                androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF00F0FF), Color(0xFFA056FF)))
+                                Brush.horizontalGradient(listOf(Color(0xFF00F0FF), Color(0xFFA056FF)))
                             else
-                                androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF27272A), Color(0xFF27272A)))
+                                Brush.horizontalGradient(listOf(Color(0xFF27272A), Color(0xFF27272A)))
                         ),
                     contentAlignment = Alignment.Center
                 ) {
@@ -211,4 +217,3 @@ fun RowScope.BottomNavItem(
         }
     }
 }
-
