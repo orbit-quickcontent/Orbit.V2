@@ -27,6 +27,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.orbitlogic.client.R
 import com.orbitlogic.client.ui.theme.*
 
 // ─── Reusable Design Tokens & Components ─────────────────────────────────────
@@ -235,15 +238,11 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Brush.linearGradient(listOf(OrbitCyan, OrbitPurple))),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("O", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
-            }
+            Image(
+                painter = painterResource(id = R.drawable.orbit_logo),
+                contentDescription = "Orbit Logo",
+                modifier = Modifier.size(36.dp)
+            )
             Text("ORBIT", fontSize = 24.sp, fontWeight = FontWeight.Black, color = Color(0xFF3B82F6), letterSpacing = 2.sp)
         }
 

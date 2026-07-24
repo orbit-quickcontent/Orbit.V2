@@ -43,9 +43,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
       {/* Header Branding */}
       <header className="w-full max-w-md flex flex-col items-center mb-6">
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-cyan-400 to-purple-600 flex items-center justify-center font-black text-xl text-white">
-            O
-          </div>
+          <img src="/orbit-logo.png" alt="Orbit Logo" className="w-10 h-10 object-contain drop-shadow-[0_0_12px_rgba(0,240,255,0.4)]" />
           <span className="text-3xl font-black tracking-tighter text-blue-500 italic">ORBIT</span>
         </div>
         <Badge variant="outline" className="px-4 py-1 border-cyan-900/50 bg-cyan-950/20 text-cyan-400 text-xs font-semibold rounded-full">
