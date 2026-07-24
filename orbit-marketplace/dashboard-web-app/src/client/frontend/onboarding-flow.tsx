@@ -56,9 +56,9 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
       {/* Hero Section */}
       <div className="text-center max-w-md mb-6">
         <h1 className="text-3xl sm:text-4xl font-extrabold mb-1">
-          <span className="text-blue-400">Join the</span> <span className="text-white">Orbit</span>
+          <span className="text-[#00F0FF]">Join the</span> <span className="text-white">Orbit</span>
         </h1>
-        <p className="text-blue-200/60 text-xs sm:text-sm">Sign in or create your account to get started</p>
+        <p className="text-[#7EB8E0] text-xs sm:text-sm mt-1">Sign in or create your account to get started</p>
       </div>
 
       {/* Social Login Buttons */}

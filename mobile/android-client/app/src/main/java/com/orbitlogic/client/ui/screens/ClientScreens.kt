@@ -260,16 +260,24 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
 
         // Hero Headline
-        Text(
-            text = "Join the Orbit",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = Color.White
-        )
+        Row {
+            Text(
+                text = "Join the ",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = OrbitCyan
+            )
+            Text(
+                text = "Orbit",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White
+            )
+        }
         Text(
             text = "Sign in or create your account to get started",
             fontSize = 13.sp,
-            color = Color.White.copy(alpha = 0.6f),
+            color = MutedText,
             modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
         )
 

@@ -181,12 +181,17 @@ struct LoginView: View {
                     .cornerRadius(16)
                 
                 VStack(spacing: 4) {
-                    Text("Join the Orbit")
-                        .font(.system(size: 32, weight: .black))
-                        .foregroundColor(.white)
+                    HStack(spacing: 0) {
+                        Text("Join the ")
+                            .font(.system(size: 32, weight: .black))
+                            .foregroundColor(Theme.orbitCyan)
+                        Text("Orbit")
+                            .font(.system(size: 32, weight: .black))
+                            .foregroundColor(.white)
+                    }
                     Text("Sign in or create your account to get started")
                         .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.6))
+                        .foregroundColor(Theme.secondaryText)
                 }
                 
                 // Social Auth Row
