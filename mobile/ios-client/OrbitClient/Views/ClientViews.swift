@@ -871,3 +871,72 @@ struct ProfileView: View {
         .orbitBackground()
     }
 }
+
+// ─── Floating Dark Glass Pill Navigation Bar ────────────────────────────────
+
+struct ClientBottomNavigationBar: View {
+    @Binding var currentTab: String
+    var userInitials: String = "TU"
+    
+    let tabs: [(key: String, label: String, icon: String)] = [
+        ("home", "Home", "🏠"),
+        ("packages", "Packages", "📦"),
+        ("tracking", "Track", "🎯"),
+        ("profile", "Profile", "👤")
+    ]
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(tabs, id: \.key) { tab in
+                let isSelected = currentTab == tab.key
+                
+                Button(action: { currentTab = tab.key }) {
+                    ZStack(alignment: .top) {
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(Color(red: 23/255, green: 22/255, blue: 34/255))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 18)
+                                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                )
+                            
+                            // Top gradient line indicator
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Theme.orbitGradient)
+                                .frame(width: 32, height: 3)
+                        }
+                        
+                        VStack(spacing: 2) {
+                            if tab.key == "profile" {
+                                ZStack {
+                                    Circle()
+                                        .fill(isSelected ? Theme.orbitGradient : LinearGradient(gradient: Gradient(colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.3)]), startPoint: .leading, endPoint: .trailing))
+                                        .frame(width: 22, height: 22)
+                                    Text(userInitials)
+                                        .font(.system(size: 9, weight: .black))
+                                        .foregroundColor(isSelected ? .black : .white)
+                                }
+                            } else {
+                                Text(tab.icon)
+                                    .font(.system(size: 14))
+                            }
+                            
+                            Text(tab.label)
+                                .font(.system(size: 10, weight: isSelected ? .bold : .medium))
+                                .foregroundColor(isSelected ? Theme.orbitCyan : Theme.secondaryText)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                    }
+                }
+            }
+        }
+        .padding(4)
+        .background(Color(red: 10/255, green: 10/255, blue: 14/255).opacity(0.92))
+        .cornerRadius(28)
+        .overlay(RoundedRectangle(cornerRadius: 28).stroke(Color.white.opacity(0.1), lineWidth: 1))
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+    }
+}
+

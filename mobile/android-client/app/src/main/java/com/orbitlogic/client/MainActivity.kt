@@ -100,51 +100,113 @@ fun ClientBottomNavigationBar(
     currentTab: String,
     onSelectTab: (String) -> Unit
 ) {
-    Surface(
-        color = SpaceNavyLight,
-        tonalElevation = 8.dp,
-        modifier = Modifier.fillMaxWidth().height(64.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            color = Color(0xFF0A0A0E).copy(alpha = 0.92f),
+            shape = RoundedCornerShape(28.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp)
         ) {
-            BottomNavItem("Home", "home", currentTab == "home") { onSelectTab("home") }
-            BottomNavItem("Packages", "packages", currentTab == "packages") { onSelectTab("packages") }
-            BottomNavItem("Book Shoot", "booking", currentTab == "booking") { onSelectTab("booking") }
-            BottomNavItem("Tracker", "tracking", currentTab == "tracking") { onSelectTab("tracking") }
-            BottomNavItem("Profile", "profile", currentTab == "profile") { onSelectTab("profile") }
+            Row(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BottomNavItem("Home", "home", currentTab == "home") { onSelectTab("home") }
+                BottomNavItem("Packages", "packages", currentTab == "packages") { onSelectTab("packages") }
+                BottomNavItem("Track", "tracking", currentTab == "tracking") { onSelectTab("tracking") }
+                BottomNavItem("Profile", "profile", currentTab == "profile") { onSelectTab("profile") }
+            }
         }
     }
 }
 
 @Composable
-fun BottomNavItem(
+fun RowScope.BottomNavItem(
     label: String,
     tabKey: String,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    Box(
         modifier = Modifier
-            .clickable { onClick() }
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .weight(1f)
+            .fillMaxHeight()
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (isSelected) Color(0xFF171622) else Color.Transparent)
+            .border(
+                width = 1.dp,
+                color = if (isSelected) Color.White.copy(alpha = 0.1f) else Color.Transparent,
+                shape = RoundedCornerShape(20.dp)
+            )
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal,
-            color = if (isSelected) OrbitCyan else MutedText
-        )
         if (isSelected) {
+            // Top gradient line indicator
             Box(
                 modifier = Modifier
-                    .padding(top = 4.dp)
-                    .size(width = 16.dp, height = 2.dp)
-                    .background(OrbitCyan)
+                    .align(Alignment.TopCenter)
+                    .width(32.dp)
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(
+                        androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            listOf(Color(0xFF00F0FF), Color(0xFFA056FF))
+                        )
+                    )
+            )
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            if (tabKey == "profile") {
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isSelected)
+                                androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF00F0FF), Color(0xFFA056FF)))
+                            else
+                                androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF27272A), Color(0xFF27272A)))
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "TU",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                        color = if (isSelected) Color.Black else Color.White
+                    )
+                }
+            } else {
+                Text(
+                    text = when (tabKey) {
+                        "home" -> "🏠"
+                        "packages" -> "📦"
+                        "tracking" -> "🎯"
+                        else -> "👤"
+                    },
+                    fontSize = 14.sp
+                )
+            }
+
+            Text(
+                text = label,
+                fontSize = 10.sp,
+                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                color = if (isSelected) Color(0xFF00F0FF) else MutedText,
+                modifier = Modifier.padding(top = 2.dp)
             )
         }
     }
