@@ -140,7 +140,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
       {/* Social Login Buttons */}
       <div className="w-full max-w-md grid grid-cols-2 gap-3 mb-6">
         <Button
-          onClick={() => onComplete()}
+          onClick={() => handleOAuthLogin("google")}
           className="w-full bg-white text-black hover:bg-zinc-200 py-3 rounded-2xl font-bold flex items-center justify-center gap-2"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -153,7 +153,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         </Button>
 
         <Button
-          onClick={() => onComplete()}
+          onClick={() => handleOAuthLogin("apple")}
           className="w-full bg-black border border-zinc-800 text-white hover:bg-zinc-900 py-3 rounded-2xl font-bold flex items-center justify-center gap-2"
         >
           <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
