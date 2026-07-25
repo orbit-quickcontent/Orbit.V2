@@ -10,47 +10,50 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { firestoreDb } from "@/lib/db";
+import { supabase } from "@/lib/supabase-client";
 import { validateBody, userSchema } from "@/lib/validation";
 import { logAudit } from "@/lib/auth-server";
 
-// GET — List users
+// GET — List users from Supabase profiles
 export async function GET() {
   try {
+    const { data: supaProfiles, error: supaErr } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!supaErr && supaProfiles && supaProfiles.length > 0) {
+      const users = supaProfiles.map((p: any) => ({
+        id: p.id,
+        email: p.email,
+        name: p.full_name,
+        phone: p.phone,
+        role: p.role ? p.role.toUpperCase() : 'USER',
+        avatar: p.avatar_url || p.avatar_emoji || '👨🏻‍🦱',
+        createdAt: p.created_at,
+        updatedAt: p.updated_at,
+        totalBookings: 0,
+      }));
+      return NextResponse.json({ users });
+    }
+
+    // Fallback to Firestore
     const clientUsers = await firestoreDb.clientUsers.findMany();
     const partnerUsers = await firestoreDb.partnerUsers.findMany();
     const allUsers = [...clientUsers, ...partnerUsers];
 
-    const usersWithStats = await Promise.all(
-      allUsers.map(async (user) => {
-        // Count bookings in-memory by querying bookings collection
-        const bookings = await firestoreDb.bookings.findMany({
-          where: { userId: user.id }
-        });
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          phone: user.phone,
-          location: user.location,
-          role: user.role,
-          brandLogo: user.brandLogo,
-          brandFont: user.brandFont,
-          brandColor: user.brandColor,
-          editorRequirements: user.editorRequirements,
-          avatar: user.avatar,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
-          totalBookings: bookings.length,
-        };
-      })
-    );
-
-    // Sort by createdAt desc
-    usersWithStats.sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
-    });
+    const usersWithStats = allUsers.map((user) => ({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      location: user.location,
+      role: user.role,
+      avatar: user.avatar,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      totalBookings: 0,
+    }));
 
     return NextResponse.json({ users: usersWithStats });
   } catch (error) {
@@ -62,7 +65,7 @@ export async function GET() {
   }
 }
 
-// POST — Create a new user
+// POST — Create/Sync user in Supabase Postgres
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -70,7 +73,6 @@ export async function POST(request: NextRequest) {
     // 1. Zod input validation
     const validation = validateBody(userSchema, body);
     if (!validation.success) {
-      console.error("Zod Validation Failed for User POST:", validation.errors, "Body received:", body);
       return NextResponse.json(
         { error: "Validation failed", details: validation.errors },
         { status: 400 }
@@ -79,17 +81,31 @@ export async function POST(request: NextRequest) {
 
     const { email, name, phone, location, role, brandLogo, brandFont, brandColor, editorRequirements } = validation.data;
 
-    // 2. Check if user already exists in either client or partner DB
+    // 2. Sync profile into Supabase Postgres
+    const supaRole = role === 'PARTNER' ? 'partner' : 'client';
+    const { data: profile, error: supaErr } = await supabase
+      .from('profiles')
+      .upsert({
+        full_name: name || email.split('@')[0],
+        email: email,
+        phone: phone || null,
+        role: supaRole,
+      }, { onConflict: 'email' })
+      .select()
+      .single();
+
+    if (!supaErr && profile) {
+      console.log('[Supabase User POST] Synced profile:', profile.id, profile.email);
+    }
+
+    // 3. Fallback/Sync with Firestore for real-time listener compatibility
     let existingUser = await firestoreDb.clientUsers.findUnique({ where: { email } });
     if (!existingUser) {
       existingUser = await firestoreDb.partnerUsers.findUnique({ where: { email } });
     }
 
     if (existingUser) {
-      return NextResponse.json(
-        { user: existingUser },
-        { status: 200 }
-      );
+      return NextResponse.json({ user: existingUser }, { status: 200 });
     }
 
     const targetCol = role === "PARTNER" ? firestoreDb.partnerUsers : firestoreDb.clientUsers;
@@ -108,7 +124,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 3. Log audit event
     await logAudit({
       userId: user.id,
       action: "USER_SIGNUP",
@@ -117,12 +132,11 @@ export async function POST(request: NextRequest) {
       details: { email, role },
       req: request,
     });
-
     return NextResponse.json({ user }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating user:", error);
     return NextResponse.json(
-      { error: "Failed to create user" },
+      { error: "Failed to create user", details: error.message },
       { status: 500 }
     );
   }

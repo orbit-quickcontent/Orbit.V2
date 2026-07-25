@@ -9,6 +9,7 @@
  */
 
 import { firestoreDb } from '@/lib/db'
+import { supabase } from '@/lib/supabase-client'
 import { NextRequest, NextResponse } from 'next/server'
 import { validateBody, bookingSchema } from '@/lib/validation'
 import { logAudit } from '@/lib/auth-server'
@@ -22,18 +23,54 @@ interface CreateBookingBody {
   notes?: string
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const bookings = await firestoreDb.bookings.findMany();
+    const { searchParams } = new URL(request.url)
+    const emailParam = searchParams.get('email')
 
-    // Sort by createdAt desc in-memory
+    // 1. Try fetching from Supabase Postgres first
+    let query = supabase.from('bookings').select('*, packages(*)')
+    if (emailParam) {
+      // Find profile ID by email
+      const { data: profile } = await supabase.from('profiles').select('id').eq('email', emailParam).single()
+      if (profile) {
+        query = query.eq('client_id', profile.id)
+      }
+    }
+
+    const { data: supabaseBookings, error: supaErr } = await query.order('created_at', { ascending: false })
+
+    if (!supaErr && supabaseBookings && supabaseBookings.length > 0) {
+      const mapped = supabaseBookings.map((b: any) => ({
+        id: b.id,
+        userId: b.client_id,
+        packageId: b.package_id,
+        status: b.status,
+        paymentStatus: b.payment_status || 'PAID',
+        bookingDate: b.booking_date || new Date().toISOString().split('T')[0],
+        timeSlot: b.time_slot || '10:00 AM - 12:00 PM',
+        location: b.location_address || '',
+        syncPercentage: b.sync_percentage || 0,
+        editCountdown: b.edit_countdown || null,
+        notes: b.notes || '',
+        createdAt: b.created_at,
+        package: b.packages ? {
+          id: b.packages.id,
+          name: b.packages.name,
+          price: b.packages.price,
+        } : null,
+      }))
+      return NextResponse.json({ bookings: mapped })
+    }
+
+    // 2. Fallback to Firestore
+    const bookings = await firestoreDb.bookings.findMany();
     bookings.sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;
     });
 
-    // Resolve user, package, and partner details in-memory
     const bookingsWithDetails = await Promise.all(
       bookings.map(async (booking) => {
         const user = await firestoreDb.clientUsers.findUnique({
@@ -44,27 +81,6 @@ export async function GET() {
           where: { id: booking.packageId },
         });
 
-        let partner = null;
-        if (booking.partnerId) {
-          const partnerData = await firestoreDb.partners.findUnique({
-            where: { id: booking.partnerId },
-          });
-          if (partnerData) {
-            const partnerUser = await firestoreDb.partnerUsers.findUnique({
-              where: { id: partnerData.userId },
-            });
-            partner = {
-              ...partnerData,
-              user: partnerUser ? {
-                id: partnerUser.id,
-                name: partnerUser.name,
-                phone: partnerUser.phone,
-                avatar: partnerUser.avatar,
-              } : null,
-            };
-          }
-        }
-
         return {
           ...booking,
           user: user ? {
@@ -74,7 +90,6 @@ export async function GET() {
             phone: user.phone,
           } : null,
           package: pkg,
-          partner,
         };
       })
     );

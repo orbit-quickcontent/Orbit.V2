@@ -10,6 +10,7 @@
  */
 
 import { firestoreDb } from '@/lib/db'
+import { supabase } from '@/lib/supabase-client'
 import { NextRequest, NextResponse } from 'next/server'
 
 interface UpdateBookingBody {
@@ -32,6 +33,43 @@ export async function GET(
   try {
     const { id } = await params
 
+    // 1. Try fetching from Supabase Postgres
+    const { data: supaBooking, error: supaErr } = await supabase
+      .from('bookings')
+      .select('*, packages(*), profiles(*)')
+      .eq('id', id)
+      .single()
+
+    if (!supaErr && supaBooking) {
+      const mapped = {
+        id: supaBooking.id,
+        userId: supaBooking.client_id,
+        packageId: supaBooking.package_id,
+        status: supaBooking.status,
+        paymentStatus: supaBooking.payment_status || 'PAID',
+        bookingDate: supaBooking.booking_date || new Date().toISOString().split('T')[0],
+        timeSlot: supaBooking.time_slot || '10:00 AM - 12:00 PM',
+        location: supaBooking.location_address || '',
+        syncPercentage: supaBooking.sync_percentage || 0,
+        editCountdown: supaBooking.edit_countdown || null,
+        notes: supaBooking.notes || '',
+        createdAt: supaBooking.created_at,
+        package: supaBooking.packages ? {
+          id: supaBooking.packages.id,
+          name: supaBooking.packages.name,
+          price: supaBooking.packages.price,
+        } : null,
+        user: supaBooking.profiles ? {
+          id: supaBooking.profiles.id,
+          name: supaBooking.profiles.full_name,
+          email: supaBooking.profiles.email,
+          phone: supaBooking.profiles.phone,
+        } : null,
+      }
+      return NextResponse.json({ booking: mapped })
+    }
+
+    // 2. Fallback to Firestore
     const booking = await firestoreDb.bookings.findUnique({
       where: { id },
     })
@@ -51,27 +89,6 @@ export async function GET(
       where: { id: booking.packageId },
     })
 
-    let partner = null
-    if (booking.partnerId) {
-      const partnerData = await firestoreDb.partners.findUnique({
-        where: { id: booking.partnerId },
-      })
-      if (partnerData) {
-        const partnerUser = await firestoreDb.partnerUsers.findUnique({
-          where: { id: partnerData.userId },
-        })
-        partner = {
-          ...partnerData,
-          user: partnerUser ? {
-            id: partnerUser.id,
-            name: partnerUser.name,
-            phone: partnerUser.phone,
-            avatar: partnerUser.avatar,
-          } : null,
-        }
-      }
-    }
-
     const bookingWithDetails = {
       ...booking,
       user: user ? {
@@ -79,15 +96,8 @@ export async function GET(
         name: user.name,
         email: user.email,
         phone: user.phone,
-        location: user.location || null,
-        brandLogo: user.brandLogo || null,
-        brandFont: user.brandFont || null,
-        brandColor: user.brandColor || null,
-        editorRequirements: user.editorRequirements || null,
-        avatar: user.avatar || null,
       } : null,
       package: pkg,
-      partner,
     }
 
     return NextResponse.json({ booking: bookingWithDetails })

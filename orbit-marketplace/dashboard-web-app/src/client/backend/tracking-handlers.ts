@@ -10,6 +10,7 @@
  */
 
 import { firestoreDb } from '@/lib/db'
+import { supabase } from '@/lib/supabase-client'
 import { NextRequest, NextResponse } from 'next/server'
 
 // Human-readable status labels
@@ -54,6 +55,35 @@ export async function GET(
   try {
     const { id } = await params
 
+    // 1. Try fetching live tracking state from Supabase Postgres
+    const { data: supaBooking, error: supaErr } = await supabase
+      .from('bookings')
+      .select('*, shoot_tracking(*)')
+      .eq('id', id)
+      .single()
+
+    if (!supaErr && supaBooking) {
+      const status = supaBooking.status || 'PAID'
+      const stepIndex = PIPELINE_STEPS.indexOf(status)
+      const totalSteps = PIPELINE_STEPS.length - 1
+      const progressPercentage = stepIndex >= 0 ? Math.round((stepIndex / totalSteps) * 100) : 0
+
+      return NextResponse.json({
+        tracking: {
+          bookingId: supaBooking.id,
+          status,
+          statusLabel: STATUS_LABELS[status] || status,
+          statusDescription: STATUS_DESCRIPTIONS[status] || '',
+          syncPercentage: supaBooking.sync_percentage || 0,
+          editCountdown: supaBooking.edit_countdown || null,
+          progressPercentage,
+          reelUrl: supaBooking.reel_url || null,
+          deliveredAt: supaBooking.delivered_at || null,
+        }
+      })
+    }
+
+    // 2. Fallback to Firestore
     const booking = await firestoreDb.bookings.findUnique({
       where: { id },
     })
@@ -76,28 +106,9 @@ export async function GET(
       )
     }
 
-    let partner: any = null
-    if (booking.partnerId) {
-      const partnerData = await firestoreDb.partners.findUnique({
-        where: { id: booking.partnerId },
-      })
-      if (partnerData) {
-        const partnerUser = await firestoreDb.partnerUsers.findUnique({
-          where: { id: partnerData.userId },
-        })
-        partner = {
-          ...partnerData,
-          user: partnerUser ? {
-            name: partnerUser.name,
-            phone: partnerUser.phone,
-            avatar: partnerUser.avatar,
-          } : null,
-        }
-      }
-    }
-
-    // Calculate overall progress percentage based on pipeline step
     const stepIndex = PIPELINE_STEPS.indexOf(booking.status)
+    const totalSteps = PIPELINE_STEPS.length - 1
+    const progressPercentage = Math.round((stepIndex / totalSteps) * 100)
     let overallProgress = 0
     if (stepIndex >= 0) {
       // Each step contributes equally, plus the syncPercentage within the SYNCING step
@@ -142,13 +153,7 @@ export async function GET(
         tier: pkg.tier,
         deliveryTime: pkg.deliveryTime,
       },
-      partner: partner
-        ? {
-            name: partner.user?.name || '',
-            deviceInfo: partner.deviceInfo,
-            rating: partner.rating,
-          }
-        : null,
+      partner: null,
       bookingDate: booking.bookingDate,
       timeSlot: booking.timeSlot,
       location: booking.location,
