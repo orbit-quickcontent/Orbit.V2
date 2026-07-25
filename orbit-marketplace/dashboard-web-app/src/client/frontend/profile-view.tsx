@@ -45,6 +45,7 @@ import {
   isWithinRedownloadWindow,
   getRedownloadDaysRemaining,
 } from "@/lib/constants";
+import { AvatarGraphic } from "@/components/ui/avatar-graphic";
 import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -86,7 +87,7 @@ export function ProfileView() {
   const renderProfileAvatar = (size: string, textSize: string) => {
     if (user.avatarType === "photo" && user.avatarPhotoUrl) {
       return (
-        <div className={`${size} rounded-full overflow-hidden shadow-xl`}>
+        <div className={`${size} rounded-full overflow-hidden shadow-xl ring-2 ring-[#00D4FF]`}>
           <img
             src={user.avatarPhotoUrl}
             alt="Profile"
@@ -95,31 +96,10 @@ export function ProfileView() {
         </div>
       );
     }
-    if (user.avatarType === "avatar" && user.avatarImage) {
-      return (
-        <div className={`${size} rounded-full overflow-hidden shadow-xl ring-2 ring-white/10`}>
-          <img
-            src={user.avatarImage}
-            alt="Profile"
-            className="w-full h-full object-cover"
-          />
-        </div>
-      );
-    }
-    if (user.avatarType === "avatar" && user.avatarEmoji) {
-      return (
-        <div
-          className={`${size} rounded-full bg-gradient-to-br from-orbit-purple/20 to-orbit-cyan/20 backdrop-blur-sm flex items-center justify-center ${textSize} shadow-xl`}
-        >
-          {user.avatarEmoji}
-        </div>
-      );
-    }
+    const activePreset = AVATAR_PRESETS.find(p => p.emoji === user.avatarEmoji) || AVATAR_PRESETS[0];
     return (
-      <div
-        className={`${size} rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center ${textSize} font-black text-white shadow-xl`}
-      >
-        {initials}
+      <div className={`${size} rounded-full overflow-hidden shadow-xl ring-2 ring-[#00D4FF] flex items-center justify-center bg-[#161616]`}>
+        <AvatarGraphic id={activePreset.id} size={80} />
       </div>
     );
   };

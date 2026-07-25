@@ -16,12 +16,13 @@ export const AVATAR_COLORS = [
   "from-rose-400 to-pink-500",
 ] as const;
 
-// 4 Creative human-like avatars for all categories of people
+// 5 Avatar presets matching Orbit reference UI
 export const AVATAR_PRESETS = [
-  { id: "creator", emoji: "🎬", label: "Creator", gradient: "from-orbit-cyan to-blue-500", description: "Content Creator", image: "/avatars/creator.png" },
-  { id: "professional", emoji: "💼", label: "Professional", gradient: "from-orbit-purple to-pink-500", description: "Business Professional", image: "/avatars/professional.png" },
-  { id: "artist", emoji: "🎨", label: "Artist", gradient: "from-orange-400 to-red-500", description: "Creative Artist", image: "/avatars/artist.png" },
-  { id: "explorer", emoji: "🌍", label: "Explorer", gradient: "from-green-400 to-emerald-500", description: "Adventurous Explorer", image: "/avatars/explorer.png" },
+  { id: "creator", emoji: "👨🏻‍🦱", label: "Creator", color: "#FF4D4D", bg: "bg-[#FF4D4D]", gradient: "from-red-500 to-rose-600", description: "Content Creator", image: "/avatars/creator.png" },
+  { id: "professional", emoji: "👨🏽‍💼", label: "Professional", color: "#3A82F6", bg: "bg-[#3A82F6]", gradient: "from-blue-500 to-indigo-600", description: "Business Professional", image: "/avatars/professional.png" },
+  { id: "artist", emoji: "👩🏽‍🎨", label: "Artist", color: "#FFC107", bg: "bg-[#FFC107]", gradient: "from-amber-400 to-yellow-500", description: "Creative Artist", image: "/avatars/artist.png" },
+  { id: "explorer", emoji: "🧑🏻‍🚀", label: "Explorer", color: "#00C853", bg: "bg-[#00C853]", gradient: "from-emerald-400 to-green-600", description: "Adventurous Explorer", image: "/avatars/explorer.png" },
+  { id: "celebration", emoji: "🎉", label: "Celebration", color: "#B033FF", bg: "bg-[#B033FF]", gradient: "from-purple-500 to-fuchsia-600", description: "Event & Celebration", image: "/avatars/celebration.png" },
 ] as const;
 
 // Format currency in Indian Rupees (₹)

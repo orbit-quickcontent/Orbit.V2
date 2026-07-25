@@ -30,7 +30,7 @@ import { AVATAR_COLORS, AVATAR_PRESETS } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
 import { type UserRole } from "@/lib/types";
 import { toast } from "sonner";
-import { auth as firebaseAuth } from "@/lib/firebase";
+import { AvatarGraphic } from "@/components/ui/avatar-graphic";
 import OTPVerification from "./otp-verification";
 
 type LoginStep = "profile" | "otp";
@@ -264,13 +264,11 @@ export default function LoginPage() {
 
   // Render the current avatar preview based on mode
   const renderAvatarPreview = () => {
-    const size = "w-24 h-24";
-
     if (avatarMode === "photo" && photoPreview) {
       return (
         <div className="relative group">
-          <div className="absolute inset-0 w-24 h-24 rounded-full bg-orbit-cyan opacity-20 blur-xl scale-125" />
-          <div className={`relative ${size} rounded-full overflow-hidden shadow-lg ring-2 ring-white/30`}>
+          <div className="absolute inset-0 w-28 h-28 rounded-full bg-[#00D4FF] opacity-20 blur-xl scale-125 animate-pulse" />
+          <div className="relative w-24 h-24 rounded-full overflow-hidden shadow-2xl ring-2 ring-[#00D4FF]">
             <img src={photoPreview} alt="Profile photo" className="w-full h-full object-cover" />
           </div>
           <button
@@ -284,27 +282,16 @@ export default function LoginPage() {
       );
     }
 
-    if (avatarMode === "avatar" && selectedAvatarPreset) {
-      const preset = AVATAR_PRESETS.find(p => p.id === selectedAvatarPreset);
-      if (preset) {
-        return (
-          <div className="relative">
-            <div className={`absolute inset-0 w-24 h-24 rounded-full bg-gradient-to-br ${preset.gradient} opacity-30 blur-xl scale-125`} />
-            <div className={`relative ${size} rounded-full overflow-hidden shadow-lg ring-2 ring-white/30`}>
-              <img src={preset.image} alt={preset.label} className="w-full h-full object-cover" />
-            </div>
-          </div>
-        );
-      }
-    }
-
-    // Default: show first avatar preset or color gradient with initials
-    const defaultPreset = AVATAR_PRESETS[0];
+    const currentPresetId = selectedAvatarPreset || "creator";
     return (
-      <div className="relative">
-        <div className={`absolute inset-0 w-24 h-24 rounded-full bg-gradient-to-br ${defaultPreset.gradient} opacity-30 blur-xl scale-125`} />
-        <div className={`relative ${size} rounded-full overflow-hidden shadow-lg ring-2 ring-white/20 opacity-50`}>
-          <img src={defaultPreset.image} alt="Default" className="w-full h-full object-cover" />
+      <div className="relative flex items-center justify-center w-36 h-36">
+        {/* Outer concentric dashed ring */}
+        <div className="absolute inset-0 rounded-full border border-dashed border-[#00D4FF]/40 animate-orbit" />
+        {/* Inner concentric dotted ring */}
+        <div className="absolute inset-2.5 rounded-full border border-dotted border-[#A855F7]/40" />
+        {/* Center avatar box */}
+        <div className="relative w-20 h-20 rounded-full overflow-hidden shadow-2xl ring-2 ring-white/10 flex items-center justify-center bg-[#161616]">
+          <AvatarGraphic id={currentPresetId} size={80} />
         </div>
       </div>
     );
@@ -470,170 +457,147 @@ export default function LoginPage() {
                     ))}
                   </div>
 
-                  {/* 4 Creative Avatar Presets — each with a color accent */}
+                  {/* 5 Avatar Presets — Matching Orbit reference UI */}
                   {avatarMode === "avatar" && (
-                    <div className="grid grid-cols-4 gap-3">
-                      {AVATAR_PRESETS.map((preset) => (
-                        <button
-                          key={preset.id}
-                          onClick={() => setSelectedAvatarPreset(preset.id)}
-                          className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-200 ${
-                            selectedAvatarPreset === preset.id
-                              ? "bg-white/15 ring-2 ring-white/30 scale-105"
-                              : "bg-white/5 hover:bg-white/10 hover:scale-105"
-                          }`}
-                        >
-                          <div className={`w-12 h-12 rounded-full overflow-hidden shadow-lg ring-1 ring-white/10`}>
-                            <img src={preset.image} alt={preset.label} className="w-full h-full object-cover" />
-                          </div>
-                          <span className="text-[10px] font-semibold text-foreground/80">{preset.label}</span>
+                    <div className="grid grid-cols-5 gap-2 pt-2">
+                      {AVATAR_PRESETS.map((preset) => {
+                        const isSelected = (selectedAvatarPreset || "creator") === preset.id;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => setSelectedAvatarPreset(preset.id)}
+                            className="flex flex-col items-center gap-1.5 group focus:outline-none"
+                          >
+                            <div
+                              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden transition-all duration-200 ${
+                                isSelected
+                                  ? "ring-2 ring-[#00B5FF] shadow-[0_0_14px_#00B5FF] scale-105"
+                                  : "opacity-75 hover:opacity-100 hover:scale-100"
+                              }`}
+                            >
+                              <AvatarGraphic id={preset.id} size={48} />
+                            </div>
+                            <span
+                              className={`text-[9px] sm:text-[10px] font-bold tracking-tight transition-colors ${
+                                isSelected ? "text-[#00B5FF]" : "text-[#8E92A0]"
+                              }`}
+                            >
+                              {preset.label}
+                            </span>
                           </button>
-                        ))}
-                      </div>
-                    )}
+                        );
+                      })}
+                    </div>
+                  )}
 
-                    {/* Photo upload */}
-                    {avatarMode === "photo" && (
-                      <div className="flex flex-col items-center gap-3">
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-muted-foreground hover:text-foreground transition-all duration-200"
-                        >
-                          <Camera className="w-4 h-4" />
-                          {photoPreview ? "Change Photo" : "Choose from Gallery"}
-                        </button>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          onChange={handlePhotoUpload}
-                          className="hidden"
-                        />
-                        <p className="text-[10px] text-muted-foreground/40">Max 5MB - JPG, PNG, WebP</p>
-                      </div>
-                    )}
+                  {/* Photo upload */}
+                  {avatarMode === "photo" && (
+                    <div className="flex flex-col items-center gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-[#222630] text-xs font-semibold text-[#8E92A0] hover:text-white transition-all"
+                      >
+                        <Camera className="w-4 h-4 text-[#00B5FF]" />
+                        {photoPreview ? "Change Photo" : "Choose from Gallery"}
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                      />
+                      <p className="text-[10px] text-[#8E92A0]">Max 5MB • JPG, PNG, WebP</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* ─── Profile Form Fields ─── */}
+                <div className="space-y-4">
+                  {/* Full Name */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold tracking-widest text-[#00B5FF] uppercase flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-[#00B5FF]" /> FULL NAME <span className="text-[#00B5FF]">*</span>
+                    </label>
+                    <Input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Test User"
+                      className="bg-[#0F1115] border-[#222630] text-white text-sm font-semibold rounded-2xl h-12 focus:border-[#00B5FF] focus:ring-1 focus:ring-[#00B5FF] transition-all"
+                    />
                   </div>
 
-                  {/* ─── Profile Form ─── */}
-                  <div className="bg-white/[0.07] backdrop-blur-lg rounded-2xl p-5 sm:p-6 space-y-4 border border-white/10">
-                    {/* Full Name */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                        <User className="w-3.5 h-3.5" /> Full Name *
-                      </label>
-                      <Input
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Enter your name"
-                        className="bg-white/5 border-white/10 text-foreground placeholder:text-muted-foreground/40 focus:border-orbit-cyan h-11"
+                  {/* Email */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold tracking-widest text-[#A832FF] uppercase flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-[#A832FF]" /> EMAIL ADDRESS <span className="text-[#A832FF]">*</span>
+                    </label>
+                    <Input
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="test@example.com"
+                      type="email"
+                      disabled={isSocial}
+                      className="bg-[#0F1115] border-[#222630] text-white text-sm font-semibold rounded-2xl h-12 focus:border-[#A832FF] focus:ring-1 focus:ring-[#A832FF] transition-all disabled:opacity-60"
+                    />
+                  </div>
+
+                  {/* Mobile Phone (India) */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold tracking-widest text-[#00B5FF] uppercase flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-[#00B5FF]" /> MOBILE PHONE (INDIA) <span className="text-[#00B5FF]">*</span>
+                    </label>
+                    <div className="flex items-center bg-[#0F1115] border border-[#222630] rounded-2xl overflow-hidden focus-within:border-[#00B5FF] transition-all h-12">
+                      <div className="bg-[#16181E] px-4 text-xs font-bold text-[#8E92A0] border-r border-[#222630] flex items-center h-full">
+                        +91
+                      </div>
+                      <input
+                        value={phone}
+                        onChange={handlePhoneChange}
+                        placeholder="9876543210"
+                        type="tel"
+                        maxLength={10}
+                        className="bg-transparent text-white font-semibold text-sm px-4 outline-none w-full"
                       />
                     </div>
-
-                    {/* Email */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                        <Mail className="w-3.5 h-3.5" /> Email Address *
-                      </label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
-                        <Input
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="you@example.com"
-                          type="email"
-                          disabled={isSocial}
-                          className="bg-white/5 border-white/10 text-foreground placeholder:text-muted-foreground/40 focus:border-orbit-cyan h-11 pl-10 disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Phone (India - 10 digits) */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                        <Phone className="w-3.5 h-3.5" /> Phone
-                      </label>
-                      <div className="relative">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-sm text-muted-foreground/60 font-medium">
-                          <span className="text-xs">+91</span>
-                          <span className="text-white/20">|</span>
-                        </div>
-                        <Input
-                          value={phone}
-                          onChange={handlePhoneChange}
-                          placeholder="10-digit mobile number"
-                          type="tel"
-                          inputMode="numeric"
-                          maxLength={10}
-                          className={`bg-white/5 text-foreground placeholder:text-muted-foreground/40 h-11 w-full pl-[4.5rem] ${
-                            !isPhoneValid
-                              ? "border-destructive focus:border-destructive"
-                              : "border-white/10 focus:border-orbit-cyan"
-                          }`}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        {!isPhoneValid && phone.length > 0 ? (
-                          <p className="text-xs text-destructive">Please enter exactly 10 digits</p>
-                        ) : (
-                          <p className="text-xs text-muted-foreground/40">India mobile numbers only</p>
-                        )}
-                        <p className="text-xs text-muted-foreground/40">{phone.length}/10</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Continue Button */}
-                  {(() => {
-                    const isSocial = user.authProvider === "google" || user.authProvider === "apple" || isSocialLogin;
-                    return (
-                      <>
-                        <Button
-                          onClick={handleProfileComplete}
-                          disabled={!name.trim() || !email.trim() || !isPhoneValid}
-                          className={`w-full mt-6 font-bold py-6 text-base transition-all duration-300 ${
-                            !name.trim() || !email.trim() || !isPhoneValid
-                              ? "bg-white/5 text-muted-foreground/40 cursor-not-allowed"
-                              : isAccentCyan
-                              ? "bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 shadow-lg shadow-orbit-cyan/20"
-                              : "bg-gradient-to-r from-orbit-purple to-orbit-cyan text-white hover:opacity-90 shadow-lg shadow-orbit-purple/20"
-                          }`}
-                        >
-                          {isSocial ? (
-                            <Sparkles className="w-4 h-4 mr-2 text-orbit-cyan animate-pulse" />
-                          ) : (
-                            <Mail className="w-4 h-4 mr-2" />
-                          )}
-                          {isSocial ? "Complete Profile & Enter" : "Continue to Verify Email"}
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </Button>
-
-                        <p className="text-center text-xs text-muted-foreground/40 mt-4">
-                          {isSocial
-                            ? `Profile verified via ${user.authProvider === "google" || isSocialLogin ? "Google" : "Apple"}.`
-                            : "You'll need to verify your email before continuing."}
-                        </p>
-                      </>
-                    );
-                  })()}
-
-                  {/* Footer links */}
-                  <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-6">
-                    <button className="text-xs text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors">
-                      Privacy Policy
-                    </button>
-                    <span className="text-muted-foreground/20 hidden sm:inline">|</span>
-                    <button className="text-xs text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors">
-                      Terms of Service
-                    </button>
-                    <span className="text-muted-foreground/20 hidden sm:inline">|</span>
-                    <button className="text-xs text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors">
-                      Support
-                    </button>
                   </div>
                 </div>
-              </motion.div>
-            )}
+
+                {/* Primary Gradient CTA Button */}
+                <button
+                  type="button"
+                  onClick={handleProfileComplete}
+                  className="w-full mt-6 py-4 rounded-2xl font-extrabold text-sm text-white flex items-center justify-center gap-2 bg-gradient-to-r from-[#00D2FF] via-[#A832FF] to-[#B53CFF] shadow-[0_0_25px_rgba(0,210,255,0.35)] hover:shadow-[0_0_35px_rgba(0,210,255,0.55)] active:scale-[0.99] transition-all cursor-pointer"
+                >
+                  <span>Join the Orbit Console</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+
+                {/* Footer Security Badge */}
+                <div className="flex items-center justify-center gap-2 pt-6 text-[10px] text-[#8E92A0] font-mono tracking-wider">
+                  <Sparkles className="w-3.5 h-3.5 text-[#00B5FF]" />
+                  <span>Secured by Orbit Identity Engine v2.0</span>
+                </div>
+                {/* Footer links */}
+                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-6">
+                  <button className="text-xs text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors">
+                    Privacy Policy
+                  </button>
+                  <span className="text-muted-foreground/20 hidden sm:inline">|</span>
+                  <button className="text-xs text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors">
+                    Terms of Service
+                  </button>
+                  <span className="text-muted-foreground/20 hidden sm:inline">|</span>
+                  <button className="text-xs text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors">
+                    Support
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
             {step === "otp" && selectedRole && (
               <motion.div

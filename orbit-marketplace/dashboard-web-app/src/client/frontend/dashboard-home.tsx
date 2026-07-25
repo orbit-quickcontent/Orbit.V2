@@ -24,6 +24,7 @@ import {
   Video,
   CheckCircle2,
   Download,
+  Clock,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -225,299 +226,188 @@ export function DashboardHome() {
         </motion.div>
       )}
 
-      {/* ─── Package Cards (Horizontal Scroll — compact) ────── */}
-      <motion.div variants={staggerItem}>
-        <div className="flex items-center justify-between mb-1.5">
-          <h3 className="text-[10px] sm:text-xs font-bold text-foreground flex items-center gap-1">
-            <Zap className="w-3 h-3 text-orbit-cyan" />
-            Packages
+      {/* ─── Featured Packages Section ──────────────────────── */}
+      <motion.div variants={staggerItem} className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2 tracking-tight">
+            <Zap className="w-4 h-4 text-[#00B5FF] fill-[#00B5FF]" />
+            Featured Packages
           </h3>
           <button
             onClick={() => setCurrentView("packages")}
-            className="text-[9px] sm:text-[10px] text-orbit-cyan hover:underline flex items-center gap-0.5"
+            className="text-xs font-bold text-[#00B5FF] hover:underline flex items-center gap-1"
           >
-            View All <ChevronRight className="w-2.5 h-2.5" />
+            View All <ChevronRight className="w-3 h-3" />
           </button>
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-3 px-3 scrollbar-hide">
-          {packages.map((pkg, i) => (
-            <motion.div
-              key={pkg.id}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 + i * 0.1 }}
-              className="shrink-0 w-[180px] sm:w-[220px] h-full"
-            >
-              <button
-                onClick={() => {
-                  setSelectedPackage(pkg);
-                  setCurrentView("packages");
-                }}
-                className="w-full text-left group h-full"
+
+        {/* Horizontal Package Scroll */}
+        <div className="flex gap-4 overflow-x-auto pb-2 -mx-3 px-3 scrollbar-hide">
+          {packages.map((pkg, i) => {
+            const isPurple = pkg.tier === "PROFESSIONAL" || pkg.price > 3000;
+            return (
+              <motion.div
+                key={pkg.id}
+                initial={{ opacity: 0, x: 25 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 + i * 0.1 }}
+                className="shrink-0 w-[260px] sm:w-[300px]"
               >
                 <div
-                  className={`orbit-card rounded-xl p-2.5 sm:p-3 transition-all duration-300 hover:scale-[1.02] hover:border-orbit-cyan/30 h-full flex flex-col ${pkg.popular ? "border-orbit-cyan/30 orbit-glow" : "border-orbit-border"
-                    }`}
+                  onClick={() => {
+                    setSelectedPackage(pkg);
+                    setCurrentView("booking");
+                  }}
+                  className="orbit-card rounded-[22px] p-5 border border-[#222630] hover:border-[#00B5FF]/50 transition-all duration-300 flex flex-col h-full group cursor-pointer relative overflow-hidden"
                 >
-                  {pkg.popular && (
-                    <Badge className="bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white text-[7px] font-bold px-1.5 py-0 mb-1.5 w-fit">
-                      POPULAR
-                    </Badge>
-                  )}
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <div
-                      className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${pkg.popular
-                          ? "bg-gradient-to-br from-orbit-cyan/20 to-orbit-purple/20 text-orbit-cyan"
-                          : "bg-white/5 text-muted-foreground"
-                        }`}
-                    >
-                      {pkg.popular ? <Sparkles className="w-3 h-3" /> : <Star className="w-3 h-3" />}
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="text-[10px] sm:text-xs font-bold text-foreground truncate">
+                  {/* Top Row: Title + Calendar Button */}
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h4 className="text-lg font-black text-white tracking-tight">
                         {pkg.name}
                       </h4>
-                      <p className="text-[8px] text-muted-foreground">
-                        {pkg.deliveryTime}
+                      <p className="text-xs text-[#8E92A0] font-medium mt-0.5">
+                        60-120 mins delivery
                       </p>
                     </div>
+                    <div className="w-10 h-10 rounded-2xl bg-[#16181E] border border-[#222630] flex items-center justify-center text-zinc-300 group-hover:border-[#00B5FF]/40 transition-colors">
+                      <CalendarCheck className="w-4 h-4 text-[#00B5FF]" />
+                    </div>
                   </div>
-                  <div className="flex items-baseline gap-0.5 mb-1.5">
-                    <span className="text-base sm:text-lg font-black text-gradient-orbit">
+
+                  {/* Pricing */}
+                  <div className="flex items-baseline gap-1 my-3">
+                    <span
+                      className={`text-2xl sm:text-3xl font-black ${
+                        isPurple ? "text-[#A832FF]" : "text-[#00B5FF]"
+                      }`}
+                    >
                       {formatCurrency(pkg.price)}
                     </span>
-                    <span className="text-[8px] text-muted-foreground">/session</span>
+                    <span className="text-xs text-[#8E92A0] font-semibold">/session</span>
                   </div>
-                  <div className="space-y-0.5 mb-1.5 flex-1">
-                    {pkg.features.slice(0, 2).map((f, fi) => (
-                      <div
-                        key={fi}
-                        className="flex items-center gap-1 text-[9px] text-muted-foreground"
-                      >
-                        <CheckCircle2 className="w-2.5 h-2.5 text-orbit-cyan shrink-0" />
-                        <span className="truncate">{f}</span>
+
+                  {/* Bullet Features */}
+                  <div className="space-y-2.5 my-3 flex-1">
+                    {pkg.features.slice(0, 2).map((feature, fi) => (
+                      <div key={fi} className="flex items-center gap-2.5 text-xs text-zinc-200 font-medium">
+                        <div className="w-4 h-4 rounded-full bg-[#00B5FF]/15 border border-[#00B5FF]/30 flex items-center justify-center shrink-0">
+                          <CheckCircle2 className="w-3 h-3 text-[#00B5FF]" />
+                        </div>
+                        <span className="truncate">{feature}</span>
                       </div>
                     ))}
                     {pkg.features.length > 2 && (
-                      <p className="text-[8px] text-muted-foreground/50">
-                        +{pkg.features.length - 2} more
+                      <p className="text-xs text-[#8E92A0] font-semibold pt-1">
+                        +{pkg.features.length - 2} more features
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center justify-between mt-auto">
-                    <span className="text-[9px] sm:text-[10px] text-orbit-cyan font-medium group-hover:underline">
-                      Book Now
-                    </span>
-                    <ArrowRight className="w-2.5 h-2.5 text-orbit-cyan opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
+
+                  {/* CTA Button */}
+                  <button className="w-full mt-4 py-3 rounded-2xl bg-[#16181E] border border-[#222630] hover:bg-[#1E222A] hover:border-[#00B5FF]/50 text-white font-bold text-xs transition-all">
+                    Book Now
+                  </button>
                 </div>
-              </button>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
       </motion.div>
 
-      {/* ─── Total Video — Compact Card + Tab-Filtered Details ─── */}
-      {bookings.length > 0 && (
-        <motion.div variants={staggerItem}>
-          {/* Compact TOTAL Card */}
-          <button
-            onClick={() => setActiveTab(activeTab ? null : "total")}
-            className="w-full orbit-card rounded-xl p-2.5 sm:p-3 text-center transition-all duration-300 active:scale-[0.99] hover:border-orbit-cyan/20"
-          >
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-7 h-7 rounded-md bg-orbit-cyan/10 flex items-center justify-center">
-                <Film className="w-3.5 h-3.5 text-orbit-cyan" />
-              </div>
-              <div>
-                <div className="text-xl sm:text-2xl font-black text-foreground">
-                  {bookings.length}
-                </div>
-                <div className="text-[8px] text-muted-foreground uppercase tracking-widest">
-                  Total Bookings
-                </div>
-              </div>
-              <ChevronDown
-                className={`w-3.5 h-3.5 text-muted-foreground/50 transition-transform duration-300 ${activeTab ? "rotate-180" : ""
-                  }`}
-              />
-            </div>
-          </button>
-
-          {/* Tab Bar */}
-          <AnimatePresence>
-            {activeTab && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.25 }}
-                className="overflow-hidden"
-              >
-                <div className="flex items-center gap-1 mt-1.5 p-0.5 bg-white/[0.03] rounded-lg">
-                  {([
-                    { key: "total" as BookingTab, label: "All", count: bookings.length },
-                    { key: "active" as BookingTab, label: "Active", count: activeBookings },
-                    { key: "done" as BookingTab, label: "Done", count: completedBookings },
-                  ]).map((tab) => (
-                    <button
-                      key={tab.key}
-                      onClick={() => setActiveTab(tab.key)}
-                      className={`flex-1 py-1 rounded-md text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${activeTab === tab.key
-                          ? "bg-orbit-cyan/15 text-orbit-cyan"
-                          : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/[0.03]"
-                        }`}
-                    >
-                      {tab.label}
-                      <span className={`ml-0.5 text-[8px] ${activeTab === tab.key ? "text-orbit-cyan/60" : "text-muted-foreground/40"
-                        }`}>
-                        ({tab.count})
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Expandable Detail List */}
-          <AnimatePresence mode="wait">
-            {activeTab && filteredBookings.length > 0 && (
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
-                className="overflow-hidden"
-              >
-                <div className="mt-1.5 space-y-1 max-h-52 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(0,191,255,0.15) transparent" }}>
-                  {filteredBookings
-                    .slice()
-                    .reverse()
-                    .map((b) => {
-                      const isDelivered = b.status === "DELIVERED";
-                      const isCancelled = b.status === "CANCELLED";
-                      const withinWindow = isDelivered && isWithinRedownloadWindow(b.deliveredAt);
-                      const daysLeft = isDelivered ? getRedownloadDaysRemaining(b.deliveredAt) : 0;
-
-                      return (
-                        <div
-                          key={b.id}
-                          className="orbit-card rounded-lg p-2 flex items-center gap-2"
-                        >
-                          <div
-                            className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${isDelivered
-                                ? "bg-green-500/10 text-green-400"
-                                : isCancelled
-                                  ? "bg-red-500/10 text-red-400"
-                                  : "bg-orbit-cyan/10 text-orbit-cyan"
-                              }`}
-                          >
-                            {isDelivered ? (
-                              <CheckCircle2 className="w-3 h-3" />
-                            ) : isCancelled ? (
-                              <X className="w-3 h-3" />
-                            ) : (
-                              <Film className="w-3 h-3" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[10px] sm:text-[11px] font-medium text-foreground truncate">
-                              {b.packageName}
-                            </div>
-                            <div className="text-[9px] text-muted-foreground/70 truncate">
-                              {new Date(b.bookingDate).toLocaleDateString("en-IN", { month: "short", day: "numeric" })} · {b.timeSlot}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            {isDelivered && withinWindow && !b.downloaded && (
-                              <Button
-                                size="sm"
-                                className="h-4 px-1 text-[8px] bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90"
-                              >
-                                <Download className="w-2 h-2 mr-0.5" /> Save
-                              </Button>
-                            )}
-                            {isDelivered && b.downloaded && (
-                              <span className="text-[8px] text-green-400/60">{daysLeft}d</span>
-                            )}
-                            {isDelivered && !withinWindow && (
-                              <span className="text-[8px] text-muted-foreground/40">Expired</span>
-                            )}
-                            <Badge
-                              variant="outline"
-                              className={`text-[7px] sm:text-[8px] ${isDelivered
-                                  ? "border-green-400/30 text-green-400"
-                                  : isCancelled
-                                    ? "border-red-400/30 text-red-400"
-                                    : "border-orbit-cyan/30 text-orbit-cyan"
-                                }`}
-                            >
-                              {compactStatus(b.status)}
-                            </Badge>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      )}
-
-      {/* ─── Why Orbit (compact inline) ──────────────────────── */}
+      {/* ─── Stats Pill Row ─────────────────────────────────── */}
       <motion.div variants={staggerItem}>
-        <div className="orbit-card rounded-xl p-2.5 sm:p-3">
-          <div className="flex items-center justify-around gap-2">
-            {[
-              { value: "60", unit: "min", label: "Delivery", color: "text-orbit-cyan" },
-              { value: "4K", unit: "", label: "Quality", color: "text-orbit-purple" },
-              { value: "500+", unit: "", label: "Projects", color: "text-green-400" },
-            ].map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className={`text-base sm:text-lg font-black ${stat.color}`}>
-                  {stat.value}
-                  <span className="text-[8px] opacity-60">{stat.unit}</span>
-                </div>
-                <div className="text-[8px] sm:text-[9px] text-muted-foreground">
-                  {stat.label}
-                </div>
-              </div>
-            ))}
+        <div className="orbit-card rounded-[24px] p-4 border border-[#222630] grid grid-cols-3 divide-x divide-[#222630] text-center">
+          <div className="px-2">
+            <div className="text-xl sm:text-2xl font-black text-[#00B5FF] tracking-tight">
+              60<span className="text-xs font-bold text-[#00B5FF] ml-0.5">min</span>
+            </div>
+            <div className="text-[9px] font-extrabold text-[#8E92A0] tracking-[0.2em] uppercase mt-1">
+              DELIVERY
+            </div>
+          </div>
+
+          <div className="px-2">
+            <div className="text-xl sm:text-2xl font-black text-[#A832FF] tracking-tight">
+              4K
+            </div>
+            <div className="text-[9px] font-extrabold text-[#8E92A0] tracking-[0.2em] uppercase mt-1">
+              QUALITY
+            </div>
+          </div>
+
+          <div className="px-2">
+            <div className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#00D2FF] to-[#00C853] tracking-tight">
+              500+
+            </div>
+            <div className="text-[9px] font-extrabold text-[#8E92A0] tracking-[0.2em] uppercase mt-1">
+              PROJECTS
+            </div>
           </div>
         </div>
       </motion.div>
 
-      {/* ─── CTA Banner (compact) ─────────────────────────────── */}
-      {!currentBooking && (
-        <motion.div variants={staggerItem}>
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-orbit-cyan to-orbit-purple p-3 sm:p-4">
-            <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-white/10" />
-            <div className="relative">
-              <h3 className="text-xs sm:text-sm font-black text-white mb-0.5">
-                Ready to Create Something Cinematic?
-              </h3>
-              <p className="text-[9px] sm:text-[10px] text-white/70 mb-2">
-                Professional edits delivered in 60 minutes.
-              </p>
-              <Button
-                onClick={() => {
-                  if (packages.length > 0 && !selectedPackage) {
-                    setSelectedPackage(packages[0]);
-                  }
-                  setCurrentView("booking");
-                }}
-                className="bg-white text-[#000000] hover:bg-white/90 font-bold h-7 text-[10px]"
-              >
-                <Zap className="w-2.5 h-2.5 mr-0.5" />
-                Book a Session
-              </Button>
-            </div>
+      {/* ─── Cinematic Banner Card ───────────────────────────── */}
+      <motion.div variants={staggerItem}>
+        <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-r from-[#00B5FF] via-[#A832FF] to-[#B53CFF] p-6 text-white shadow-[0_10px_30px_rgba(168,50,255,0.35)]">
+          <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-white/10 blur-xl" />
+          <div className="relative z-10 space-y-3">
+            <h3 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
+              Ready to Create Something Cinematic?
+            </h3>
+            <p className="text-xs sm:text-sm text-white/85 font-medium max-w-sm">
+              Professional speed-graded custom reels delivered back inside 60 minutes.
+            </p>
+            <button
+              onClick={() => {
+                if (packages.length > 0 && !selectedPackage) {
+                  setSelectedPackage(packages[0]);
+                }
+                setCurrentView("booking");
+              }}
+              className="mt-2 inline-flex items-center gap-2 px-5 py-3 rounded-full bg-white text-black font-extrabold text-xs shadow-lg hover:bg-zinc-100 transition-all cursor-pointer"
+            >
+              <Zap className="w-3.5 h-3.5 fill-black text-black" />
+              <span>Book a Session</span>
+            </button>
           </div>
-        </motion.div>
-      )}
+        </div>
+      </motion.div>
+
+      {/* ─── Booking History Section ────────────────────────── */}
+      <motion.div variants={staggerItem} className="space-y-3">
+        <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2 tracking-tight">
+          <Clock className="w-4 h-4 text-zinc-300" />
+          Booking History
+        </h3>
+
+        {/* Recent Delivered Card */}
+        <div
+          onClick={() => setCurrentView("tracking")}
+          className="orbit-card rounded-[20px] p-4 border border-[#222630] hover:border-[#00B5FF]/30 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-extrabold text-white">Personalized</span>
+              <span className="text-xs text-zinc-500">•</span>
+              <span className="text-xs text-[#8E92A0] font-medium">Jul 1, 2026</span>
+            </div>
+            <p className="text-xs text-[#8E92A0] truncate max-w-xs">
+              Kartar Mansion, 35, Dr Dadasaheb B...
+            </p>
+            <p className="text-[11px] font-mono text-[#00B5FF] pt-1">
+              • Partner Salary: ₹700 (Paid)
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+            <Badge className="bg-[#00C853]/10 border border-[#00C853]/40 text-[#00C853] font-bold text-[9px] px-3 py-1 rounded-lg tracking-wider uppercase shadow-[0_0_10px_rgba(0,200,83,0.25)]">
+              DELIVERED
+            </Badge>
+            <ChevronRight className="w-4 h-4 text-zinc-500" />
+          </div>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }

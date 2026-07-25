@@ -208,8 +208,8 @@ export function ClientNavbar() {
                   <h1 className="text-base sm:text-lg font-extrabold text-white leading-none">
                     Hi, {firstName}
                   </h1>
-                  <Badge className="bg-orbit-cyan/15 hover:bg-orbit-cyan/20 text-orbit-cyan border-none text-[8px] font-extrabold px-1.5 py-0.5 rounded-md leading-none uppercase tracking-wider">
-                    Client
+                  <Badge className="bg-[#00B5FF]/10 text-[#00B5FF] border border-[#00B5FF]/30 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-[0_0_8px_rgba(0,181,255,0.3)]">
+                    CREATOR
                   </Badge>
                 </div>
               </div>

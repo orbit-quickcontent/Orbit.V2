@@ -36,7 +36,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-4 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
-      <div className="pointer-events-auto w-full max-w-md bg-[#0a0a0e]/90 backdrop-blur-xl border border-white/10 rounded-[28px] p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.8)]">
+      <div className="pointer-events-auto w-full max-w-md bg-[#0F1115]/95 backdrop-blur-xl border border-[#222630] rounded-[28px] p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.9)]">
         <div className="flex items-center justify-between relative h-14 px-1">
           {NAV_ITEMS.map((item) => {
             const isActive = currentView === item.view;
@@ -46,17 +46,17 @@ export function BottomNav() {
               <button
                 key={item.view}
                 onClick={() => setCurrentView(item.view)}
-                className="relative flex-1 flex flex-col items-center justify-center h-full rounded-2xl transition-all duration-200 group"
+                className="relative flex-1 flex flex-col items-center justify-center h-full rounded-2xl transition-all duration-200 group cursor-pointer"
               >
                 {/* Active Card Container & Top Gradient Indicator */}
                 {isActive && (
                   <motion.div
                     layoutId="activeNavBackground"
-                    className="absolute inset-0 bg-[#171622] border border-white/10 rounded-2xl shadow-inner overflow-hidden"
+                    className="absolute inset-0 bg-[#16181E] border border-[#222630] rounded-2xl shadow-inner overflow-hidden"
                     transition={{ type: "spring", stiffness: 400, damping: 32 }}
                   >
                     {/* Top gradient line indicator */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2.5px] bg-gradient-to-r from-[#00F0FF] to-[#A056FF] rounded-full shadow-[0_0_8px_#00F0FF]" />
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2.5px] bg-gradient-to-r from-[#00D2FF] to-[#B53CFF] rounded-full shadow-[0_0_8px_#00D2FF]" />
                   </motion.div>
                 )}
 
@@ -66,8 +66,8 @@ export function BottomNav() {
                     <div
                       className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-200 ${
                         isActive
-                          ? "bg-gradient-to-r from-[#00F0FF] to-[#A056FF] text-black shadow-[0_0_10px_rgba(0,240,255,0.4)]"
-                          : "bg-zinc-800 border border-zinc-700 text-zinc-400 group-hover:text-zinc-200"
+                          ? "bg-gradient-to-r from-[#00D2FF] to-[#B53CFF] text-black shadow-[0_0_10px_rgba(0,210,255,0.5)]"
+                          : "bg-[#222630] border border-[#222630] text-[#8E92A0] group-hover:text-zinc-200"
                       }`}
                     >
                       {avatarInitial}
@@ -77,8 +77,8 @@ export function BottomNav() {
                       <Icon
                         className={`w-5 h-5 transition-all duration-200 ${
                           isActive
-                            ? "text-[#00F0FF] scale-110 drop-shadow-[0_0_6px_rgba(0,240,255,0.5)]"
-                            : "text-zinc-400 group-hover:text-zinc-200"
+                            ? "text-[#00B5FF] scale-110 drop-shadow-[0_0_6px_rgba(0,181,255,0.5)]"
+                            : "text-[#8E92A0] group-hover:text-zinc-200"
                         }`}
                         strokeWidth={isActive ? 2.5 : 1.8}
                       />
@@ -88,7 +88,7 @@ export function BottomNav() {
                   {/* Label */}
                   <span
                     className={`text-[10px] font-semibold tracking-tight transition-colors duration-200 ${
-                      isActive ? "text-[#00F0FF]" : "text-zinc-400 group-hover:text-zinc-200"
+                      isActive ? "text-[#00B5FF]" : "text-[#8E92A0] group-hover:text-zinc-200"
                     }`}
                   >
                     {item.label}
@@ -99,7 +99,7 @@ export function BottomNav() {
                 {item.view === "tracking" &&
                   currentBooking &&
                   !["DELIVERED", "CANCELLED"].includes(currentBooking.status) && (
-                    <div className="absolute top-2 right-4 w-2 h-2 rounded-full bg-[#00F0FF] animate-ping z-20" />
+                    <div className="absolute top-2 right-4 w-2 h-2 rounded-full bg-[#00B5FF] animate-ping z-20" />
                   )}
               </button>
             );
