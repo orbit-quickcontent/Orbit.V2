@@ -6,7 +6,7 @@ public class SupabaseAuthManager: ObservableObject {
     
     public let client = SupabaseClient(
         supabaseURL: URL(string: "https://stlwhzryieptzhfvbqbd.supabase.co")!,
-        supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0bHdoenJ5aWVwdHpoZnZicWJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1MTc0ODEsImV4cCI6MjA2NzA5MzQ4MX0.placeholder"
+        supabaseKey: "sb_publishable_KyB9qOWcwTtO0nn9l-nFjw_rpEx92iT"
     )
     
     @Published public var isAuthenticated: Bool = false

@@ -10,7 +10,7 @@ import org.json.JSONObject
 
 class SupabaseAuthManager(
     private val supabaseUrl: String = "https://stlwhzryieptzhfvbqbd.supabase.co",
-    private val anonKey: String = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0bHdoenJ5aWVwdHpoZnZicWJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1MTc0ODEsImV4cCI6MjA2NzA5MzQ4MX0.placeholder"
+    private val anonKey: String = "sb_publishable_KyB9qOWcwTtO0nn9l-nFjw_rpEx92iT"
 ) {
     private val client = OkHttpClient()
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
