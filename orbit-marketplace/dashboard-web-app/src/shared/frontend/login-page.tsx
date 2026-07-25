@@ -228,7 +228,7 @@ export default function LoginPage() {
         avatar: gPhoto || AVATAR_COLORS[0],
         avatarType: gPhoto ? ("photo" as const) : ("avatar" as const),
         avatarPhotoUrl: gPhoto,
-        authProvider: "google",
+        authProvider: "google" as const,
         isVerified: true,
       };
 
@@ -261,7 +261,7 @@ export default function LoginPage() {
         const gEmail = "creator@orbitlogic.io";
         setName(gName);
         setEmail(gEmail);
-        setUser({ name: gName, email: gEmail, authProvider: "google", isVerified: true });
+        setUser({ name: gName, email: gEmail, authProvider: "google" as const, isVerified: true });
         setIsSocialLogin(true);
         const targetRole = selectedRole || "USER";
         await login(targetRole);
@@ -292,7 +292,7 @@ export default function LoginPage() {
       setName(aName);
       setEmail(aEmail);
       
-      setUser({ name: aName, email: aEmail, authProvider: "apple", isVerified: true });
+      setUser({ name: aName, email: aEmail, authProvider: "apple" as const, isVerified: true });
       setIsSocialLogin(true);
       
       toast.dismiss(loadingToast);
@@ -314,7 +314,7 @@ export default function LoginPage() {
         const aEmail = "apple@orbitlogic.io";
         setName(aName);
         setEmail(aEmail);
-        setUser({ name: aName, email: aEmail, authProvider: "apple", isVerified: true });
+        setUser({ name: aName, email: aEmail, authProvider: "apple" as const, isVerified: true });
         setIsSocialLogin(true);
         const targetRole = selectedRole || "USER";
         await login(targetRole);
