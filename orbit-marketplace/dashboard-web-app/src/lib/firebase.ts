@@ -4,13 +4,13 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
-// Config templates for the different Orbit app contexts under the 'orbit-fs' project
+// Config templates for the Orbit app contexts ('orbit-fs' / 'orbit-q')
 const baseConfig = {
-  apiKey: "AIzaSyA4QOCd8Ppfs8MVrmge7XDcrEEYok-jw4E",
-  authDomain: "orbit-fs.firebaseapp.com",
-  projectId: "orbit-fs",
-  storageBucket: "orbit-fs.firebasestorage.app",
-  messagingSenderId: "882668962125",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyA4QOCd8Ppfs8MVrmge7XDcrEEYok-jw4E",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "orbit-fs.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "orbit-fs",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "orbit-fs.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "882668962125",
 };
 
 const adminConfig = {

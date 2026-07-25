@@ -238,6 +238,30 @@ export const useAppStore = create<AppState>((set, get) => ({
     const name = get().user.name;
     const phone = get().user.phone;
 
+    if (email) {
+      try {
+        // Sync user profile to backend API / Firestore
+        const userRes = await fetch("/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            name: name || (role === "USER" ? "Client User" : "Partner User"),
+            phone: phone || "",
+            role,
+          }),
+        });
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          if (userData.user?.id) {
+            get().setUser({ id: userData.user.id } as any);
+          }
+        }
+      } catch (err) {
+        console.error("[Store] Error syncing user on login:", err);
+      }
+    }
+
     if (role === "PARTNER" && email) {
       try {
         // 1. Fetch all partners to check if partner with this email exists
@@ -252,34 +276,21 @@ export const useAppStore = create<AppState>((set, get) => ({
             pid = existingPartner.id;
             console.log(`[Store] Found existing partner in DB: ${pid}`);
           } else {
-            // 2. If not found, check if a User exists or create one
-            let dbUserId = "";
-            const userRes = await fetch("/api/users");
-            if (userRes.ok) {
-              const userData = await userRes.json();
-              const existingUser = userData.users?.find(
-                (u: any) => u.email?.toLowerCase().trim() === email.toLowerCase().trim()
-              );
-              if (existingUser) {
-                dbUserId = existingUser.id;
-              }
-            }
-
+            let dbUserId = get().user.id || "";
             if (!dbUserId) {
-              // Create user
-              const createUserRes = await fetch("/api/users", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, name, phone, role: "PARTNER" }),
-              });
-              if (createUserRes.ok) {
-                const newUserData = await createUserRes.json();
-                dbUserId = newUserData.user?.id;
+              const userRes = await fetch("/api/users");
+              if (userRes.ok) {
+                const userData = await userRes.json();
+                const existingUser = userData.users?.find(
+                  (u: any) => u.email?.toLowerCase().trim() === email.toLowerCase().trim()
+                );
+                if (existingUser) {
+                  dbUserId = existingUser.id;
+                }
               }
             }
 
             if (dbUserId) {
-              // Create partner
               const createPartnerRes = await fetch("/api/partners", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -316,6 +327,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     if (role === "PARTNER") {
       await get().fetchPartnerProfile();
+    } else {
+      await get().fetchClientBookings();
     }
   },
   logout: () => {
