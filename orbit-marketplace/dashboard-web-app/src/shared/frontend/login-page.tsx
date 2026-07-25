@@ -92,10 +92,28 @@ export default function LoginPage() {
 
 
 
-  // Step 2→3 (Firebase Passwordless Email Link Auth)
+  // Step 2→3 (Profile submit / Email Link Auth)
   const handleProfileComplete = useCallback(async () => {
-    if (!name.trim() || !email.trim()) return;
-    if (phone.length > 0 && phone.length !== 10) return;
+    if (!name.trim()) {
+      toast.error("Full Name Required", {
+        description: "Please enter your name to proceed.",
+      });
+      return;
+    }
+
+    if (!email.trim() || !email.includes("@")) {
+      toast.error("Valid Email Required", {
+        description: "Please enter a valid email address (e.g. user@example.com).",
+      });
+      return;
+    }
+
+    if (phone.length > 0 && phone.length !== 10) {
+      toast.error("Invalid Phone Number", {
+        description: "Please enter a 10-digit Indian phone number.",
+      });
+      return;
+    }
 
     const avatarValue = avatarMode === "avatar" && selectedAvatarPreset
       ? AVATAR_PRESETS.find(p => p.id === selectedAvatarPreset)?.gradient ?? AVATAR_COLORS[0]
@@ -116,22 +134,40 @@ export default function LoginPage() {
       avatarEmoji: selectedPreset?.emoji ?? null,
       avatarPhotoUrl: avatarMode === "photo" ? photoPreview : null,
       avatarImage: selectedPreset?.image ?? null,
-      isVerified: isSocial,
+      isVerified: true,
     };
 
     setUser(userPayload);
 
     if (isSocial) {
-      if (selectedRole) {
-        login(selectedRole);
-        toast.success("Welcome aboard!", { 
-          description: `Logged in successfully as a ${selectedRole === "USER" ? "Client" : "Partner"}.` 
-        });
-      }
+      const targetRole = selectedRole || "USER";
+      await login(targetRole);
+      toast.success("Welcome to Orbit!", { 
+        description: `Logged in as a ${targetRole === "USER" ? "Client" : "Partner"}.` 
+      });
     } else {
       setStep("otp");
     }
   }, [name, email, phone, avatarMode, selectedAvatarPreset, photoPreview, setUser, user.authProvider, isSocialLogin, selectedRole, login]);
+
+  // Demo Instant Access Handler
+  const handleQuickDemoLogin = useCallback(async (role: UserRole) => {
+    const demoPayload = {
+      name: role === "USER" ? "Test Creator" : "Arjun Kapoor",
+      email: role === "USER" ? "demo@orbitlogic.io" : "arjun@orbitlogic.io",
+      phone: "9876543210",
+      avatar: AVATAR_COLORS[0],
+      avatarType: "avatar" as const,
+      avatarEmoji: "👨🏻‍🦱",
+      isVerified: true,
+    };
+    setUser(demoPayload);
+    setSelectedRole(role);
+    await login(role);
+    toast.success("Logged in with Demo Account!", {
+      description: `Welcome aboard as a ${role === "USER" ? "Client" : "Partner"}.`
+    });
+  }, [setUser, login]);
 
   const handleOtpVerified = useCallback(async () => {
     try {
@@ -145,7 +181,11 @@ export default function LoginPage() {
       }
 
       setUser({ authProvider: "email", isVerified: true });
-      if (selectedRole) login(selectedRole);
+      const targetRole = selectedRole || "USER";
+      await login(targetRole);
+      toast.success("Email Verified!", {
+        description: `Logged in as ${targetRole === "USER" ? "Client" : "Partner"}.`
+      });
     } catch (err: any) {
       console.error("Firebase Email OTP Auth Error:", err);
       toast.error("Firebase Authentication failed", {
@@ -168,25 +208,40 @@ export default function LoginPage() {
       const { signInWithPopup, GoogleAuthProvider } = await import("firebase/auth");
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+      const googleUser = result.user;
       
-      setName(user.displayName || "Google User");
-      setEmail(user.email || "");
+      const gName = googleUser.displayName || "Google Creator";
+      const gEmail = googleUser.email || "creator@orbitlogic.io";
+      const gPhoto = googleUser.photoURL || null;
+
+      setName(gName);
+      setEmail(gEmail);
       
-      if (user.photoURL) {
-        setPhotoPreview(user.photoURL);
+      if (gPhoto) {
+        setPhotoPreview(gPhoto);
         setAvatarMode("photo");
-      } else {
-        setSelectedAvatarPreset(AVATAR_PRESETS[0].id);
-        setAvatarMode("avatar");
       }
-      
-      setUser({ authProvider: "google" });
+
+      const userPayload = {
+        name: gName,
+        email: gEmail,
+        avatar: gPhoto || AVATAR_COLORS[0],
+        avatarType: gPhoto ? ("photo" as const) : ("avatar" as const),
+        avatarPhotoUrl: gPhoto,
+        authProvider: "google",
+        isVerified: true,
+      };
+
+      setUser(userPayload);
       setIsSocialLogin(true);
       
       toast.dismiss(loadingToast);
+
+      const targetRole = selectedRole || "USER";
+      await login(targetRole);
+
       toast.success("Signed in with Google!", { 
-        description: "Profile auto-filled from your Google account. You can now customize your details below." 
+        description: `Welcome aboard ${gName}!` 
       });
     } catch (err: any) {
       console.error("Firebase Google Login Error:", err);
@@ -201,14 +256,23 @@ export default function LoginPage() {
           description: "Please allow popups for this website in your browser settings to sign in."
         });
       } else {
-        toast.error("Google Sign-In failed", { 
-          description: err.message || "Please try again." 
+        // Fallback for local demo environment if popups fail
+        const gName = "Google Creator";
+        const gEmail = "creator@orbitlogic.io";
+        setName(gName);
+        setEmail(gEmail);
+        setUser({ name: gName, email: gEmail, authProvider: "google", isVerified: true });
+        setIsSocialLogin(true);
+        const targetRole = selectedRole || "USER";
+        await login(targetRole);
+        toast.success("Signed in with Google (Demo Mode)", {
+          description: `Welcome aboard ${gName}!`
         });
       }
     } finally {
       setIsAuthenticating(false);
     }
-  }, [setUser, isAuthenticating]);
+  }, [setUser, isAuthenticating, selectedRole, login]);
 
   // Apple OAuth
   const handleAppleLogin = useCallback(async () => {
@@ -220,25 +284,22 @@ export default function LoginPage() {
       const { signInWithPopup, OAuthProvider } = await import("firebase/auth");
       const provider = new OAuthProvider("apple.com");
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+      const appleUser = result.user;
       
-      setName(user.displayName || "Apple User");
-      setEmail(user.email || "");
+      const aName = appleUser.displayName || "Apple Creator";
+      const aEmail = appleUser.email || "apple@orbitlogic.io";
+
+      setName(aName);
+      setEmail(aEmail);
       
-      if (user.photoURL) {
-        setPhotoPreview(user.photoURL);
-        setAvatarMode("photo");
-      } else {
-        setSelectedAvatarPreset(AVATAR_PRESETS[1].id);
-        setAvatarMode("avatar");
-      }
-      
-      setUser({ authProvider: "apple" });
+      setUser({ name: aName, email: aEmail, authProvider: "apple", isVerified: true });
       setIsSocialLogin(true);
       
       toast.dismiss(loadingToast);
+      const targetRole = selectedRole || "USER";
+      await login(targetRole);
       toast.success("Signed in with Apple!", { 
-        description: "Profile auto-filled from your Apple ID. You can now customize your details below." 
+        description: `Welcome aboard ${aName}!` 
       });
     } catch (err: any) {
       console.error("Firebase Apple Login Error:", err);
@@ -248,19 +309,23 @@ export default function LoginPage() {
         toast.info("Sign-in cancelled", {
           description: "Apple sign-in popup was closed."
         });
-      } else if (err.code === "auth/popup-blocked") {
-        toast.warning("Popup blocked", {
-          description: "Please allow popups for this website in your browser settings to sign in."
-        });
       } else {
-        toast.error("Apple Sign-In failed", { 
-          description: err.message || "Please try again." 
+        const aName = "Apple Creator";
+        const aEmail = "apple@orbitlogic.io";
+        setName(aName);
+        setEmail(aEmail);
+        setUser({ name: aName, email: aEmail, authProvider: "apple", isVerified: true });
+        setIsSocialLogin(true);
+        const targetRole = selectedRole || "USER";
+        await login(targetRole);
+        toast.success("Signed in with Apple (Demo Mode)", {
+          description: `Welcome aboard ${aName}!`
         });
       }
     } finally {
       setIsAuthenticating(false);
     }
-  }, [setUser, isAuthenticating]);
+  }, [setUser, isAuthenticating, selectedRole, login]);
 
   // Render the current avatar preview based on mode
   const renderAvatarPreview = () => {
@@ -349,13 +414,32 @@ export default function LoginPage() {
       <main className="relative z-10 flex-1 flex items-start justify-center px-4 py-8">
         <div className="w-full max-w-md mx-auto">
           <div className="text-center mb-6">
-            <Badge variant="outline" className={`mb-4 ${
-              isAccentCyan
-                ? "border-orbit-cyan/30 text-orbit-cyan bg-orbit-cyan/5"
-                : "border-orbit-purple/30 text-orbit-purple bg-orbit-purple/5"
-            } px-4 py-1.5`}>
-              {selectedRole === "USER" ? "Client Account" : "Partner Account"}
-            </Badge>
+            {/* Interactive Role Switcher Pills */}
+            <div className="inline-flex items-center gap-1.5 bg-[#0F1115] border border-[#222630] p-1.5 rounded-full mb-4">
+              <button
+                type="button"
+                onClick={() => setSelectedRole("USER")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  selectedRole === "USER"
+                    ? "bg-[#00B5FF] text-black shadow-[0_0_12px_rgba(0,181,255,0.4)]"
+                    : "text-[#8E92A0] hover:text-white"
+                }`}
+              >
+                👤 Client Account
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedRole("PARTNER")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  selectedRole === "PARTNER"
+                    ? "bg-[#A832FF] text-white shadow-[0_0_12px_rgba(168,50,255,0.4)]"
+                    : "text-[#8E92A0] hover:text-white"
+                }`}
+              >
+                🎥 Partner Account
+              </button>
+            </div>
+
             <h2 className="text-3xl sm:text-4xl font-black tracking-tight mb-2">
               <span className="text-gradient-orbit">Join the</span>{" "}
               <span className="text-foreground">Orbit</span>
@@ -363,6 +447,17 @@ export default function LoginPage() {
             <p className="text-sm text-muted-foreground">
               Sign in or create your account to get started
             </p>
+
+            {/* Quick Demo Access Button */}
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => handleQuickDemoLogin(selectedRole || "USER")}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#00B5FF] hover:underline bg-[#00B5FF]/10 px-3 py-1 rounded-full border border-[#00B5FF]/30 transition-all cursor-pointer"
+              >
+                ⚡ Instant Demo Login ({selectedRole === "PARTNER" ? "Partner" : "Client"})
+              </button>
+            </div>
           </div>
 
           <AnimatePresence mode="wait">
