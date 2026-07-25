@@ -64,7 +64,7 @@ export default function ClientApp() {
   return (
     <div className="min-h-screen flex flex-col bg-background relative">
       <ClientNavbar />
-      <main className="flex-1 pb-20 px-3 sm:px-6 lg:px-8 overflow-x-hidden">
+      <main className="flex-1 pb-32 sm:pb-36 px-3 sm:px-6 lg:px-8 overflow-x-hidden">
         <div className="max-w-7xl mx-auto">
           <AnimatePresence mode="wait">
             {currentView === "landing" && (

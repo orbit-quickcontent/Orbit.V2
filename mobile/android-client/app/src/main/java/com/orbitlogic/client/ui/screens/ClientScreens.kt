@@ -602,21 +602,20 @@ fun DashboardHomeScreen(
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(86.dp)
+                            .height(98.dp)
                             .border(1.dp, OrbitBorder, RoundedCornerShape(16.dp))
                             .clickable { onNavigateToTracking("bk_active_901") }
                     ) {
-                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.Center) {
                             Box(
                                 modifier = Modifier.size(28.dp).clip(CircleShape).background(OrbitPurple),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text("🌸", fontSize = 12.sp)
                             }
-                            Column {
-                                Text("TRACK ORDER", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                                Text("1 ACTIVE", fontSize = 9.sp, color = MutedText, fontWeight = FontWeight.Bold)
-                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("TRACK ORDER", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                            Text("1 ACTIVE", fontSize = 9.sp, color = MutedText, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -628,21 +627,20 @@ fun DashboardHomeScreen(
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(86.dp)
+                            .height(98.dp)
                             .border(1.dp, OrbitBorder, RoundedCornerShape(16.dp))
                             .clickable { onNavigateToPackages() }
                     ) {
-                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.Center) {
                             Box(
                                 modifier = Modifier.size(28.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text("📄", fontSize = 12.sp)
                             }
-                            Column {
-                                Text("RECENT PROJECTS", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                                Text("12 DELIVERED", fontSize = 9.sp, color = MutedText, fontWeight = FontWeight.Bold)
-                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("RECENT PROJECTS", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                            Text("12 DELIVERED", fontSize = 9.sp, color = MutedText, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -652,21 +650,20 @@ fun DashboardHomeScreen(
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(86.dp)
+                            .height(98.dp)
                             .border(1.dp, OrbitBorder, RoundedCornerShape(16.dp))
                             .clickable { onNavigateToProfile() }
                     ) {
-                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.Center) {
                             Box(
                                 modifier = Modifier.size(28.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text("⭐", fontSize = 12.sp)
                             }
-                            Column {
-                                Text("BRAND IDENTITY", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                                Text("ASSETS & DNA", fontSize = 9.sp, color = MutedText, fontWeight = FontWeight.Bold)
-                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("BRAND IDENTITY", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                            Text("ASSETS & DNA", fontSize = 9.sp, color = MutedText, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -737,6 +734,62 @@ fun DashboardHomeScreen(
                                 onClick = onNavigateToBooking,
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, OrbitBorder),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Book Now", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = SpaceNavyLight),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier
+                            .width(260.dp)
+                            .border(1.dp, OrbitCyan.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                            .padding(16.dp)
+                    ) {
+                        Column {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Professional (UGC)", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                            Text("Brand DNA integration", color = MutedText, fontSize = 11.sp)
+                            Text("₹4,999 /session", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = OrbitCyan, modifier = Modifier.padding(vertical = 8.dp))
+                            Text("✓ 3 cinematic reels", color = MutedText, fontSize = 12.sp)
+                            Text("✓ Logo/Font Brand matching", color = MutedText, fontSize = 12.sp)
+                            Text("+5 more features", color = OrbitCyan, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
+                            Button(
+                                onClick = onNavigateToBooking,
+                                colors = ButtonDefaults.buttonColors(containerColor = OrbitCyan),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Book Now", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = SpaceNavyLight),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier
+                            .width(260.dp)
+                            .border(1.dp, OrbitPurple.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                            .padding(16.dp)
+                    ) {
+                        Column {
+                            Text("Enterprise Campaign", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text("Full ad campaign & raw 4K", color = MutedText, fontSize = 11.sp)
+                            Text("₹9,999 /session", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = OrbitPurple, modifier = Modifier.padding(vertical = 8.dp))
+                            Text("✓ 5 Cinematic Ads & Shorts", color = MutedText, fontSize = 12.sp)
+                            Text("✓ 4K Raw 10-bit Footage Access", color = MutedText, fontSize = 12.sp)
+                            Text("+4 more features", color = OrbitPurple, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
+                            Button(
+                                onClick = onNavigateToBooking,
+                                colors = ButtonDefaults.buttonColors(containerColor = OrbitPurple),
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(10.dp)
                             ) {

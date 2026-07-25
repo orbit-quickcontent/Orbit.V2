@@ -420,6 +420,23 @@ export const useAppStore = create<AppState>((set, get) => ({
       ],
       popular: true,
     },
+    {
+      id: "pkg-enterprise",
+      name: "Enterprise Campaign",
+      tier: "ENTERPRISE",
+      price: 9999,
+      focus: "Full-scale brand ad campaign & raw master files",
+      deliveryTime: "60-120 mins",
+      features: [
+        "All Professional features",
+        "Up to 5 Cinematic Ads & Shorts",
+        "4K Raw 10-bit Footage Access",
+        "Dedicated Senior Editor",
+        "Unlimited revisions for 7 days",
+        "Commercial Licensing Rights",
+      ],
+      popular: false,
+    },
   ],
   fetchPackages: async () => {
     try {

@@ -148,17 +148,19 @@ export function DashboardHome() {
             <button
               key={i}
               onClick={action.onClick}
-              className="group orbit-card rounded-2xl p-4 text-left hover:border-orbit-cyan/20 transition-all duration-300 active:scale-[0.97]"
+              className="group orbit-card rounded-2xl p-3.5 sm:p-4 text-left hover:border-orbit-cyan/20 transition-all duration-300 active:scale-[0.97] flex flex-col justify-between min-h-[108px] overflow-hidden"
             >
-              <div className={`${action.iconBg} mb-3.5 group-hover:scale-105 transition-transform duration-300`}>
+              <div className={`${action.iconBg} mb-2 group-hover:scale-105 transition-transform duration-300`}>
                 {action.icon}
               </div>
-              <h3 className="text-[10px] sm:text-xs font-black text-white tracking-wider mb-0.5 font-space truncate">
-                {action.label}
-              </h3>
-              <p className="text-[9px] text-muted-foreground/60 font-bold uppercase tracking-wide truncate">
-                {action.desc}
-              </p>
+              <div>
+                <h3 className="text-[10px] sm:text-xs font-black text-white tracking-wider font-space truncate leading-tight">
+                  {action.label}
+                </h3>
+                <p className="text-[8.5px] sm:text-[9px] text-muted-foreground/60 font-bold uppercase tracking-wide truncate leading-tight mt-0.5">
+                  {action.desc}
+                </p>
+              </div>
             </button>
           ))}
         </div>
