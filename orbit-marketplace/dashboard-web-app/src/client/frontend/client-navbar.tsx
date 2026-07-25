@@ -313,6 +313,15 @@ export function ClientNavbar() {
                   )}
                 </button>
 
+                {/* LogOut / Login Switch button */}
+                <button
+                  onClick={() => logout()}
+                  title="Sign Out / Active Login Page"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-muted-foreground hover:text-red-400 hover:bg-white/10 transition-all duration-200"
+                >
+                  <LogOut className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground hover:text-red-400" />
+                </button>
+
                 {/* Notification panel */}
                 <AnimatePresence>
                   {notifOpen && (

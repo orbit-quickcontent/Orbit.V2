@@ -43,12 +43,15 @@ export default function OrbitApp() {
     _hydrate();
   }, [_hydrate]);
 
-  // Force logout on role mismatch (e.g. Client app loading Partner session)
+  // Activate login page on URL query param (e.g. ?login=true) or role mismatch
   useEffect(() => {
     if (_hydrated && typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const roleParam = params.get("role");
-      if (roleParam && isAuthenticated && userRole !== roleParam) {
+      const loginParam = params.get("login");
+      const logoutParam = params.get("logout");
+
+      if (loginParam === "true" || logoutParam === "true" || (roleParam && isAuthenticated && userRole !== roleParam)) {
         logout();
       }
     }
