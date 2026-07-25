@@ -1197,65 +1197,83 @@ fun TrackingScreen(bookingId: String) {
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            OrbitHeader(title = "Live Shoot Tracker", subtitle = "Tracking Booking ID: $bookingId")
-
-            GlassCard(borderColor = OrbitCyan) {
-                Text("Current Status: SHOOTING IN PROGRESS", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = OrbitCyan)
-                Text("Partner arrived at location and recording footage.", color = MutedText, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp, bottom = 16.dp))
-
-                LinearProgressIndicator(
-                    progress = { 0.5f },
-                    color = OrbitCyan,
-                    trackColor = OrbitBorder,
-                    modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp))
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("✓ ", color = OrbitCyan, fontWeight = FontWeight.Bold)
-                        Text("Payment Confirmed", color = Color.White, fontSize = 14.sp)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("✓ ", color = OrbitCyan, fontWeight = FontWeight.Bold)
-                        Text("Partner Assigned & Dispatched", color = Color.White, fontSize = 14.sp)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("• ", color = OrbitCyan, fontWeight = FontWeight.Bold)
-                        Text("Shooting Footage (Active)", color = OrbitCyan, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("◦ ", color = MutedText)
-                        Text("Footage Sync to Cloud (Pending)", color = MutedText, fontSize = 14.sp)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("◦ ", color = MutedText)
-                        Text("Editor Delivery (Pending)", color = MutedText, fontSize = 14.sp)
+            // Streamlined Header
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Live Shoot", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    Text("ID: $bookingId", color = MutedText, fontSize = 12.sp)
+                }
+                Surface(
+                    color = OrbitCyan.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.35f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(OrbitCyan))
+                        Text("SHOOTING", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            // Compact Status & Progress Card
+            GlassCard(borderColor = OrbitCyan.copy(alpha = 0.3f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Shooting in Progress", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Step 3 of 5", fontSize = 11.sp, color = OrbitCyan, fontWeight = FontWeight.Bold)
+                }
+                Text("Partner is recording footage on location.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
 
+                LinearProgressIndicator(
+                    progress = { 0.6f },
+                    color = OrbitCyan,
+                    trackColor = OrbitBorder,
+                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp))
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Sleek Minimal Partner Card
             GlassCard {
-                Text("Assigned Partner", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier.size(44.dp).clip(CircleShape).background(Brush.linearGradient(listOf(OrbitPurple, OrbitCyan))),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("AR", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier.size(50.dp).clip(CircleShape).background(OrbitPurple),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("AR", color = Color.White, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text("Alex Rivera", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 15.sp)
+                            Text("4.9 ★ • iPhone 15 Pro Max", color = MutedText, fontSize = 12.sp)
+                        }
                     }
 
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column {
-                        Text("Alex Rivera", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
-                        Text("Rating: 4.9 ★ (84 Shoots Completed)", color = MutedText, fontSize = 12.sp)
-                        Text("Equipment: iPhone 15 Pro Max + Gimbal", color = OrbitCyan, fontSize = 12.sp)
+                    Surface(
+                        color = Color.White.copy(alpha = 0.08f),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.clickable { }
+                    ) {
+                        Text("Contact", color = OrbitCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
                     }
                 }
             }
