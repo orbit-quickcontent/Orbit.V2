@@ -83,29 +83,22 @@ export function DashboardHome() {
       animate="show"
       className="space-y-4 sm:space-y-5"
     >
-      {/* ─── Premium Brand Typography Header ────────────────── */}
-      <motion.div variants={staggerItem} className="py-4 sm:py-6 select-none">
-        <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white font-space leading-none">
-          Shoot
-        </h2>
-        <h2 className="text-4xl sm:text-5xl font-medium tracking-tight text-gradient-orbit editorial-italic leading-none mt-2">
-          In Progress.
-        </h2>
-        <p className="text-[8px] sm:text-[9.5px] text-white/20 font-bold uppercase tracking-[0.25em] mt-4">
-          Orbit v1.0.4 — Premium Access
+      {/* ─── Subtitle Header ────────────────── */}
+      <motion.div variants={staggerItem} className="py-2 select-none">
+        <p className="text-sm sm:text-base text-slate-400 font-normal">
+          Ready to create something cinematic?
         </p>
       </motion.div>
 
-      {/* ─── Quick Actions (2x2 grid — compact) ──────────────── */}
+      {/* ─── Quick Actions (2x2 grid — auto-adjusting for screen ratios) ──────────────── */}
       <motion.div variants={staggerItem}>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {[
             {
-              icon: <span className="font-extrabold text-sm text-black">+</span>,
-              label: "BOOK NEW SHOOT",
-              desc: "INSTANT MATCHING",
-              bg: "bg-orbit-cyan",
-              iconBg: "w-8 h-8 rounded-full flex items-center justify-center bg-orbit-cyan",
+              icon: <CalendarCheck className="w-5 h-5 text-cyan-400" />,
+              label: "Book Now",
+              desc: "Schedule a session",
+              iconBg: "w-10 h-10 rounded-full flex items-center justify-center bg-cyan-950/40 border border-cyan-500/20",
               onClick: () => {
                 if (packages.length > 0 && !selectedPackage) {
                   setSelectedPackage(packages[0]);
@@ -114,27 +107,24 @@ export function DashboardHome() {
               },
             },
             {
-              icon: <span className="font-extrabold text-[9px] text-white tracking-tighter">DNA</span>,
-              label: "TRACK ORDER",
-              desc: `${activeBookings} ACTIVE`,
-              bg: "bg-orbit-purple",
-              iconBg: "w-8 h-8 rounded-full flex items-center justify-center bg-orbit-purple",
+              icon: <Radar className="w-5 h-5 text-purple-400" />,
+              label: "Track Order",
+              desc: activeBookings > 0 ? `${activeBookings} active` : "No active",
+              iconBg: "w-10 h-10 rounded-full flex items-center justify-center bg-purple-950/40 border border-purple-500/20",
               onClick: () => setCurrentView("tracking"),
             },
             {
-              icon: <Film className="w-4 h-4 text-white" />,
-              label: "RECENT PROJECTS",
-              desc: `${completedBookings} DELIVERED`,
-              bg: "bg-white/10",
-              iconBg: "w-8 h-8 rounded-full flex items-center justify-center bg-white/10 border border-white/5",
-              onClick: () => setActiveTab(activeTab === "done" ? null : "done"),
+              icon: <Package className="w-5 h-5 text-emerald-400" />,
+              label: "Packages",
+              desc: "View pricing",
+              iconBg: "w-10 h-10 rounded-full flex items-center justify-center bg-emerald-950/40 border border-emerald-500/20",
+              onClick: () => setCurrentView("packages"),
             },
             {
-              icon: <Star className="w-3.5 h-3.5 text-white fill-white" />,
-              label: "BRAND IDENTITY",
-              desc: "ASSETS & DNA",
-              bg: "bg-white/10",
-              iconBg: "w-8 h-8 rounded-full flex items-center justify-center bg-white/10 border border-white/5",
+              icon: <Zap className="w-5 h-5 text-amber-400" />,
+              label: "Brand DNA",
+              desc: "Customize style",
+              iconBg: "w-10 h-10 rounded-full flex items-center justify-center bg-amber-950/40 border border-amber-500/20",
               onClick: () => {
                 const ugcPkg = packages.find((p) => p.tier === "PROFESSIONAL" || p.id === "pkg-professional");
                 if (ugcPkg) {
@@ -148,16 +138,16 @@ export function DashboardHome() {
             <button
               key={i}
               onClick={action.onClick}
-              className="group orbit-card rounded-2xl p-3.5 sm:p-4 text-left hover:border-orbit-cyan/20 transition-all duration-300 active:scale-[0.97] flex flex-col justify-between min-h-[108px] overflow-hidden"
+              className="group bg-[#0D0D11] rounded-2xl p-4 sm:p-5 text-left border border-white/5 hover:border-cyan-500/30 transition-all duration-300 active:scale-[0.98] flex flex-col justify-between min-h-[116px] sm:min-h-[128px]"
             >
-              <div className={`${action.iconBg} mb-2 group-hover:scale-105 transition-transform duration-300`}>
+              <div className={`${action.iconBg} group-hover:scale-105 transition-transform duration-300`}>
                 {action.icon}
               </div>
-              <div>
-                <h3 className="text-[10px] sm:text-xs font-black text-white tracking-wider font-space truncate leading-tight">
+              <div className="mt-3">
+                <h3 className="text-sm sm:text-base font-bold text-white font-space truncate leading-tight">
                   {action.label}
                 </h3>
-                <p className="text-[8.5px] sm:text-[9px] text-muted-foreground/60 font-bold uppercase tracking-wide truncate leading-tight mt-0.5">
+                <p className="text-xs text-slate-500 font-normal truncate leading-tight mt-1">
                   {action.desc}
                 </p>
               </div>
@@ -166,213 +156,87 @@ export function DashboardHome() {
         </div>
       </motion.div>
 
-      {/* ─── Active Booking Card (compact) ───────────────────── */}
-      {currentBooking && !["DELIVERED", "CANCELLED"].includes(currentBooking.status) && (
-        <motion.div variants={staggerItem}>
-          <button
-            onClick={() => setCurrentView("tracking")}
-            className="w-full text-left group"
-          >
-            <div className="orbit-card rounded-xl p-2.5 sm:p-3 border-orbit-cyan/20 hover:border-orbit-cyan/40 transition-all duration-300 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-orbit-cyan/5 via-transparent to-orbit-purple/5 animate-data-stream" />
-              <div className="relative">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-orbit-cyan animate-pulse" />
-                    <span className="text-[9px] sm:text-[10px] font-bold text-orbit-cyan uppercase tracking-wider">
-                      Active
-                    </span>
-                  </div>
-                  <ChevronRight className="w-3 h-3 text-muted-foreground group-hover:text-orbit-cyan group-hover:translate-x-1 transition-all" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-md bg-gradient-to-br from-orbit-cyan/20 to-orbit-purple/20 flex items-center justify-center shrink-0">
-                    <Video className="w-4 h-4 text-orbit-cyan" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-[11px] sm:text-xs font-bold text-foreground truncate">
-                      {currentBooking.packageName}
-                    </h4>
-                    <p className="text-[9px] text-muted-foreground truncate">
-                      #{currentBooking.id} · {currentBooking.location ? currentBooking.location.split(" @")[0] : ""}
-                    </p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className="border-orbit-cyan/30 text-orbit-cyan text-[8px] shrink-0"
-                  >
-                    {compactStatus(currentBooking.status)}
-                  </Badge>
-                </div>
-                {/* Mini progress bar */}
-                <div className="h-0.5 bg-white/5 rounded-full overflow-hidden mt-1.5">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-orbit-cyan to-orbit-purple rounded-full"
-                    initial={{ width: "0%" }}
-                    animate={{
-                      width:
-                        currentBooking.status === "PAID" ? "15%"
-                          : currentBooking.status === "PARTNER_DISPATCHED" ? "30%"
-                            : currentBooking.status === "EN_ROUTE" ? "45%"
-                              : currentBooking.status === "SHOOTING" ? "60%"
-                                : currentBooking.status === "SYNCING" ? "75%"
-                                  : currentBooking.status === "EDITING" ? "90%"
-                                    : "100%",
-                    }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                  />
-                </div>
-              </div>
-            </div>
-          </button>
-        </motion.div>
-      )}
-
-      {/* ─── Featured Packages Section ──────────────────────── */}
-      <motion.div variants={staggerItem} className="space-y-3">
+      {/* ─── Our Packages Section ──────────────────────── */}
+      <motion.div variants={staggerItem} className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2 tracking-tight">
-            <Zap className="w-4 h-4 text-[#00B5FF] fill-[#00B5FF]" />
-            Featured Packages
+          <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+            Our Packages
           </h3>
           <button
             onClick={() => setCurrentView("packages")}
-            className="text-xs font-bold text-[#00B5FF] hover:underline flex items-center gap-1"
+            className="text-xs font-bold text-cyan-400 hover:underline flex items-center gap-1"
           >
-            View All <ChevronRight className="w-3 h-3" />
+            View All <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Horizontal Package Scroll */}
-        <div className="flex gap-4 overflow-x-auto pb-2 -mx-3 px-3 scrollbar-hide">
-          {packages.map((pkg, i) => {
-            const isPurple = pkg.tier === "PROFESSIONAL" || pkg.price > 3000;
-            return (
-              <motion.div
-                key={pkg.id}
-                initial={{ opacity: 0, x: 25 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 + i * 0.1 }}
-                className="shrink-0 w-[260px] sm:w-[300px]"
-              >
-                <div
-                  onClick={() => {
-                    setSelectedPackage(pkg);
-                    setCurrentView("booking");
-                  }}
-                  className="orbit-card rounded-[22px] p-5 border border-[#222630] hover:border-[#00B5FF]/50 transition-all duration-300 flex flex-col h-full group cursor-pointer relative overflow-hidden"
-                >
-                  {/* Top Row: Title + Calendar Button */}
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h4 className="text-lg font-black text-white tracking-tight">
-                        {pkg.name}
-                      </h4>
-                      <p className="text-xs text-[#8E92A0] font-medium mt-0.5">
-                        60-120 mins delivery
-                      </p>
-                    </div>
-                    <div className="w-10 h-10 rounded-2xl bg-[#16181E] border border-[#222630] flex items-center justify-center text-zinc-300 group-hover:border-[#00B5FF]/40 transition-colors">
-                      <CalendarCheck className="w-4 h-4 text-[#00B5FF]" />
-                    </div>
-                  </div>
+        {/* 2 Package Cards Side-by-Side (Auto-adjusting grid) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <button
+            onClick={() => {
+              if (packages[0]) setSelectedPackage(packages[0]);
+              setCurrentView("booking");
+            }}
+            className="bg-[#0C1014] rounded-2xl p-4 text-left border border-slate-800 hover:border-cyan-500/40 transition-all duration-300 group"
+          >
+            <h4 className="text-base font-bold text-white">Personalized</h4>
+            <p className="text-sm font-extrabold text-cyan-400 mt-1">₹1,999/session</p>
+            <div className="flex items-center gap-2 mt-3 text-xs text-slate-400">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>1 Cinematic Reel</span>
+            </div>
+          </button>
 
-                  {/* Pricing */}
-                  <div className="flex items-baseline gap-1 my-3">
-                    <span
-                      className={`text-2xl sm:text-3xl font-black ${
-                        isPurple ? "text-[#A832FF]" : "text-[#00B5FF]"
-                      }`}
-                    >
-                      {formatCurrency(pkg.price)}
-                    </span>
-                    <span className="text-xs text-[#8E92A0] font-semibold">/session</span>
-                  </div>
-
-                  {/* Bullet Features */}
-                  <div className="space-y-2.5 my-3 flex-1">
-                    {pkg.features.slice(0, 2).map((feature, fi) => (
-                      <div key={fi} className="flex items-center gap-2.5 text-xs text-zinc-200 font-medium">
-                        <div className="w-4 h-4 rounded-full bg-[#00B5FF]/15 border border-[#00B5FF]/30 flex items-center justify-center shrink-0">
-                          <CheckCircle2 className="w-3 h-3 text-[#00B5FF]" />
-                        </div>
-                        <span className="truncate">{feature}</span>
-                      </div>
-                    ))}
-                    {pkg.features.length > 2 && (
-                      <p className="text-xs text-[#8E92A0] font-semibold pt-1">
-                        +{pkg.features.length - 2} more features
-                      </p>
-                    )}
-                  </div>
-
-                  {/* CTA Button */}
-                  <button className="w-full mt-4 py-3 rounded-2xl bg-[#16181E] border border-[#222630] hover:bg-[#1E222A] hover:border-[#00B5FF]/50 text-white font-bold text-xs transition-all">
-                    Book Now
-                  </button>
-                </div>
-              </motion.div>
-            );
-          })}
+          <button
+            onClick={() => {
+              const ugc = packages.find((p) => p.tier === "PROFESSIONAL") || packages[1];
+              if (ugc) setSelectedPackage(ugc);
+              setCurrentView("booking");
+            }}
+            className="bg-[#130E1A] rounded-2xl p-4 text-left border border-purple-900/60 hover:border-purple-500/40 transition-all duration-300 group"
+          >
+            <div className="flex items-center justify-between">
+              <h4 className="text-base font-bold text-white">Professional (UGC)</h4>
+              <Badge className="bg-purple-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded">
+                POPULAR
+              </Badge>
+            </div>
+            <p className="text-sm font-extrabold text-cyan-400 mt-1">₹4,999/session</p>
+            <div className="flex items-center gap-2 mt-3 text-xs text-slate-400">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>3 Cinematic Reels</span>
+            </div>
+          </button>
         </div>
       </motion.div>
 
-      {/* ─── Stats Pill Row ─────────────────────────────────── */}
-      <motion.div variants={staggerItem}>
-        <div className="orbit-card rounded-[24px] p-4 border border-[#222630] grid grid-cols-3 divide-x divide-[#222630] text-center">
-          <div className="px-2">
-            <div className="text-xl sm:text-2xl font-black text-[#00B5FF] tracking-tight">
-              60<span className="text-xs font-bold text-[#00B5FF] ml-0.5">min</span>
-            </div>
-            <div className="text-[9px] font-extrabold text-[#8E92A0] tracking-[0.2em] uppercase mt-1">
-              DELIVERY
-            </div>
+      {/* ─── Delivery Stats Bar ─────────────────────── */}
+      <motion.div variants={staggerItem} className="pt-2">
+        <div className="bg-[#0D0D10] rounded-2xl p-4 border border-white/5 grid grid-cols-3 text-center divide-x divide-white/5">
+          <div>
+            <p className="text-base sm:text-lg font-extrabold text-cyan-400">60 min</p>
+            <p className="text-[10px] sm:text-xs text-slate-500">Delivery Guarantee</p>
           </div>
-
-          <div className="px-2">
-            <div className="text-xl sm:text-2xl font-black text-[#A832FF] tracking-tight">
-              4K
-            </div>
-            <div className="text-[9px] font-extrabold text-[#8E92A0] tracking-[0.2em] uppercase mt-1">
-              QUALITY
-            </div>
+          <div>
+            <p className="text-base sm:text-lg font-extrabold text-cyan-400">4K HDR</p>
+            <p className="text-[10px] sm:text-xs text-slate-500">Native Quality</p>
           </div>
-
-          <div className="px-2">
-            <div className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#00D2FF] to-[#00C853] tracking-tight">
-              500+
-            </div>
-            <div className="text-[9px] font-extrabold text-[#8E92A0] tracking-[0.2em] uppercase mt-1">
-              PROJECTS
-            </div>
+          <div>
+            <p className="text-base sm:text-lg font-extrabold text-cyan-400">500+</p>
+            <p className="text-[10px] sm:text-xs text-slate-500">Reels Delivered</p>
           </div>
         </div>
       </motion.div>
 
-      {/* ─── Cinematic Banner Card ───────────────────────────── */}
-      <motion.div variants={staggerItem}>
-        <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-r from-[#00B5FF] via-[#A832FF] to-[#B53CFF] p-6 text-white shadow-[0_10px_30px_rgba(168,50,255,0.35)]">
-          <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-white/10 blur-xl" />
-          <div className="relative z-10 space-y-3">
-            <h3 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
-              Ready to Create Something Cinematic?
-            </h3>
-            <p className="text-xs sm:text-sm text-white/85 font-medium max-w-sm">
-              Professional speed-graded custom reels delivered back inside 60 minutes.
-            </p>
-            <button
-              onClick={() => {
-                if (packages.length > 0 && !selectedPackage) {
-                  setSelectedPackage(packages[0]);
-                }
-                setCurrentView("booking");
-              }}
-              className="mt-2 inline-flex items-center gap-2 px-5 py-3 rounded-full bg-white text-black font-extrabold text-xs shadow-lg hover:bg-zinc-100 transition-all cursor-pointer"
-            >
-              <Zap className="w-3.5 h-3.5 fill-black text-black" />
-              <span>Book a Session</span>
-            </button>
-          </div>
+      {/* ─── Hero Gradient CTA Card ─────────────────── */}
+      <motion.div variants={staggerItem} className="pt-2">
+        <div className="bg-gradient-to-r from-sky-600 via-sky-700 to-purple-900 rounded-2xl p-5 sm:p-6 text-left shadow-lg">
+          <h3 className="text-xl sm:text-2xl font-extrabold text-white leading-tight">
+            Ready to Create
+          </h3>
+          <h3 className="text-xl sm:text-2xl font-extrabold text-white leading-tight">
+            Something Cinematic?
+          </h3>
         </div>
       </motion.div>
 

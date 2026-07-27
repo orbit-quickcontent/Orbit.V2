@@ -175,43 +175,22 @@ fun RowScope.BottomNavItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            if (tabKey == "profile") {
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isSelected)
-                                Brush.horizontalGradient(listOf(Color(0xFF00F0FF), Color(0xFFA056FF)))
-                            else
-                                Brush.horizontalGradient(listOf(Color(0xFF27272A), Color(0xFF27272A)))
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "TU",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Black,
-                        color = if (isSelected) Color.Black else Color.White
-                    )
-                }
-            } else {
-                Text(
-                    text = when (tabKey) {
-                        "home" -> "🏠"
-                        "packages" -> "📦"
-                        "tracking" -> "🎯"
-                        else -> "👤"
-                    },
-                    fontSize = 14.sp
-                )
-            }
+            Text(
+                text = when (tabKey) {
+                    "home" -> "🏠"
+                    "packages" -> "🎁"
+                    "tracking" -> "🎯"
+                    else -> "👤"
+                },
+                fontSize = 16.sp,
+                color = if (isSelected) Color(0xFF00F0FF) else Color(0xFF71717A)
+            )
 
             Text(
                 text = label,
                 fontSize = 10.sp,
-                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
-                color = if (isSelected) Color(0xFF00F0FF) else MutedText,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected) Color(0xFF00F0FF) else Color(0xFF71717A),
                 modifier = Modifier.padding(top = 2.dp)
             )
         }
