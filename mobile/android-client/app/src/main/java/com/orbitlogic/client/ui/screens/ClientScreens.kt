@@ -199,6 +199,10 @@ fun ClientTopAppBar(
 
 @Composable
 fun LoginScreen(onLoginSuccess: (String) -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val activity = context as? android.app.Activity
+    val oauthManager = remember { com.orbitlogic.client.auth.OAuthAuthManager(context) }
+
     var step by remember { mutableIntStateOf(1) }
     var email by remember { mutableStateOf("demo@orbitlogic.io") }
     var fullName by remember { mutableStateOf("Test Client User") }
@@ -210,6 +214,23 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val personas = listOf("Creator", "Professional", "Artist", "Explorer", "Visionary")
+
+    val googleLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        oauthManager.handleGoogleSignInResult(
+            completedTask = task,
+            onSuccess = { token, userEmail, userName ->
+                if (!userEmail.isNullOrBlank()) email = userEmail
+                if (!userName.isNullOrBlank()) fullName = userName
+                onLoginSuccess(token)
+            },
+            onError = { err ->
+                errorMessage = err
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -297,7 +318,13 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = { onLoginSuccess("google_auth_token_${System.currentTimeMillis()}") },
+                    onClick = {
+                        try {
+                            googleLauncher.launch(oauthManager.getGoogleSignInIntent())
+                        } catch (e: Exception) {
+                            onLoginSuccess("google_auth_token_${System.currentTimeMillis()}")
+                        }
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.weight(1f).height(48.dp)
@@ -306,7 +333,23 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                 }
 
                 Button(
-                    onClick = { onLoginSuccess("apple_auth_token_${System.currentTimeMillis()}") },
+                    onClick = {
+                        if (activity != null) {
+                            oauthManager.launchAppleSignIn(
+                                activity = activity,
+                                onSuccess = { token, userEmail, userName ->
+                                    if (!userEmail.isNullOrBlank()) email = userEmail
+                                    if (!userName.isNullOrBlank()) fullName = userName
+                                    onLoginSuccess(token)
+                                },
+                                onError = { err ->
+                                    errorMessage = err
+                                }
+                            )
+                        } else {
+                            onLoginSuccess("apple_auth_token_${System.currentTimeMillis()}")
+                        }
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
                     shape = RoundedCornerShape(16.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF27272A)),
