@@ -140,6 +140,101 @@ fun ClientBottomNavigationBar(
 }
 
 @Composable
+fun HomeVectorIcon(color: Color, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier = modifier.size(20.dp)) {
+        val w = size.width
+        val h = size.height
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.5f, h * 0.12f)
+            lineTo(w * 0.88f, h * 0.44f)
+            lineTo(w * 0.78f, h * 0.44f)
+            lineTo(w * 0.78f, h * 0.88f)
+            lineTo(w * 0.22f, h * 0.88f)
+            lineTo(w * 0.22f, h * 0.44f)
+            lineTo(w * 0.12f, h * 0.44f)
+            close()
+        }
+        drawPath(
+            path = path,
+            color = color,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                width = 2.dp.toPx(),
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
+                strokeJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+            )
+        )
+        // Door arch
+        val doorPath = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.40f, h * 0.88f)
+            lineTo(w * 0.40f, h * 0.62f)
+            lineTo(w * 0.60f, h * 0.62f)
+            lineTo(w * 0.60f, h * 0.88f)
+        }
+        drawPath(
+            path = doorPath,
+            color = color,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                width = 1.8.dp.toPx(),
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+            )
+        )
+    }
+}
+
+@Composable
+fun PackageVectorIcon(color: Color, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier = modifier.size(20.dp)) {
+        val w = size.width
+        val h = size.height
+        val boxPath = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.5f, h * 0.12f)
+            lineTo(w * 0.88f, h * 0.32f)
+            lineTo(w * 0.88f, h * 0.72f)
+            lineTo(w * 0.5f, h * 0.90f)
+            lineTo(w * 0.12f, h * 0.72f)
+            lineTo(w * 0.12f, h * 0.32f)
+            close()
+        }
+        drawPath(
+            path = boxPath,
+            color = color,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                width = 1.8.dp.toPx(),
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
+                strokeJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+            )
+        )
+        drawLine(color = color, start = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.52f), end = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.90f), strokeWidth = 1.8.dp.toPx())
+        drawLine(color = color, start = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.52f), end = androidx.compose.ui.geometry.Offset(w * 0.88f, h * 0.32f), strokeWidth = 1.8.dp.toPx())
+        drawLine(color = color, start = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.52f), end = androidx.compose.ui.geometry.Offset(w * 0.12f, h * 0.32f), strokeWidth = 1.8.dp.toPx())
+    }
+}
+
+@Composable
+fun TrackVectorIcon(color: Color, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier = modifier.size(20.dp)) {
+        val center = androidx.compose.ui.geometry.Offset(size.width * 0.5f, size.height * 0.5f)
+        drawCircle(
+            color = color,
+            radius = size.width * 0.42f,
+            center = center,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.8.dp.toPx())
+        )
+        drawCircle(
+            color = color,
+            radius = size.width * 0.24f,
+            center = center,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.8.dp.toPx())
+        )
+        drawCircle(
+            color = color,
+            radius = size.width * 0.08f,
+            center = center
+        )
+    }
+}
+
+@Composable
 fun RowScope.BottomNavItem(
     label: String,
     tabKey: String,
@@ -154,6 +249,8 @@ fun RowScope.BottomNavItem(
         ),
         label = "tabScale"
     )
+
+    val iconColor = if (isSelected) Color(0xFF00F0FF) else Color(0xFF8E92A0)
 
     Box(
         modifier = Modifier
@@ -190,45 +287,39 @@ fun RowScope.BottomNavItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            if (tabKey == "profile") {
-                // Profile Avatar Badge matching exact image layout
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isSelected) Brush.horizontalGradient(listOf(Color(0xFF00F0FF), Color(0xFFA056FF)))
-                            else Brush.linearGradient(listOf(Color(0xFF222630), Color(0xFF16181E)))
+            when (tabKey) {
+                "home" -> HomeVectorIcon(color = iconColor)
+                "packages" -> PackageVectorIcon(color = iconColor)
+                "tracking" -> TrackVectorIcon(color = iconColor)
+                "profile" -> {
+                    // Profile Avatar Badge matching exact image layout
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isSelected) Brush.horizontalGradient(listOf(Color(0xFF00F0FF), Color(0xFFA056FF)))
+                                else Brush.linearGradient(listOf(Color(0xFF222630), Color(0xFF16181E)))
+                            )
+                            .border(1.dp, if (isSelected) Color.White else Color.White.copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "TU",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Black,
+                            color = if (isSelected) Color.Black else Color(0xFF8E92A0)
                         )
-                        .border(1.dp, if (isSelected) Color.White else Color.White.copy(alpha = 0.15f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "TU",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Black,
-                        color = if (isSelected) Color.Black else Color(0xFF8E92A0)
-                    )
+                    }
                 }
-            } else {
-                Text(
-                    text = when (tabKey) {
-                        "home" -> "🏠"
-                        "packages" -> "📦"
-                        "tracking" -> "🎯"
-                        else -> "👤"
-                    },
-                    fontSize = 16.sp,
-                    color = if (isSelected) Color(0xFF00F0FF) else Color(0xFF71717A)
-                )
             }
 
             Text(
                 text = label,
                 fontSize = 10.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) Color(0xFF00F0FF) else Color(0xFF71717A),
-                modifier = Modifier.padding(top = 2.dp)
+                color = if (isSelected) Color(0xFF00F0FF) else Color(0xFF8E92A0),
+                modifier = Modifier.padding(top = 3.dp)
             )
         }
     }
