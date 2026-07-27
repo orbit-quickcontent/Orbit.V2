@@ -117,15 +117,16 @@ fun ClientBottomNavigationBar(
         contentAlignment = Alignment.Center
     ) {
         Surface(
-            color = Color(0xFF0A0A0E).copy(alpha = 0.92f),
-            shape = RoundedCornerShape(28.dp),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+            color = Color(0xFF0A0C10).copy(alpha = 0.90f),
+            shape = RoundedCornerShape(32.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+            shadowElevation = 16.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp)
+                .height(64.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -145,15 +146,25 @@ fun RowScope.BottomNavItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isSelected) 1.04f else 1.0f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+        ),
+        label = "tabScale"
+    )
+
     Box(
         modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
+            .androidx.compose.ui.draw.scale(scale)
             .clip(RoundedCornerShape(20.dp))
-            .background(if (isSelected) Color(0xFF171622) else Color.Transparent)
+            .background(if (isSelected) Color(0xFF161824).copy(alpha = 0.95f) else Color.Transparent)
             .border(
                 width = 1.dp,
-                color = if (isSelected) Color.White.copy(alpha = 0.1f) else Color.Transparent,
+                color = if (isSelected) Color.White.copy(alpha = 0.18f) else Color.Transparent,
                 shape = RoundedCornerShape(20.dp)
             )
             .clickable { onClick() },
@@ -164,7 +175,7 @@ fun RowScope.BottomNavItem(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .width(32.dp)
+                    .width(34.dp)
                     .height(3.dp)
                     .clip(RoundedCornerShape(2.dp))
                     .background(
@@ -179,16 +190,38 @@ fun RowScope.BottomNavItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = when (tabKey) {
-                    "home" -> "🏠"
-                    "packages" -> "🎁"
-                    "tracking" -> "🎯"
-                    else -> "👤"
-                },
-                fontSize = 16.sp,
-                color = if (isSelected) Color(0xFF00F0FF) else Color(0xFF71717A)
-            )
+            if (tabKey == "profile") {
+                // Profile Avatar Badge matching exact image layout
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isSelected) Brush.horizontalGradient(listOf(Color(0xFF00F0FF), Color(0xFFA056FF)))
+                            else Brush.linearGradient(listOf(Color(0xFF222630), Color(0xFF16181E)))
+                        )
+                        .border(1.dp, if (isSelected) Color.White else Color.White.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "TU",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        color = if (isSelected) Color.Black else Color(0xFF8E92A0)
+                    )
+                }
+            } else {
+                Text(
+                    text = when (tabKey) {
+                        "home" -> "🏠"
+                        "packages" -> "📦"
+                        "tracking" -> "🎯"
+                        else -> "👤"
+                    },
+                    fontSize = 16.sp,
+                    color = if (isSelected) Color(0xFF00F0FF) else Color(0xFF71717A)
+                )
+            }
 
             Text(
                 text = label,
