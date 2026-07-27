@@ -43,13 +43,16 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainClientNavigationHost() {
-    var isAuthenticated by remember { mutableStateOf(true) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefsManager = remember { com.orbitlogic.client.storage.PrefsManager(context) }
+    var isAuthenticated by remember { mutableStateOf(prefsManager.isLoggedIn()) }
     var currentTab by remember { mutableStateOf("home") } // home, packages, booking, tracking, profile
     var selectedPackageId by remember { mutableStateOf("pkg-professional") }
     var activeBookingId by remember { mutableStateOf("bk_active_901") }
 
     if (!isAuthenticated) {
-        LoginScreen(onLoginSuccess = {
+        LoginScreen(onLoginSuccess = { token ->
+            prefsManager.saveAuthSession(token, "CLIENT")
             isAuthenticated = true
             currentTab = "home"
         })
@@ -92,6 +95,7 @@ fun MainClientNavigationHost() {
                     "tracking" -> TrackingScreen(bookingId = activeBookingId)
                     "profile" -> ProfileScreen(
                         onLogout = {
+                            prefsManager.clearSession()
                             isAuthenticated = false
                         }
                     )

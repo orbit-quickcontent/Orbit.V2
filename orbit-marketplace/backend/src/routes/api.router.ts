@@ -5,6 +5,7 @@ import express from 'express';
 // 1. Shared / Auth Handlers
 import * as sendOtpHandler from '../shared/backend/send-otp-handler';
 import * as verifyOtpHandler from '../shared/backend/verify-otp-handler';
+import * as authHandlers from '../shared/backend/auth-handlers';
 
 // 2. Client / User Handlers
 import * as bookingListHandlers from '../client/backend/booking-list-handlers';
@@ -48,6 +49,15 @@ router.get('/', jsonParser, nextToExpress(rootRoute.GET));
 // Auth routes
 router.post('/auth/send-otp', jsonParser, nextToExpress(sendOtpHandler.POST));
 router.post('/auth/verify-otp', jsonParser, nextToExpress(verifyOtpHandler.POST));
+router.post('/auth/login', jsonParser, nextToExpress(authHandlers.loginHandler));
+router.post('/auth/logout', jsonParser, nextToExpress(authHandlers.logoutHandler));
+router.post('/auth/register', jsonParser, nextToExpress(authHandlers.registerHandler));
+router.post('/auth/forgot-password', jsonParser, nextToExpress(authHandlers.forgotPasswordHandler));
+router.post('/auth/reset-password', jsonParser, nextToExpress(authHandlers.resetPasswordHandler));
+router.post('/auth/google', jsonParser, nextToExpress(authHandlers.googleAuthHandler));
+router.post('/auth/apple', jsonParser, nextToExpress(authHandlers.appleAuthHandler));
+router.post('/auth/refresh', jsonParser, nextToExpress(authHandlers.refreshTokenHandler));
+router.get('/auth/me', jsonParser, nextToExpress(authHandlers.meHandler));
 
 // User routes
 router.get('/users', jsonParser, nextToExpress(userHandlers.GET));

@@ -11,15 +11,27 @@ model User {
   id           String    @id @default(cuid())
   email        String    @unique
   name         String?
+  displayName  String?
   phone        String?
   location     String?
-  role         String    @default("USER") // USER, PARTNER, ADMIN
+  role         String    @default("CLIENT") // CLIENT, PARTNER, EDITOR, ADMIN, SUPER_ADMIN
   brandLogo    String?    // URL to brand logo
   brandFont    String?    // Brand font name
   brandColor   String?    // Brand hex color
   editorRequirements String?    // Editor requirements from client
   avatar       String?    // URL to avatar
+  photoURL     String?
   passwordHash String?    // Secure password hash for email/password auth
+  status       String    @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  walletBalance Float    @default(0.0)
+  rating       Float     @default(0.0)
+  kycStatus    String    @default("UNVERIFIED") // UNVERIFIED, PENDING, VERIFIED, FAILED
+  deviceType   String?
+  deviceId     String?
+  appVersion   String?
+  fcmToken     String?
+  lastLogin    DateTime?
+  lastSeen     DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime? // Soft delete support

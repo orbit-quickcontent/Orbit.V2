@@ -20,7 +20,7 @@ export type BookingStatus =
 
 export type PaymentStatus = "UNPAID" | "PROCESSING" | "SUCCESS" | "FAILED" | "REFUNDED";
 
-export type UserRole = "USER" | "PARTNER";
+export type UserRole = "CLIENT" | "USER" | "PARTNER" | "EDITOR" | "ADMIN" | "SUPER_ADMIN";
 
 export type AppPhase = "splash" | "auth" | "app";
 

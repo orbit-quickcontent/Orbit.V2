@@ -74,6 +74,37 @@ data class UpdateUserRequest(
     val editorRequirements: String?
 )
 
+data class LoginRequest(val email: String, val password: String? = null, val role: String? = null)
+data class LoginResponse(
+    val success: Boolean,
+    val token: String?,
+    val accessToken: String?,
+    val refreshToken: String?,
+    val redirectUrl: String?,
+    val user: UserDto?
+)
+
+data class RegisterRequest(
+    val email: String,
+    val password: String? = null,
+    val name: String? = null,
+    val phone: String? = null,
+    val role: String? = "CLIENT",
+    val deviceType: String? = "ANDROID",
+    val deviceId: String? = null,
+    val appVersion: String? = null,
+    val fcmToken: String? = null
+)
+
+data class ForgotPasswordRequest(val email: String)
+data class ForgotPasswordResponse(val success: Boolean, val message: String)
+
+data class ResetPasswordRequest(val email: String, val otp: String, val newPassword: String)
+data class ResetPasswordResponse(val success: Boolean, val message: String)
+
+data class RefreshTokenRequest(val refreshToken: String)
+data class RefreshTokenResponse(val success: Boolean, val token: String, val accessToken: String, val refreshToken: String)
+
 // ─── API Interface ───────────────────────────────────────────────────────────
 
 interface ApiService {
@@ -82,6 +113,27 @@ interface ApiService {
 
     @POST("auth/verify-otp")
     suspend fun verifyOtp(@Body request: VerifyOtpRequest): VerifyOtpResponse
+
+    @POST("auth/login")
+    suspend fun login(@Body request: LoginRequest): LoginResponse
+
+    @POST("auth/logout")
+    suspend fun logout(@Header("Authorization") token: String): SendOtpResponse
+
+    @POST("auth/register")
+    suspend fun register(@Body request: RegisterRequest): LoginResponse
+
+    @POST("auth/forgot-password")
+    suspend fun forgotPassword(@Body request: ForgotPasswordRequest): ForgotPasswordResponse
+
+    @POST("auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest): ResetPasswordResponse
+
+    @POST("auth/refresh")
+    suspend fun refreshToken(@Body request: RefreshTokenRequest): RefreshTokenResponse
+
+    @GET("auth/me")
+    suspend fun getMe(@Header("Authorization") token: String): LoginResponse
 
     @GET("users")
     suspend fun getCurrentUser(@Header("Authorization") token: String): UserDto

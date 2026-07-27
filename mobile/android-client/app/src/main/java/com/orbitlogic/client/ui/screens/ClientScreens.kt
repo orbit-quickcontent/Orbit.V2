@@ -199,9 +199,11 @@ fun ClientTopAppBar(
 
 @Composable
 fun LoginScreen(onLoginSuccess: (String) -> Unit) {
+    var step by remember { mutableIntStateOf(1) }
     var email by remember { mutableStateOf("") }
     var fullName by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var otpCode by remember { mutableStateOf("") }
     var selectedPersona by remember { mutableStateOf("Creator") }
     var avatarMode by remember { mutableStateOf("Avatar") } // Avatar or Photo
     var isLoading by remember { mutableStateOf(false) }
@@ -244,260 +246,337 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Hero Headline
-        Row {
-            Text(
-                text = "Join the ",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = OrbitCyan
-            )
-            Text(
-                text = "Orbit",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color.White
-            )
-        }
-        Text(
-            text = "Sign in or create your account to get started",
-            fontSize = 13.sp,
-            color = MutedText,
-            modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
-        )
-
-        // Social Sign-In Buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Button(
-                onClick = { onLoginSuccess("google_auth_token") },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.weight(1f).height(48.dp)
-            ) {
-                Text("G  Google", color = Color.Black, fontWeight = FontWeight.Bold)
+        if (step == 1) {
+            // Hero Headline
+            Row {
+                Text(
+                    text = "Join the ",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = OrbitCyan
+                )
+                Text(
+                    text = "Orbit",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White
+                )
             }
+            Text(
+                text = "Sign in or create your account to get started",
+                fontSize = 13.sp,
+                color = MutedText,
+                modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
+            )
 
-            Button(
-                onClick = { onLoginSuccess("apple_auth_token") },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
-                shape = RoundedCornerShape(16.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF27272A)),
-                modifier = Modifier.weight(1f).height(48.dp)
+            // Social Sign-In Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("  Apple", color = Color.White, fontWeight = FontWeight.Bold)
-            }
-        }
-
-        // Divider
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Divider(modifier = Modifier.weight(1f), color = Color(0xFF27272A))
-            Text("OR EMAIL", color = Color(0xFF71717A), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-            Divider(modifier = Modifier.weight(1f), color = Color(0xFF27272A))
-        }
-
-        // Profile Picture Persona Selector Container
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF09090B)),
-            shape = RoundedCornerShape(24.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF18181B)),
-            modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("CHOOSE YOUR PROFILE PICTURE", color = Color(0xFF93C5FD).copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Avatar Main Preview
-                Box(
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF27272A))
-                        .border(4.dp, Color(0xFF3F3F46), CircleShape),
-                    contentAlignment = Alignment.Center
+                Button(
+                    onClick = { onLoginSuccess("google_auth_token") },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.weight(1f).height(48.dp)
                 ) {
-                    Text(
-                        text = if (selectedPersona == "Creator") "👨🏻‍🦱" else if (selectedPersona == "Professional") "👨🏽‍💼" else if (selectedPersona == "Artist") "👩🏽‍🎨" else "🧑🏻‍🚀",
-                        fontSize = 44.sp
-                    )
+                    Text("G  Google", color = Color.Black, fontWeight = FontWeight.Bold)
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Avatar / Photo Toggle
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xFF18181B))
-                        .padding(4.dp)
+                Button(
+                    onClick = { onLoginSuccess("apple_auth_token") },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                    shape = RoundedCornerShape(16.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF27272A)),
+                    modifier = Modifier.weight(1f).height(48.dp)
                 ) {
-                    Surface(
-                        color = if (avatarMode == "Avatar") Color(0xFF3F3F46) else Color.Transparent,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.clickable { avatarMode = "Avatar" }
-                    ) {
-                        Text("👤 Avatar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-                    }
-                    Surface(
-                        color = if (avatarMode == "Photo") Color(0xFF3F3F46) else Color.Transparent,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.clickable { avatarMode = "Photo" }
-                    ) {
-                        Text("🖼 Photo", color = Color(0xFF71717A), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-                    }
+                    Text("  Apple", color = Color.White, fontWeight = FontWeight.Bold)
                 }
+            }
 
-                Spacer(modifier = Modifier.height(20.dp))
+            // Divider
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Divider(modifier = Modifier.weight(1f), color = Color(0xFF27272A))
+                Text("OR EMAIL", color = Color(0xFF71717A), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Divider(modifier = Modifier.weight(1f), color = Color(0xFF27272A))
+            }
 
-                // Persona Grid
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth()
+            // Profile Picture Persona Selector Container
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF09090B)),
+                shape = RoundedCornerShape(24.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF18181B)),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    items(personas) { persona ->
-                        val isSelected = persona == selectedPersona
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(if (isSelected) Color(0xFF27272A) else Color(0xFF18181B).copy(alpha = 0.5f))
-                                .border(1.dp, if (isSelected) Color(0xFFEF4444) else Color.Transparent, RoundedCornerShape(16.dp))
-                                .clickable { selectedPersona = persona }
-                                .padding(10.dp)
+                    Text("CHOOSE YOUR PROFILE PICTURE", color = Color(0xFF93C5FD).copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Avatar Main Preview
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF27272A))
+                            .border(4.dp, Color(0xFF3F3F46), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (selectedPersona == "Creator") "👨🏻‍🦱" else if (selectedPersona == "Professional") "👨🏽‍💼" else if (selectedPersona == "Artist") "👩🏽‍🎨" else "🧑🏻‍🚀",
+                            fontSize = 44.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Avatar / Photo Toggle
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color(0xFF18181B))
+                            .padding(4.dp)
+                    ) {
+                        Surface(
+                            color = if (avatarMode == "Avatar") Color(0xFF3F3F46) else Color.Transparent,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.clickable { avatarMode = "Avatar" }
                         ) {
-                            Box(
+                            Text("👤 Avatar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                        }
+                        Surface(
+                            color = if (avatarMode == "Photo") Color(0xFF3F3F46) else Color.Transparent,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.clickable { avatarMode = "Photo" }
+                        ) {
+                            Text("🖼 Photo", color = Color(0xFF71717A), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Persona Grid
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(personas) { persona ->
+                            val isSelected = persona == selectedPersona
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF27272A)),
-                                contentAlignment = Alignment.Center
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(if (isSelected) Color(0xFF27272A) else Color(0xFF18181B).copy(alpha = 0.5f))
+                                    .border(1.dp, if (isSelected) Color(0xFFEF4444) else Color.Transparent, RoundedCornerShape(16.dp))
+                                    .clickable { selectedPersona = persona }
+                                    .padding(10.dp)
                             ) {
-                                Text(
-                                    text = when(persona) {
-                                        "Creator" -> "👨🏻‍🦱"
-                                        "Professional" -> "👨🏽‍💼"
-                                        "Artist" -> "👩🏽‍🎨"
-                                        "Explorer" -> "🧑🏻‍🚀"
-                                        else -> "👩🏻‍💼"
-                                    },
-                                    fontSize = 20.sp
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF27272A)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = when(persona) {
+                                            "Creator" -> "👨🏻‍🦱"
+                                            "Professional" -> "👨🏽‍💼"
+                                            "Artist" -> "👩🏽‍🎨"
+                                            "Explorer" -> "🧑🏻‍🚀"
+                                            else -> "👩🏻‍💼"
+                                        },
+                                        fontSize = 20.sp
+                                    )
+                                }
+                                Text(persona, color = if (isSelected) Color.White else Color(0xFF71717A), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
                             }
-                            Text(persona, color = if (isSelected) Color.White else Color(0xFF71717A), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
                         }
                     }
                 }
             }
-        }
 
-        // Onboarding Input Form
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF09090B)),
-            shape = RoundedCornerShape(24.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF18181B)),
-            modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
-        ) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Column {
-                    Text("FULL NAME *", color = Color(0xFF93C5FD).copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    OutlinedTextField(
-                        value = fullName,
-                        onValueChange = { fullName = it },
-                        placeholder = { Text("Enter your name", color = Color(0xFF52525B)) },
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = OrbitCyan,
-                            unfocusedBorderColor = Color(0xFF27272A),
-                            focusedContainerColor = Color(0xFF111111),
-                            unfocusedContainerColor = Color(0xFF111111)
-                        )
-                    )
-                }
-
-                Column {
-                    Text("EMAIL ADDRESS *", color = Color(0xFF93C5FD).copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        placeholder = { Text("you@example.com", color = Color(0xFF52525B)) },
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = OrbitCyan,
-                            unfocusedBorderColor = Color(0xFF27272A),
-                            focusedContainerColor = Color(0xFF111111),
-                            unfocusedContainerColor = Color(0xFF111111)
-                        )
-                    )
-                }
-
-                Column {
-                    Text("PHONE", color = Color(0xFF93C5FD).copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF111111))
-                            .border(1.dp, Color(0xFF27272A), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("+91", color = Color(0xFF71717A), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        Divider(modifier = Modifier.height(20.dp).width(1.dp).padding(horizontal = 10.dp), color = Color(0xFF27272A))
-                        BasicTextField(
-                            value = phone,
-                            onValueChange = { newValue -> if (newValue.length <= 10) phone = newValue },
-                            modifier = Modifier.weight(1f),
-                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("India mobile numbers only", color = Color(0xFF52525B), fontSize = 10.sp)
-                        Text("${phone.length}/10", color = Color(0xFF52525B), fontSize = 10.sp)
-                    }
-                }
-            }
-        }
-
-        // Action Button
-        Button(
-            onClick = {
-                if (email.isBlank() && phone.isBlank()) {
-                    errorMessage = "Please enter valid email or phone."
-                    return@Button
-                }
-                onLoginSuccess("session_token_client_${System.currentTimeMillis()}")
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF09090B)),
-            shape = RoundedCornerShape(16.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF27272A)),
-            modifier = Modifier.fillMaxWidth().height(54.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Onboarding Input Form
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF09090B)),
+                shape = RoundedCornerShape(24.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF18181B)),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
             ) {
-                Text("✉  Continue to Verify Email  →", color = Color(0xFFA1A1AA), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column {
+                        Text("FULL NAME *", color = Color(0xFF93C5FD).copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        OutlinedTextField(
+                            value = fullName,
+                            onValueChange = { fullName = it },
+                            placeholder = { Text("Enter your name", color = Color(0xFF52525B)) },
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = OrbitCyan,
+                                unfocusedBorderColor = Color(0xFF27272A),
+                                focusedContainerColor = Color(0xFF111111),
+                                unfocusedContainerColor = Color(0xFF111111)
+                            )
+                        )
+                    }
+
+                    Column {
+                        Text("EMAIL ADDRESS *", color = Color(0xFF93C5FD).copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it },
+                            placeholder = { Text("you@example.com", color = Color(0xFF52525B)) },
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = OrbitCyan,
+                                unfocusedBorderColor = Color(0xFF27272A),
+                                focusedContainerColor = Color(0xFF111111),
+                                unfocusedContainerColor = Color(0xFF111111)
+                            )
+                        )
+                    }
+
+                    Column {
+                        Text("PHONE", color = Color(0xFF93C5FD).copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF111111))
+                                .border(1.dp, Color(0xFF27272A), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("+91", color = Color(0xFF71717A), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Divider(modifier = Modifier.height(20.dp).width(1.dp).padding(horizontal = 10.dp), color = Color(0xFF27272A))
+                            BasicTextField(
+                                value = phone,
+                                onValueChange = { newValue -> if (newValue.length <= 10) phone = newValue },
+                                modifier = Modifier.weight(1f),
+                                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("India mobile numbers only", color = Color(0xFF52525B), fontSize = 10.sp)
+                            Text("${phone.length}/10", color = Color(0xFF52525B), fontSize = 10.sp)
+                        }
+                    }
+                }
+            }
+
+            errorMessage?.let { msg ->
+                Text(msg, color = Color(0xFFEF4444), fontSize = 12.sp, modifier = Modifier.padding(bottom = 12.dp))
+            }
+
+            // Action Button
+            Button(
+                onClick = {
+                    if (email.isBlank() && phone.isBlank()) {
+                        errorMessage = "Please enter a valid email or phone number."
+                        return@Button
+                    }
+                    errorMessage = null
+                    step = 2
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF09090B)),
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF27272A)),
+                modifier = Modifier.fillMaxWidth().height(54.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("✉  Continue to Verify Email  →", color = Color(0xFFA1A1AA), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+            }
+
+            Text("You'll need to verify your email before continuing.", color = Color(0xFF60A5FA).copy(alpha = 0.4f), fontSize = 10.sp, modifier = Modifier.padding(top = 8.dp, bottom = 24.dp))
+        } else {
+            // Step 2: 6-Digit OTP Verification Screen
+            Text("Verify Your Email", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+            Text(
+                text = "We sent a 6-digit verification code to ${if (email.isNotBlank()) email else phone}",
+                fontSize = 13.sp,
+                color = MutedText,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 6.dp, bottom = 28.dp)
+            )
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF09090B)),
+                shape = RoundedCornerShape(24.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF18181B)),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text("ENTER 6-DIGIT VERIFICATION CODE", color = Color(0xFF93C5FD).copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+
+                    OutlinedTextField(
+                        value = otpCode,
+                        onValueChange = { newValue ->
+                            if (newValue.length <= 6 && newValue.all { it.isDigit() }) {
+                                otpCode = newValue
+                            }
+                        },
+                        placeholder = { Text("123456", color = Color(0xFF52525B)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = OrbitCyan,
+                            unfocusedBorderColor = Color(0xFF27272A),
+                            focusedContainerColor = Color(0xFF111111),
+                            unfocusedContainerColor = Color(0xFF111111)
+                        )
+                    )
+
+                    errorMessage?.let { msg ->
+                        Text(msg, color = Color(0xFFEF4444), fontSize = 12.sp)
+                    }
+
+                    GradientButton(
+                        text = "Verify Code & Enter Orbit",
+                        onClick = {
+                            if (otpCode.length < 6) {
+                                errorMessage = "Please enter the full 6-digit OTP code."
+                                return@GradientButton
+                            }
+                            onLoginSuccess("session_token_client_${System.currentTimeMillis()}")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            TextButton(
+                onClick = {
+                    step = 1
+                    otpCode = ""
+                    errorMessage = null
+                }
+            ) {
+                Text("← Change Email or Phone", color = OrbitCyan, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
         }
-
-        Text("You'll need to verify your email before continuing.", color = Color(0xFF60A5FA).copy(alpha = 0.4f), fontSize = 10.sp, modifier = Modifier.padding(top = 8.dp, bottom = 24.dp))
     }
 }
 

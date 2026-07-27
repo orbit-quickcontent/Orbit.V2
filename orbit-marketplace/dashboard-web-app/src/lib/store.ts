@@ -330,6 +330,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     } else {
       await get().fetchClientBookings();
     }
+
+    if (typeof window !== "undefined") {
+      if (role === "EDITOR") {
+        window.location.href = "/editor";
+      } else if (role === "ADMIN") {
+        window.location.href = "/admin";
+      } else if (role === "SUPER_ADMIN") {
+        window.location.href = "/admin?view=super_admin";
+      }
+    }
   },
   logout: () => {
     set({

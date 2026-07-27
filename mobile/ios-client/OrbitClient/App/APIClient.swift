@@ -51,6 +51,15 @@ struct Booking: Codable, Identifiable {
     let createdAt: String
 }
 
+struct AuthResponse: Codable {
+    let success: Bool
+    let token: String?
+    let accessToken: String?
+    let refreshToken: String?
+    let redirectUrl: String?
+    let user: User?
+}
+
 class APIClient {
     static let shared = APIClient()
     private let baseURL = URL(string: "http://localhost:3001/api/")!
