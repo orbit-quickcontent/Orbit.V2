@@ -157,10 +157,10 @@ fun HomeVectorIcon(color: Color, modifier: Modifier = Modifier) {
         drawPath(
             path = path,
             color = color,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(
+            style = Stroke(
                 width = 2.dp.toPx(),
-                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
-                strokeJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
             )
         )
         // Door arch
@@ -173,9 +173,9 @@ fun HomeVectorIcon(color: Color, modifier: Modifier = Modifier) {
         drawPath(
             path = doorPath,
             color = color,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(
+            style = Stroke(
                 width = 1.8.dp.toPx(),
-                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                cap = StrokeCap.Round
             )
         )
     }
@@ -198,10 +198,10 @@ fun PackageVectorIcon(color: Color, modifier: Modifier = Modifier) {
         drawPath(
             path = boxPath,
             color = color,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(
+            style = Stroke(
                 width = 1.8.dp.toPx(),
-                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
-                strokeJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
             )
         )
         drawLine(color = color, start = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.52f), end = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.90f), strokeWidth = 1.8.dp.toPx())
@@ -218,13 +218,13 @@ fun TrackVectorIcon(color: Color, modifier: Modifier = Modifier) {
             color = color,
             radius = size.width * 0.42f,
             center = center,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.8.dp.toPx())
+            style = Stroke(width = 1.8.dp.toPx())
         )
         drawCircle(
             color = color,
             radius = size.width * 0.24f,
             center = center,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.8.dp.toPx())
+            style = Stroke(width = 1.8.dp.toPx())
         )
         drawCircle(
             color = color,
@@ -241,7 +241,7 @@ fun RowScope.BottomNavItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val scale by androidx.compose.animation.core.animateFloatAsState(
+    val tabScale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isSelected) 1.04f else 1.0f,
         animationSpec = androidx.compose.animation.core.spring(
             dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
@@ -256,7 +256,7 @@ fun RowScope.BottomNavItem(
         modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
-            .androidx.compose.ui.draw.scale(scale)
+            .scale(tabScale)
             .clip(RoundedCornerShape(20.dp))
             .background(if (isSelected) Color(0xFF161824).copy(alpha = 0.95f) else Color.Transparent)
             .border(
