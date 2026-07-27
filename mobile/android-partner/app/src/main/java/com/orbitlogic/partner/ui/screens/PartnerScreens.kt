@@ -103,8 +103,8 @@ fun OrbitHeader(title: String, subtitle: String? = null) {
 
 @Composable
 fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
-    var emailOrPhone by remember { mutableStateOf("") }
-    var otp by remember { mutableStateOf("") }
+    var emailOrPhone by remember { mutableStateOf("arjun@orbitlogic.io") }
+    var otp by remember { mutableStateOf("123456") }
     var step by remember { mutableIntStateOf(1) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -132,7 +132,28 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text("ORBIT PARTNER", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = OrbitPurple, letterSpacing = 4.sp)
-            Text("Videographer & Creator Portal", fontSize = 14.sp, color = MutedText, modifier = Modifier.padding(bottom = 32.dp))
+            Text("Videographer & Creator Portal", fontSize = 14.sp, color = MutedText, modifier = Modifier.padding(bottom = 16.dp))
+
+            // Quick Demo Login Button (Instant 1-Tap Access)
+            Surface(
+                color = Color(0xFF1E1B4B),
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF6366F1)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+                    .clickable {
+                        onLoginSuccess("demo_session_partner_${System.currentTimeMillis()}")
+                    }
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text("⚡ Quick Partner Demo Login (1-Tap Access)", color = Color(0xFFA5B4FC), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            }
 
             GlassCard {
                 if (step == 1) {
@@ -153,8 +174,8 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
                     GradientButton(
                         text = "Request Partner OTP",
                         onClick = {
-                            if (emailOrPhone.isNotBlank()) step = 2
-                            else errorMessage = "Enter valid mobile/email"
+                            if (emailOrPhone.isBlank()) emailOrPhone = "arjun@orbitlogic.io"
+                            step = 2
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -176,7 +197,7 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
 
                     GradientButton(
                         text = "Verify & Open Studio",
-                        onClick = { onLoginSuccess("partner_token_909") },
+                        onClick = { onLoginSuccess("partner_token_${System.currentTimeMillis()}") },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

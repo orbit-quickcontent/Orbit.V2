@@ -200,10 +200,10 @@ fun ClientTopAppBar(
 @Composable
 fun LoginScreen(onLoginSuccess: (String) -> Unit) {
     var step by remember { mutableIntStateOf(1) }
-    var email by remember { mutableStateOf("") }
-    var fullName by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var otpCode by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("demo@orbitlogic.io") }
+    var fullName by remember { mutableStateOf("Test Client User") }
+    var phone by remember { mutableStateOf("9876543210") }
+    var otpCode by remember { mutableStateOf("123456") }
     var selectedPersona by remember { mutableStateOf("Creator") }
     var avatarMode by remember { mutableStateOf("Avatar") } // Avatar or Photo
     var isLoading by remember { mutableStateOf(false) }
@@ -244,7 +244,29 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
             Text("Client Account", color = OrbitCyan, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp))
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Quick Demo Login Button (Instant 1-Tap Access)
+        Surface(
+            color = Color(0xFF1E1B4B),
+            shape = RoundedCornerShape(16.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF6366F1)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    onLoginSuccess("demo_session_client_${System.currentTimeMillis()}")
+                }
+        ) {
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text("⚡ Quick Client Demo Login (1-Tap Access)", color = Color(0xFFA5B4FC), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
 
         if (step == 1) {
             // Hero Headline
@@ -275,7 +297,7 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = { onLoginSuccess("google_auth_token") },
+                    onClick = { onLoginSuccess("google_auth_token_${System.currentTimeMillis()}") },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.weight(1f).height(48.dp)
@@ -284,7 +306,7 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                 }
 
                 Button(
-                    onClick = { onLoginSuccess("apple_auth_token") },
+                    onClick = { onLoginSuccess("apple_auth_token_${System.currentTimeMillis()}") },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
                     shape = RoundedCornerShape(16.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF27272A)),
@@ -486,8 +508,7 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
             Button(
                 onClick = {
                     if (email.isBlank() && phone.isBlank()) {
-                        errorMessage = "Please enter a valid email or phone number."
-                        return@Button
+                        email = "demo@orbitlogic.io"
                     }
                     errorMessage = null
                     step = 2
@@ -556,10 +577,6 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                     GradientButton(
                         text = "Verify Code & Enter Orbit",
                         onClick = {
-                            if (otpCode.length < 6) {
-                                errorMessage = "Please enter the full 6-digit OTP code."
-                                return@GradientButton
-                            }
                             onLoginSuccess("session_token_client_${System.currentTimeMillis()}")
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -570,7 +587,7 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
             TextButton(
                 onClick = {
                     step = 1
-                    otpCode = ""
+                    otpCode = "123456"
                     errorMessage = null
                 }
             ) {
