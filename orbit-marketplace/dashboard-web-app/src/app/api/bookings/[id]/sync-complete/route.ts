@@ -59,11 +59,11 @@ export async function POST(
 
     const alreadyCredited = ["READY_TO_EDIT", "EDITING", "DELIVERED"].includes(booking.status);
 
-    // 2. Update booking: status to READY_TO_EDIT, syncPercentage to 100, save footageUrls in Firestore
+    // 2. Update booking: status to EDITING, syncPercentage to 100, save footageUrls in Firestore
     const updatedRaw = await firestoreDb.bookings.update({
       where: { id: bookingId },
       data: {
-        status: "READY_TO_EDIT",
+        status: "EDITING",
         syncPercentage: 100,
         footageUrls: JSON.stringify(footageUrls),
       },
@@ -139,7 +139,7 @@ export async function POST(
           event: "booking:status-update",
           payload: {
             bookingId,
-            status: "READY_TO_EDIT",
+            status: "EDITING",
             previousStatus: booking.status,
           },
         }),
