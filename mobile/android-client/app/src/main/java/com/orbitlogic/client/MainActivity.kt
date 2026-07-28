@@ -121,11 +121,15 @@ fun ClientBottomNavigationBar(
     val animatedIndex by androidx.compose.animation.core.animateFloatAsState(
         targetValue = selectedIndex.toFloat(),
         animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy,
             stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
         ),
         label = "slidingIndicatorOffset"
     )
+
+    // Calculate movement delta to dynamically resize and stretch shape according to the box path
+    val movementDelta = kotlin.math.abs(animatedIndex - selectedIndex.toFloat())
+    val stretchFactor = 1.0f + (movementDelta * 0.25f).coerceAtMost(0.35f)
 
     Box(
         modifier = Modifier
@@ -148,13 +152,16 @@ fun ClientBottomNavigationBar(
                     .padding(6.dp)
             ) {
                 val tabWidth = maxWidth / tabs.size
-                val indicatorOffset = tabWidth * animatedIndex
+                val baseIndicatorOffset = tabWidth * animatedIndex
+                val dynamicWidth = tabWidth * stretchFactor
+                val overflowX = (dynamicWidth - tabWidth) / 2f
+                val finalOffset = (baseIndicatorOffset - overflowX).coerceIn(0.dp, maxWidth - dynamicWidth)
 
-                // Smooth Sliding Active Option Background Pill + Top Glow Bar
+                // Smooth Dynamic Resizing Active Option Background Pill + Top Glow Bar
                 Box(
                     modifier = Modifier
-                        .offset(x = indicatorOffset)
-                        .width(tabWidth)
+                        .offset(x = finalOffset)
+                        .width(dynamicWidth)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(20.dp))
                         .background(Color(0xFF161824).copy(alpha = 0.95f))
@@ -164,11 +171,12 @@ fun ClientBottomNavigationBar(
                             shape = RoundedCornerShape(20.dp)
                         )
                 ) {
-                    // Top gradient line indicator attached to the sliding selection pill
+                    // Top gradient line indicator resizing dynamically with the shape box
+                    val topLineWidth = (32.dp * stretchFactor).coerceIn(32.dp, 56.dp)
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .width(34.dp)
+                            .width(topLineWidth)
                             .height(3.dp)
                             .clip(RoundedCornerShape(2.dp))
                             .background(

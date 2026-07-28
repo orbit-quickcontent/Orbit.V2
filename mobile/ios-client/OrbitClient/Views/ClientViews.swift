@@ -897,7 +897,7 @@ struct ClientBottomNavigationBar: View {
                 let isSelected = currentTab == tab.key
                 
                 Button(action: {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                    withAnimation(.spring(response: 0.36, dampingFraction: 0.68, blendDuration: 0)) {
                         currentTab = tab.key
                     }
                 }) {
@@ -911,10 +911,11 @@ struct ClientBottomNavigationBar: View {
                                 )
                                 .matchedGeometryEffect(id: "activeTabIndicator", in: animation)
                             
-                            // Top gradient line indicator
+                            // Top gradient line indicator dynamically resizing to fit the target box
                             RoundedRectangle(cornerRadius: 2)
                                 .fill(Theme.orbitGradient)
-                                .frame(width: 32, height: 3)
+                                .frame(height: 3)
+                                .padding(.horizontal, 16)
                                 .matchedGeometryEffect(id: "activeTabTopLine", in: animation)
                         }
                         
