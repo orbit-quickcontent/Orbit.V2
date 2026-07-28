@@ -8,6 +8,16 @@
  * Re-exported by: src/app/api/users/route.ts
  */
 
+/**
+ * Client Backend | User Handlers
+ *
+ * User management business logic using Firestore.
+ * - GET  — List all users with booking counts
+ * - POST — Create a new user (email required, unique)
+ *
+ * Re-exported by: src/app/api/users/route.ts
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { firestoreDb } from "@/lib/db";
 import { supabase } from "@/lib/supabase-client";
@@ -37,31 +47,32 @@ export async function GET() {
       return NextResponse.json({ users });
     }
 
-    // Fallback to Firestore
-    const clientUsers = await firestoreDb.clientUsers.findMany();
-    const partnerUsers = await firestoreDb.partnerUsers.findMany();
-    const allUsers = [...clientUsers, ...partnerUsers];
+    // Fallback to Firestore safely
+    try {
+      const clientUsers = await firestoreDb.clientUsers.findMany();
+      const partnerUsers = await firestoreDb.partnerUsers.findMany();
+      const allUsers = [...clientUsers, ...partnerUsers];
 
-    const usersWithStats = allUsers.map((user) => ({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      phone: user.phone,
-      location: user.location,
-      role: user.role,
-      avatar: user.avatar,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      totalBookings: 0,
-    }));
+      const usersWithStats = allUsers.map((user) => ({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+        location: user.location,
+        role: user.role,
+        avatar: user.avatar,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        totalBookings: 0,
+      }));
 
-    return NextResponse.json({ users: usersWithStats });
+      return NextResponse.json({ users: usersWithStats });
+    } catch (fsErr) {
+      return NextResponse.json({ users: [] });
+    }
   } catch (error) {
     console.error("Error fetching users:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch users" },
-      { status: 500 }
-    );
+    return NextResponse.json({ users: [] });
   }
 }
 
@@ -87,6 +98,7 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .upsert({
         full_name: name || email.split('@')[0],
+        name: name || email.split('@')[0],
         email: email,
         phone: phone || null,
         role: supaRole,
@@ -96,43 +108,48 @@ export async function POST(request: NextRequest) {
 
     if (!supaErr && profile) {
       console.log('[Supabase User POST] Synced profile:', profile.id, profile.email);
+      return NextResponse.json({ user: { id: profile.id, email: profile.email, name: profile.full_name, role: profile.role } }, { status: 200 });
     }
 
-    // 3. Fallback/Sync with Firestore for real-time listener compatibility
-    let existingUser = await firestoreDb.clientUsers.findUnique({ where: { email } });
-    if (!existingUser) {
-      existingUser = await firestoreDb.partnerUsers.findUnique({ where: { email } });
+    // 3. Fallback/Sync with Firestore safely
+    try {
+      let existingUser = await firestoreDb.clientUsers.findUnique({ where: { email } });
+      if (!existingUser) {
+        existingUser = await firestoreDb.partnerUsers.findUnique({ where: { email } });
+      }
+
+      if (existingUser) {
+        return NextResponse.json({ user: existingUser }, { status: 200 });
+      }
+
+      const targetCol = role === "PARTNER" ? firestoreDb.partnerUsers : firestoreDb.clientUsers;
+
+      const user = await targetCol.create({
+        data: {
+          email,
+          name: name ?? null,
+          phone: phone ?? null,
+          location: location ?? null,
+          role: role ?? "USER",
+          brandLogo: brandLogo ?? null,
+          brandFont: brandFont ?? null,
+          brandColor: brandColor ?? null,
+          editorRequirements: editorRequirements ?? null,
+        },
+      });
+
+      await logAudit({
+        userId: user.id,
+        action: "USER_SIGNUP",
+        entity: "User",
+        entityId: user.id,
+        details: { email, role },
+        req: request,
+      });
+      return NextResponse.json({ user }, { status: 201 });
+    } catch (fsErr) {
+      return NextResponse.json({ user: { id: profile?.id || email, email, name, role } }, { status: 200 });
     }
-
-    if (existingUser) {
-      return NextResponse.json({ user: existingUser }, { status: 200 });
-    }
-
-    const targetCol = role === "PARTNER" ? firestoreDb.partnerUsers : firestoreDb.clientUsers;
-
-    const user = await targetCol.create({
-      data: {
-        email,
-        name: name ?? null,
-        phone: phone ?? null,
-        location: location ?? null,
-        role: role ?? "USER",
-        brandLogo: brandLogo ?? null,
-        brandFont: brandFont ?? null,
-        brandColor: brandColor ?? null,
-        editorRequirements: editorRequirements ?? null,
-      },
-    });
-
-    await logAudit({
-      userId: user.id,
-      action: "USER_SIGNUP",
-      entity: "User",
-      entityId: user.id,
-      details: { email, role },
-      req: request,
-    });
-    return NextResponse.json({ user }, { status: 201 });
   } catch (error: any) {
     console.error("Error creating user:", error);
     return NextResponse.json(

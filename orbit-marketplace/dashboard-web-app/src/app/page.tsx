@@ -57,45 +57,43 @@ export default function OrbitApp() {
     }
   }, [_hydrated, isAuthenticated, userRole, logout]);
 
-  // Before hydration, show a blank loading state to avoid flicker
+  // Before hydration, show a sleek loading spinner
   if (!_hydrated) {
     return (
       <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#000000]">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-full border-2 border-orbit-cyan/30 border-t-orbit-cyan animate-spin" />
-          <p className="text-xs text-muted-foreground/40 tracking-widest uppercase">Orbit</p>
+          <div className="w-16 h-16 rounded-full border-2 border-cyan-500/30 border-t-cyan-400 animate-spin" />
+          <p className="text-xs text-zinc-500 tracking-widest uppercase">Orbit Loading...</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <>
-      <AnimatePresence mode="wait">
-        {appPhase === "auth" && !isAuthenticated && (
-          <motion.div
-            key="login"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <LoginPage />
-          </motion.div>
-        )}
+  const showApp = isAuthenticated && appPhase === "app";
 
-        {appPhase === "app" && isAuthenticated && (
-          <motion.div
-            key={userRole === "PARTNER" ? "partner" : "client"}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            {userRole === "PARTNER" ? <PartnerApp /> : <ClientApp />}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+  return (
+    <AnimatePresence mode="wait">
+      {showApp ? (
+        <motion.div
+          key={userRole === "PARTNER" ? "partner" : "client"}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          {userRole === "PARTNER" ? <PartnerApp /> : <ClientApp />}
+        </motion.div>
+      ) : (
+        <motion.div
+          key="login"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <LoginPage />
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
