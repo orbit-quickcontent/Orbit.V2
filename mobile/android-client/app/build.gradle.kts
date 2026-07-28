@@ -38,6 +38,7 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs = freeCompilerArgs + listOf("-Xskip-metadata-version-check")
     }
     buildFeatures {
         compose = true
@@ -53,8 +54,8 @@ android {
 }
 
 dependencies {
-    // Firebase BoM & Services
-    implementation(platform("com.google.firebase:firebase-bom:33.9.0"))
+    // Firebase BoM & Services (32.8.0 targets Kotlin 1.9 metadata)
+    implementation(platform("com.google.firebase:firebase-bom:32.8.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
