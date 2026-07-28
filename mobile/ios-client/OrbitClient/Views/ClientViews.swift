@@ -952,3 +952,101 @@ struct ClientBottomNavigationBar: View {
     }
 }
 
+// ─── Main Client Navigation Host (iOS 18 SidebarAdaptable + Floating Bar Fallback) ───
+
+public struct ClientMainNavigationHost: View {
+    @State private var currentTab: String = "home"
+    @State private var selectedPackageId: String = "pkg-professional"
+    @State private var activeBookingId: String = "bk_active_901"
+    @State private var isAuthenticated: Bool = true
+    
+    public init() {}
+    
+    public var body: some View {
+        if !isAuthenticated {
+            LoginScreen(onLoginSuccess: { _ in
+                isAuthenticated = true
+                currentTab = "home"
+            })
+        } else {
+            if #available(iOS 18.0, macOS 15.0, *) {
+                TabView(selection: $currentTab) {
+                    Tab("Home", systemImage: "house.fill", value: "home") {
+                        DashboardHomeScreen(
+                            onNavigateToBooking: { currentTab = "booking" },
+                            onNavigateToPackages: { currentTab = "packages" },
+                            onNavigateToTracking: { id in
+                                activeBookingId = id
+                                currentTab = "tracking"
+                            },
+                            onNavigateToProfile: { currentTab = "profile" }
+                        )
+                    }
+                    
+                    Tab("Packages", systemImage: "shippingbox.fill", value: "packages") {
+                        PackagesScreen(onSelectPackage: { pkgId in
+                            selectedPackageId = pkgId
+                            currentTab = "booking"
+                        })
+                    }
+                    
+                    Tab("Track", systemImage: "scope", value: "tracking") {
+                        TrackingScreen(bookingId: activeBookingId)
+                    }
+                    
+                    Tab("Profile", systemImage: "person.crop.circle", value: "profile") {
+                        ProfileScreen(onLogout: { isAuthenticated = false })
+                    }
+                }
+                .tabViewStyle(.sidebarAdaptable)
+                .orbitBackground()
+            } else {
+                // iOS 17 and earlier fallback with Custom Floating Dark Glass Pill Navigation Bar
+                ZStack(alignment: .bottom) {
+                    Group {
+                        switch currentTab {
+                        case "home":
+                            DashboardHomeScreen(
+                                onNavigateToBooking: { currentTab = "booking" },
+                                onNavigateToPackages: { currentTab = "packages" },
+                                onNavigateToTracking: { id in
+                                    activeBookingId = id
+                                    currentTab = "tracking"
+                                },
+                                onNavigateToProfile: { currentTab = "profile" }
+                            )
+                        case "packages":
+                            PackagesScreen(onSelectPackage: { pkgId in
+                                selectedPackageId = pkgId
+                                currentTab = "booking"
+                            })
+                        case "booking":
+                            BookingFlowScreen(packageId: selectedPackageId, onBookingComplete: {
+                                currentTab = "tracking"
+                            })
+                        case "tracking":
+                            TrackingScreen(bookingId: activeBookingId)
+                        case "profile":
+                            ProfileScreen(onLogout: { isAuthenticated = false })
+                        default:
+                            DashboardHomeScreen(
+                                onNavigateToBooking: { currentTab = "booking" },
+                                onNavigateToPackages: { currentTab = "packages" },
+                                onNavigateToTracking: { id in
+                                    activeBookingId = id
+                                    currentTab = "tracking"
+                                },
+                                onNavigateToProfile: { currentTab = "profile" }
+                            )
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    
+                    ClientBottomNavigationBar(currentTab: $currentTab)
+                }
+                .orbitBackground()
+            }
+        }
+    }
+}
+
