@@ -397,176 +397,230 @@ export function BookingFlow() {
           )}
 
           {step === 2 && (
-            <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="orbit-card rounded-2xl p-4 sm:p-6 md:p-8">
-              <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-6 flex items-center gap-2"><CalendarIcon className="w-5 h-5 text-orbit-cyan" />Schedule & Location</h3>
-              <div className="space-y-6">
-                {/* Book Right Now Option */}
-                <div className="orbit-card rounded-xl p-4 border border-orbit-cyan/20 bg-gradient-to-r from-orbit-cyan/5 to-orbit-purple/5">
-                  <button
-                    onClick={() => {
-                      const now = new Date();
-                      let h = now.getHours();
-                      const m = Math.ceil(now.getMinutes() / 5) * 5;
-                      const period = h >= 12 ? "PM" : "AM";
-                      if (h > 12) h -= 12;
-                      if (h === 0) h = 12;
-                      setBookingDate(now);
-                      setBookingTimeSlot(`${h}:${String(m % 60).padStart(2, "0")} ${period}`);
-                      toast.success("Booked for right now!", { description: "A partner will be dispatched immediately." });
-                      setTimeout(() => {
-                        locationInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-                        locationInputRef.current?.focus({ preventScroll: true });
-                      }, 100);
-                    }}
-                    className="w-full flex items-center justify-between group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orbit-cyan/20 to-orbit-purple/20 flex items-center justify-center">
-                        <ZapIcon className="w-5 h-5 text-orbit-cyan" />
-                      </div>
-                      <div className="text-left">
-                        <div className="text-sm font-bold text-orbit-cyan">Book Right Now</div>
-                        <div className="text-xs text-muted-foreground">Skip scheduling — get a partner immediately</div>
-                      </div>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-orbit-cyan group-hover:translate-x-1 transition-transform" />
-                  </button>
-                </div>
-
-                <div className="relative flex items-center gap-3">
-                  <div className="flex-1 h-px bg-orbit-border" />
-                  <span className="text-xs text-muted-foreground/50">or schedule a time</span>
-                  <div className="flex-1 h-px bg-orbit-border" />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-3 block">Select Date *</label>
-                  <div className="orbit-card rounded-xl p-2 sm:p-4 inline-block overflow-x-auto max-w-full">
-                    <Calendar mode="single" selected={bookingDate} onSelect={setBookingDate} disabled={{ before: new Date() }} className="text-foreground" />
+            <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="orbit-card rounded-2xl p-4 sm:p-6 md:p-8 space-y-6">
+              {/* Top Banner Notice when Book Right Now is clicked */}
+              {bookingDate && (
+                <div className="bg-[#0A0C10] border border-white/10 rounded-2xl p-4 flex items-center gap-3.5 shadow-xl">
+                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-black font-black text-sm shrink-0">
+                    ✓
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-white">Booked for right now!</div>
+                    <div className="text-xs text-zinc-400">A partner will be dispatched immediately.</div>
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-3 block flex items-center gap-2"><Clock className="w-4 h-4 text-orbit-cyan" />Select Time *</label>
-                  {/* Diagonal Clock Time Picker */}
-                  <div className="orbit-card rounded-xl p-4 border border-orbit-border">
-                    <div className="flex items-center justify-center gap-3 sm:gap-4">
-                      {/* Hour Selector */}
-                      <div className="flex flex-col items-center gap-1">
-                        <button onClick={() => {
-                          const cur = bookingTimeSlot ? parseInt(bookingTimeSlot) : 12;
+              )}
+
+              {/* Book Right Now Option */}
+              <div className="orbit-card rounded-2xl p-4 border border-orbit-cyan/20 bg-gradient-to-r from-orbit-cyan/5 to-orbit-purple/5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const now = new Date();
+                    let h = now.getHours();
+                    const m = Math.ceil(now.getMinutes() / 5) * 5;
+                    const period = h >= 12 ? "PM" : "AM";
+                    if (h > 12) h -= 12;
+                    if (h === 0) h = 12;
+                    setBookingDate(now);
+                    setBookingTimeSlot(`${h}:${String(m % 60).padStart(2, "0")} ${period}`);
+                    toast.success("Booked for right now!", { description: "A partner will be dispatched immediately." });
+                    setTimeout(() => {
+                      locationInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      locationInputRef.current?.focus({ preventScroll: true });
+                    }, 100);
+                  }}
+                  className="w-full flex items-center justify-between group cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orbit-cyan/20 to-orbit-purple/20 flex items-center justify-center">
+                      <ZapIcon className="w-5 h-5 text-orbit-cyan" />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-sm font-bold text-orbit-cyan">Book Right Now</div>
+                      <div className="text-xs text-muted-foreground">Skip scheduling — get a partner immediately</div>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-orbit-cyan group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
+
+              <div className="relative flex items-center gap-3">
+                <div className="flex-1 h-px bg-white/10" />
+                <span className="text-xs text-muted-foreground/60">or schedule a date & time</span>
+                <div className="flex-1 h-px bg-white/10" />
+              </div>
+
+              {/* Interactive Date Picker */}
+              <div>
+                <label className="text-xs font-bold text-zinc-300 mb-3 block">Select Date *</label>
+                <div className="bg-[#0A0C10] rounded-2xl p-2 sm:p-4 border border-white/10 inline-block overflow-x-auto max-w-full">
+                  <Calendar mode="single" selected={bookingDate} onSelect={setBookingDate} disabled={{ before: new Date() }} className="text-foreground" />
+                </div>
+              </div>
+
+              {/* Interactive Time Picker Component */}
+              <div>
+                <label className="text-xs font-bold text-zinc-300 mb-3 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-[#00F0FF]" /> Select Time *
+                </label>
+                <div className="bg-[#0A0C10]/90 rounded-2xl p-6 border border-white/10">
+                  <div className="flex items-center justify-center gap-6 sm:gap-8">
+                    {/* Hour Spinner */}
+                    <div className="flex flex-col items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cur = bookingTimeSlot ? parseInt(bookingTimeSlot) : 3;
                           const next = cur >= 12 ? 1 : cur + 1;
                           const existingPeriod = bookingTimeSlot ? (bookingTimeSlot.includes("PM") ? "PM" : "AM") : "AM";
-                          const existingMin = bookingTimeSlot ? bookingTimeSlot.split(":").pop()?.split(" ")[0] : "00";
-                          setBookingTimeSlot(`${next}:${existingMin || "00"} ${existingPeriod}`);
-                        }} className="w-10 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-orbit-cyan/10 text-muted-foreground hover:text-orbit-cyan transition-all">
-                          <ChevronDown className="w-4 h-4 rotate-180" />
-                        </button>
-                        <div className="text-4xl sm:text-5xl font-black text-gradient-orbit w-16 text-center tabular-nums">
-                          {bookingTimeSlot ? parseInt(bookingTimeSlot) : "--"}
-                        </div>
-                        <button onClick={() => {
-                          const cur = bookingTimeSlot ? parseInt(bookingTimeSlot) : 12;
+                          const existingMin = bookingTimeSlot ? (bookingTimeSlot.split(":")[1]?.split(" ")[0] || "35") : "35";
+                          setBookingTimeSlot(`${next}:${existingMin} ${existingPeriod}`);
+                        }}
+                        className="w-12 h-10 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all border border-white/5 cursor-pointer"
+                      >
+                        <ChevronDown className="w-5 h-5 rotate-180" />
+                      </button>
+                      <div className="text-5xl font-black text-[#00F0FF] w-16 text-center tabular-nums drop-shadow-[0_0_12px_rgba(0,240,255,0.4)]">
+                        {bookingTimeSlot ? parseInt(bookingTimeSlot) : 3}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cur = bookingTimeSlot ? parseInt(bookingTimeSlot) : 3;
                           const next = cur <= 1 ? 12 : cur - 1;
                           const existingPeriod = bookingTimeSlot ? (bookingTimeSlot.includes("PM") ? "PM" : "AM") : "AM";
-                          const existingMin = bookingTimeSlot ? bookingTimeSlot.split(":").pop()?.split(" ")[0] : "00";
-                          setBookingTimeSlot(`${next}:${existingMin || "00"} ${existingPeriod}`);
-                        }} className="w-10 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-orbit-cyan/10 text-muted-foreground hover:text-orbit-cyan transition-all">
-                          <ChevronDown className="w-4 h-4" />
-                        </button>
-                        <span className="text-[10px] text-muted-foreground mt-1">Hour</span>
-                      </div>
+                          const existingMin = bookingTimeSlot ? (bookingTimeSlot.split(":")[1]?.split(" ")[0] || "35") : "35";
+                          setBookingTimeSlot(`${next}:${existingMin} ${existingPeriod}`);
+                        }}
+                        className="w-12 h-10 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all border border-white/5 cursor-pointer"
+                      >
+                        <ChevronDown className="w-5 h-5" />
+                      </button>
+                      <span className="text-[11px] font-semibold text-zinc-500 mt-1">Hour</span>
+                    </div>
 
-                      <span className="text-4xl sm:text-5xl font-black text-orbit-cyan animate-pulse">:</span>
+                    {/* Colon Separator */}
+                    <span className="text-5xl font-black text-[#00F0FF] animate-pulse drop-shadow-[0_0_10px_rgba(0,240,255,0.5)] mb-6">:</span>
 
-                      {/* Minute Selector */}
-                      <div className="flex flex-col items-center gap-1">
-                        <button onClick={() => {
-                          const existingHour = bookingTimeSlot ? parseInt(bookingTimeSlot) : 12;
+                    {/* Minute Spinner */}
+                    <div className="flex flex-col items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const existingHour = bookingTimeSlot ? parseInt(bookingTimeSlot) : 3;
                           const existingPeriod = bookingTimeSlot ? (bookingTimeSlot.includes("PM") ? "PM" : "AM") : "AM";
-                          const curMin = bookingTimeSlot ? parseInt(bookingTimeSlot.split(":").pop() || "0") : 0;
+                          const curMin = bookingTimeSlot ? parseInt(bookingTimeSlot.split(":")[1]?.split(" ")[0] || "35") : 35;
                           const idx = MINUTES.findIndex(m => m >= curMin);
                           const nextIdx = idx < MINUTES.length - 1 ? idx + 1 : 0;
                           setBookingTimeSlot(`${existingHour}:${String(MINUTES[nextIdx]).padStart(2, "0")} ${existingPeriod}`);
-                        }} className="w-10 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-orbit-cyan/10 text-muted-foreground hover:text-orbit-cyan transition-all">
-                          <ChevronDown className="w-4 h-4 rotate-180" />
-                        </button>
-                        <div className="text-4xl sm:text-5xl font-black text-gradient-orbit w-16 text-center tabular-nums">
-                          {bookingTimeSlot ? (bookingTimeSlot.split(":").pop()?.split(" ")[0] || "00") : "--"}
-                        </div>
-                        <button onClick={() => {
-                          const existingHour = bookingTimeSlot ? parseInt(bookingTimeSlot) : 12;
+                        }}
+                        className="w-12 h-10 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all border border-white/5 cursor-pointer"
+                      >
+                        <ChevronDown className="w-5 h-5 rotate-180" />
+                      </button>
+                      <div className="text-5xl font-black text-[#A056FF] w-16 text-center tabular-nums drop-shadow-[0_0_12px_rgba(160,86,255,0.4)]">
+                        {bookingTimeSlot ? (bookingTimeSlot.split(":")[1]?.split(" ")[0] || "35") : 35}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const existingHour = bookingTimeSlot ? parseInt(bookingTimeSlot) : 3;
                           const existingPeriod = bookingTimeSlot ? (bookingTimeSlot.includes("PM") ? "PM" : "AM") : "AM";
-                          const curMin = bookingTimeSlot ? parseInt(bookingTimeSlot.split(":").pop() || "0") : 0;
+                          const curMin = bookingTimeSlot ? parseInt(bookingTimeSlot.split(":")[1]?.split(" ")[0] || "35") : 35;
                           const idx = MINUTES.findIndex(m => m >= curMin);
                           const prevIdx = idx > 0 ? idx - 1 : MINUTES.length - 1;
                           setBookingTimeSlot(`${existingHour}:${String(MINUTES[prevIdx]).padStart(2, "0")} ${existingPeriod}`);
-                        }} className="w-10 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-orbit-cyan/10 text-muted-foreground hover:text-orbit-cyan transition-all">
-                          <ChevronDown className="w-4 h-4" />
-                        </button>
-                        <span className="text-[10px] text-muted-foreground mt-1">Min</span>
-                      </div>
+                        }}
+                        className="w-12 h-10 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all border border-white/5 cursor-pointer"
+                      >
+                        <ChevronDown className="w-5 h-5" />
+                      </button>
+                      <span className="text-[11px] font-semibold text-zinc-500 mt-1">Min</span>
+                    </div>
 
-                      {/* AM/PM Toggle */}
-                      <div className="flex flex-col gap-1.5 ml-2">
-                        {PERIODS.map((p) => {
-                          const isActive = bookingTimeSlot ? bookingTimeSlot.includes(p) : p === "AM";
-                          return (
-                            <button
-                              key={p}
-                              onClick={() => {
-                                const existingHour = bookingTimeSlot ? parseInt(bookingTimeSlot) : 12;
-                                const existingMin = bookingTimeSlot ? (bookingTimeSlot.split(":").pop()?.split(" ")[0] || "00") : "00";
-                                setBookingTimeSlot(`${existingHour}:${existingMin} ${p}`);
-                              }}
-                              className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${
-                                isActive
-                                  ? "bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white orbit-glow"
-                                  : "bg-white/5 text-muted-foreground hover:bg-white/10 border border-orbit-border"
-                              }`}
-                            >
-                              {p}
-                            </button>
-                          );
-                        })}
-                      </div>
+                    {/* AM/PM Toggle Pill Box */}
+                    <div className="flex flex-col gap-2 p-1.5 rounded-2xl bg-[#12131C] border border-white/10 ml-4 mb-5">
+                      {PERIODS.map((p) => {
+                        const isActive = bookingTimeSlot ? bookingTimeSlot.includes(p) : p === "AM";
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => {
+                              const existingHour = bookingTimeSlot ? parseInt(bookingTimeSlot) : 3;
+                              const existingMin = bookingTimeSlot ? (bookingTimeSlot.split(":")[1]?.split(" ")[0] || "35") : "35";
+                              setBookingTimeSlot(`${existingHour}:${existingMin} ${p}`);
+                            }}
+                            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                              isActive
+                                ? "bg-gradient-to-r from-[#00F0FF] to-[#A056FF] text-white shadow-[0_0_15px_rgba(0,240,255,0.5)]"
+                                : "bg-transparent text-zinc-500 hover:text-zinc-200"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Shoot Location *</label>
-                  <div className="flex items-start gap-2 p-2 rounded-xl bg-white/5 border border-orbit-border focus-within:border-orbit-cyan/50 focus-within:ring-1 focus-within:ring-orbit-cyan/20 transition-all">
-                    <MapPin className="w-4 h-4 text-muted-foreground mt-2.5 ml-1.5 shrink-0" />
-                    <Textarea 
-                      ref={locationInputRef} 
-                      value={bookingLocation} 
-                      onChange={(e) => setBookingLocation(e.target.value)} 
-                      placeholder="Enter shoot location" 
-                      className="flex-1 bg-transparent border-none focus-visible:ring-0 focus-visible:border-none focus-visible:outline-none focus:ring-0 shadow-none min-h-[44px] py-1 px-1 text-sm outline-none resize-none overflow-hidden" 
-                    />
-                    <button
-                      type="button"
-                      onClick={handleGetLiveLocation}
-                      disabled={isLocating}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orbit-cyan/10 hover:bg-orbit-cyan/20 border border-orbit-cyan/20 text-[10px] font-black uppercase tracking-wider text-orbit-cyan transition-colors h-7 mt-1.5 mr-1 shrink-0"
-                      title="Use live location"
-                    >
-                      {isLocating ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Locate className="w-3.5 h-3.5" />
-                      )}
-                      Locate Me
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Additional Notes</label>
-                  <Textarea value={bookingNotes} onChange={(e) => setBookingNotes(e.target.value)} placeholder="Any special requests..." className="bg-white/5 border-orbit-border focus:border-orbit-cyan/50 min-h-[80px]" />
+              </div>
+
+              {/* Shoot Location Input */}
+              <div>
+                <label className="text-xs font-bold text-zinc-300 mb-2.5 block">Shoot Location *</label>
+                <div className="flex items-center gap-2 p-2 rounded-2xl bg-[#0A0C10] border border-white/15 focus-within:border-[#00F0FF] transition-all h-14">
+                  <MapPin className="w-5 h-5 text-zinc-400 ml-3 shrink-0" />
+                  <input
+                    ref={locationInputRef as any}
+                    value={bookingLocation}
+                    onChange={(e) => setBookingLocation(e.target.value)}
+                    placeholder="Enter shoot location"
+                    className="bg-transparent text-white font-semibold text-sm px-2 outline-none w-full placeholder:text-zinc-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleGetLiveLocation}
+                    disabled={isLocating}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-[#00F0FF] text-[#00F0FF] hover:bg-[#00F0FF]/15 text-xs font-extrabold uppercase tracking-wider transition-all shrink-0 mr-1 cursor-pointer"
+                  >
+                    {isLocating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Locate className="w-3.5 h-3.5" />}
+                    LOCATE ME
+                  </button>
                 </div>
               </div>
-              <div className="mt-8 flex justify-between">
-                <Button variant="outline" onClick={() => setStep(1)} className="border-orbit-border text-foreground hover:bg-white/5"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-                <Button onClick={() => setStep(3)} disabled={!canProceedStep2} className="bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold">Review Order <ArrowRight className="w-4 h-4 ml-2" /></Button>
+
+              {/* Additional Notes Textarea */}
+              <div>
+                <label className="text-xs font-bold text-zinc-300 mb-2.5 block">Additional Notes</label>
+                <Textarea
+                  value={bookingNotes}
+                  onChange={(e) => setBookingNotes(e.target.value)}
+                  placeholder="Any special requests..."
+                  className="bg-[#0A0C10] border-white/15 focus:border-[#00F0FF] min-h-[96px] rounded-2xl p-4 text-white text-sm placeholder:text-zinc-500"
+                />
+              </div>
+
+              {/* Bottom Action Buttons */}
+              <div className="mt-8 flex items-center justify-between gap-4 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="px-6 py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-bold text-sm border border-white/10 flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Back
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStep(3)}
+                  disabled={!canProceedStep2}
+                  className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-[#00D2FF] via-[#7000FF] to-[#A056FF] text-white font-extrabold text-sm flex items-center gap-2 shadow-[0_0_25px_rgba(0,210,255,0.35)] hover:shadow-[0_0_35px_rgba(0,210,255,0.55)] active:scale-[0.99] transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  <span>Review Order</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
             </motion.div>
           )}
