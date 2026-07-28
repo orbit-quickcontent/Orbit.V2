@@ -67,15 +67,18 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
 
       // 2. Upsert profile in Supabase public.profiles table
       if (userId) {
-        await supabase.from("profiles").upsert({
+        const { error: profileErr } = await supabase.from("profiles").upsert({
           id: userId,
-          full_name: fullName,
+          full_name: fullName || "Orbit User",
+          name: fullName || "Orbit User",
           email,
-          phone,
+          phone: phone || "+919876543210",
           role: "client",
           avatar_emoji: avatarEmoji,
           persona: selectedPersona,
+          updated_at: new Date().toISOString(),
         });
+        if (profileErr) console.warn("Supabase profile sync warning:", profileErr.message);
       }
 
       // 3. Sync local Zustand store

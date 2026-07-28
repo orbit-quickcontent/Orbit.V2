@@ -27,8 +27,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
+import kotlinx.coroutines.launch
 import com.orbitlogic.client.R
 import com.orbitlogic.client.ui.theme.*
 
@@ -202,6 +202,8 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? android.app.Activity
     val oauthManager = remember { com.orbitlogic.client.auth.OAuthAuthManager(context) }
+    val supabaseAuthManager = remember { com.orbitlogic.client.data.SupabaseAuthManager() }
+    val coroutineScope = rememberCoroutineScope()
 
     var step by remember { mutableIntStateOf(1) }
     var email by remember { mutableStateOf("demo@orbitlogic.io") }
@@ -224,6 +226,9 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
             onSuccess = { token, userEmail, userName ->
                 if (!userEmail.isNullOrBlank()) email = userEmail
                 if (!userName.isNullOrBlank()) fullName = userName
+                coroutineScope.launch {
+                    supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, selectedPersona)
+                }
                 onLoginSuccess(token)
             },
             onError = { err ->
@@ -275,6 +280,9 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
+                    coroutineScope.launch {
+                        supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, selectedPersona)
+                    }
                     onLoginSuccess("demo_session_client_${System.currentTimeMillis()}")
                 }
         ) {
@@ -620,6 +628,9 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                     GradientButton(
                         text = "Verify Code & Enter Orbit",
                         onClick = {
+                            coroutineScope.launch {
+                                supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, selectedPersona)
+                            }
                             onLoginSuccess("session_token_client_${System.currentTimeMillis()}")
                         },
                         modifier = Modifier.fillMaxWidth()
