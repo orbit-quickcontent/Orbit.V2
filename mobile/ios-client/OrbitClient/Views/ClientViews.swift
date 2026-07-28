@@ -630,10 +630,14 @@ struct PackagesView: View {
 struct BookingFlowView: View {
     let packageId: String
     let onBookingComplete: () -> Void
-    @State private var date = "2026-08-01"
-    @State private var slot = "10:00 AM - 12:00 PM"
-    @State private var location = ""
-    @State private var notes = ""
+    
+    @State private var date: Date = Date()
+    @State private var hour: Int = 3
+    @State private var minute: Int = 35
+    @State private var period: String = "AM"
+    @State private var location: String = ""
+    @State private var notes: String = ""
+    @State private var isBookedNow: Bool = true
     
     var body: some View {
         VStack(spacing: 0) {
@@ -641,42 +645,192 @@ struct BookingFlowView: View {
             
             ScrollView {
                 VStack(spacing: 20) {
-                    OrbitHeader(title = "Configure Shoot", subtitle = "Selected Tier: \(packageId.uppercased())")
+                    OrbitHeader(title: "Configure Session", subtitle = "Selected Tier: \(packageId.uppercased())")
                     
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("1. Schedule & Address")
-                            .font(.headline)
-                            .bold()
-                        
-                        TextField("Date (YYYY-MM-DD)", text: $date)
-                            .padding()
-                            .background(Theme.background)
-                            .cornerRadius(8)
-                            .foregroundColor(.white)
-                        
-                        TextField("Time Slot (e.g. 10:00 AM)", text: $slot)
-                            .padding()
-                            .background(Theme.background)
-                            .cornerRadius(8)
-                            .foregroundColor(.white)
-                        
-                        TextField("Shoot Location Address", text: $location)
-                            .padding()
-                            .background(Theme.background)
-                            .cornerRadius(8)
-                            .foregroundColor(.white)
-                        
-                        TextField("Special Instructions (Optional)", text: $notes)
-                            .padding()
-                            .background(Theme.background)
-                            .cornerRadius(8)
-                            .foregroundColor(.white)
-                        
-                        Spacer().frame(height: 12)
-                        
-                        GradientButton(text: "Pay & Dispatch Shoot", onClick: onBookingComplete)
+                    // Top Notice Pill Banner
+                    if isBookedNow {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.white)
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 14, weight: .black))
+                                    .foregroundColor(.black)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Booked for right now!")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.white)
+                                Text("A partner will be dispatched immediately.")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(Theme.secondaryText)
+                            }
+                            Spacer()
+                        }
+                        .padding(16)
+                        .background(Color(red: 10/255, green: 12/255, blue: 16/255))
+                        .cornerRadius(20)
+                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.1), lineWidth: 1))
                     }
-                    .glassCardStyle()
+                    
+                    // Select Time Card
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "clock")
+                                .foregroundColor(Theme.orbitCyan)
+                            Text("Select Time *")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        
+                        HStack(spacing: 20) {
+                            // Hour Spinner Column
+                            VStack(spacing: 6) {
+                                Button(action: { hour = hour >= 12 ? 1 : hour + 1 }) {
+                                    Image(systemName: "chevron.up")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(Theme.secondaryText)
+                                        .frame(width: 44, height: 36)
+                                        .background(Color.white.opacity(0.05))
+                                        .cornerRadius(12)
+                                }
+                                
+                                Text("\(hour)")
+                                    .font(.system(size: 44, weight: .black))
+                                    .foregroundColor(Theme.orbitCyan)
+                                    .frame(width: 56)
+                                
+                                Button(action: { hour = hour <= 1 ? 12 : hour - 1 }) {
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(Theme.secondaryText)
+                                        .frame(width: 44, height: 36)
+                                        .background(Color.white.opacity(0.05))
+                                        .cornerRadius(12)
+                                }
+                                Text("Hour").font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.secondaryText)
+                            }
+                            
+                            // Colon Separator
+                            Text(":")
+                                .font(.system(size: 44, weight: .black))
+                                .foregroundColor(Theme.orbitCyan)
+                                .offset(y: -10)
+                            
+                            // Minute Spinner Column
+                            VStack(spacing: 6) {
+                                Button(action: { minute = (minute + 5) % 60 }) {
+                                    Image(systemName: "chevron.up")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(Theme.secondaryText)
+                                        .frame(width: 44, height: 36)
+                                        .background(Color.white.opacity(0.05))
+                                        .cornerRadius(12)
+                                }
+                                
+                                Text(String(format: "%02d", minute))
+                                    .font(.system(size: 44, weight: .black))
+                                    .foregroundColor(Theme.orbitPurple)
+                                    .frame(width: 64)
+                                
+                                Button(action: { minute = (minute - 5 + 60) % 60 }) {
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(Theme.secondaryText)
+                                        .frame(width: 44, height: 36)
+                                        .background(Color.white.opacity(0.05))
+                                        .cornerRadius(12)
+                                }
+                                Text("Min").font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.secondaryText)
+                            }
+                            
+                            Spacer()
+                            
+                            // AM/PM Toggle Pill Box
+                            VStack(spacing: 6) {
+                                Button(action: { period = "AM" }) {
+                                    Text("AM")
+                                        .font(.system(size: 12, weight: .black))
+                                        .foregroundColor(period == "AM" ? .white : Theme.secondaryText)
+                                        .frame(width: 52, height: 34)
+                                        .background(period == "AM" ? Theme.orbitGradient : LinearGradient(gradient: Gradient(colors: [Color.clear, Color.clear]), startPoint: .leading, endPoint: .trailing))
+                                        .cornerRadius(10)
+                                }
+                                Button(action: { period = "PM" }) {
+                                    Text("PM")
+                                        .font(.system(size: 12, weight: .black))
+                                        .foregroundColor(period == "PM" ? .white : Theme.secondaryText)
+                                        .frame(width: 52, height: 34)
+                                        .background(period == "PM" ? Theme.orbitGradient : LinearGradient(gradient: Gradient(colors: [Color.clear, Color.clear]), startPoint: .leading, endPoint: .trailing))
+                                        .cornerRadius(10)
+                                }
+                            }
+                            .padding(6)
+                            .background(Color(red: 18/255, green: 19/255, blue: 28/255))
+                            .cornerRadius(16)
+                            .offset(y: -6)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(20)
+                        .background(Color(red: 10/255, green: 12/255, blue: 16/255))
+                        .cornerRadius(20)
+                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                    }
+                    
+                    // Shoot Location Card
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Shoot Location *")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                        
+                        HStack(spacing: 10) {
+                            Image(systemName: "mappin.and.ellipse")
+                                .foregroundColor(Theme.secondaryText)
+                            
+                            TextField("Enter shoot location", text: $location)
+                                .foregroundColor(.white)
+                                .font(.system(size: 14, weight: .semibold))
+                            
+                            Button(action: {
+                                location = "Live Location @ Bandra West, Mumbai"
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "scope")
+                                    Text("LOCATE ME")
+                                }
+                                .font(.system(size: 10, weight: .black))
+                                .foregroundColor(Theme.orbitCyan)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .overlay(Capsule().stroke(Theme.orbitCyan, lineWidth: 1))
+                            }
+                        }
+                        .padding(14)
+                        .background(Color(red: 10/255, green: 12/255, blue: 16/255))
+                        .cornerRadius(20)
+                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.12), lineWidth: 1))
+                    }
+                    
+                    // Additional Notes
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Additional Notes")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                        
+                        TextField("Any special requests...", text: $notes, axis: .vertical)
+                            .lineLimit(3...5)
+                            .padding(14)
+                            .background(Color(red: 10/255, green: 12/255, blue: 16/255))
+                            .cornerRadius(20)
+                            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.12), lineWidth: 1))
+                            .foregroundColor(.white)
+                    }
+                    
+                    // Bottom CTA Action
+                    GradientButton(text: "Review Order & Pay  →", onClick: onBookingComplete)
+                        .padding(.top, 8)
                 }
                 .padding(16)
             }
