@@ -74,35 +74,47 @@ fun MainClientNavigationHost() {
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                when (currentTab) {
-                    "home" -> DashboardHomeScreen(
-                        onNavigateToBooking = { currentTab = "booking" },
-                        onNavigateToPackages = { currentTab = "packages" },
-                        onNavigateToTracking = { id ->
-                            activeBookingId = id
-                            currentTab = "tracking"
-                        },
-                        onNavigateToProfile = { currentTab = "profile" }
-                    )
-                    "packages" -> PackagesScreen(
-                        onSelectPackage = { pkgId ->
-                            selectedPackageId = pkgId
-                            currentTab = "booking"
-                        }
-                    )
-                    "booking" -> BookingFlowScreen(
-                        packageId = selectedPackageId,
-                        onBookingComplete = {
-                            currentTab = "tracking"
-                        }
-                    )
-                    "tracking" -> TrackingScreen(bookingId = activeBookingId)
-                    "profile" -> ProfileScreen(
-                        onLogout = {
-                            prefsManager.clearSession()
-                            isAuthenticated = false
-                        }
-                    )
+                androidx.compose.animation.AnimatedContent(
+                    targetState = currentTab,
+                    transitionSpec = {
+                        androidx.compose.animation.fadeIn(
+                            animationSpec = androidx.compose.animation.core.tween(180)
+                        ) togetherWith androidx.compose.animation.fadeOut(
+                            animationSpec = androidx.compose.animation.core.tween(180)
+                        )
+                    },
+                    label = "ScreenTransition"
+                ) { targetTab ->
+                    when (targetTab) {
+                        "home" -> DashboardHomeScreen(
+                            onNavigateToBooking = { currentTab = "booking" },
+                            onNavigateToPackages = { currentTab = "packages" },
+                            onNavigateToTracking = { id ->
+                                activeBookingId = id
+                                currentTab = "tracking"
+                            },
+                            onNavigateToProfile = { currentTab = "profile" }
+                        )
+                        "packages" -> PackagesScreen(
+                            onSelectPackage = { pkgId ->
+                                selectedPackageId = pkgId
+                                currentTab = "booking"
+                            }
+                        )
+                        "booking" -> BookingFlowScreen(
+                            packageId = selectedPackageId,
+                            onBookingComplete = {
+                                currentTab = "tracking"
+                            }
+                        )
+                        "tracking" -> TrackingScreen(bookingId = activeBookingId)
+                        "profile" -> ProfileScreen(
+                            onLogout = {
+                                prefsManager.clearSession()
+                                isAuthenticated = false
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -117,12 +129,12 @@ fun ClientBottomNavigationBar(
     val tabs = remember { listOf("home", "packages", "tracking", "profile") }
     val selectedIndex = tabs.indexOf(currentTab).coerceAtLeast(0)
 
-    // Smooth physics-based spring animation for sliding option indicator
+    // Hardware-accelerated ultra-smooth animation for sliding option indicator
     val animatedIndex by androidx.compose.animation.core.animateFloatAsState(
         targetValue = selectedIndex.toFloat(),
         animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy,
-            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumHigh
         ),
         label = "slidingIndicatorOffset"
     )

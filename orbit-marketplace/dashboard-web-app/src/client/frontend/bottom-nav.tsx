@@ -71,7 +71,7 @@ export function BottomNav() {
                   <motion.div
                     layoutId="activeNavBackground"
                     className={`absolute inset-0 bg-gradient-to-b from-[#1C1D2A]/90 to-[#12131D]/95 border border-white/15 ${cornerRadiusClass} shadow-[inset_1.5px_1.5px_1px_0_rgba(255,255,255,0.25),inset_-1.5px_-1.5px_2px_1px_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.4)] overflow-hidden`}
-                    transition={{ type: "spring", stiffness: 450, damping: 30 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 38, mass: 0.8 }}
                   >
                     {/* Top gradient line indicator */}
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-9 h-[3px] bg-gradient-to-r from-[#00F0FF] via-[#7000FF] to-[#A056FF] rounded-full shadow-[0_0_10px_#00F0FF]" />
