@@ -1337,15 +1337,18 @@ fun PackagesScreen(onSelectPackage: (String) -> Unit) {
 @Composable
 fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
     var shootDate by remember { mutableStateOf("2026-08-01") }
-    var timeSlot by remember { mutableStateOf("10:00 AM - 12:00 PM") }
+    var hour by remember { mutableIntStateOf(3) }
+    var minute by remember { mutableIntStateOf(35) }
+    var period by remember { mutableStateOf("AM") }
     var locationAddress by remember { mutableStateOf("") }
     var specialNotes by remember { mutableStateOf("") }
     var step by remember { mutableIntStateOf(1) }
+    var selectedPaymentMethod by remember { mutableStateOf("upi") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SpaceNavy)
+            .background(Color.Black)
     ) {
         ClientTopAppBar()
 
@@ -1353,112 +1356,301 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            OrbitHeader(title = "Configure Shoot Booking", subtitle = "Tier: ${packageId.uppercase()}")
+            OrbitHeader(title = "Configure Session", subtitle = "Selected Tier: ${packageId.uppercase()}")
 
             if (step == 1) {
-                GlassCard {
-                    Text("1. Shoot Schedule & Slot", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    Spacer(modifier = Modifier.height(12.dp))
+                // Top Notice Pill Banner
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0C10)),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(Color.White),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("✓", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                        }
+                        Column {
+                            Text("Booked for right now!", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("A partner will be dispatched immediately.", color = MutedText, fontSize = 12.sp)
+                        }
+                    }
+                }
 
-                    OutlinedTextField(
-                        value = shootDate,
-                        onValueChange = { shootDate = it },
-                        label = { Text("Shoot Date (YYYY-MM-DD)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrbitCyan)
-                    )
+                // Time Picker Spinner Component
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0C10)),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("⏰", fontSize = 14.sp)
+                            Text("Select Time *", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            // Hour Column
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Surface(
+                                    color = Color.White.copy(alpha = 0.05f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.clickable { hour = if (hour >= 12) 1 else hour + 1 }
+                                ) {
+                                    Text("▲", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+                                }
+                                Text("$hour", fontSize = 40.sp, fontWeight = FontWeight.Black, color = OrbitCyan)
+                                Surface(
+                                    color = Color.White.copy(alpha = 0.05f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.clickable { hour = if (hour <= 1) 12 else hour - 1 }
+                                ) {
+                                    Text("▼", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+                                }
+                                Text("Hour", color = MutedText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                            }
 
-                    OutlinedTextField(
-                        value = timeSlot,
-                        onValueChange = { timeSlot = it },
-                        label = { Text("Preferred Time Slot") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrbitCyan)
-                    )
+                            Text(":", fontSize = 40.sp, fontWeight = FontWeight.Black, color = OrbitCyan, modifier = Modifier.padding(bottom = 16.dp))
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                            // Minute Column
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Surface(
+                                    color = Color.White.copy(alpha = 0.05f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.clickable { minute = (minute + 5) % 60 }
+                                ) {
+                                    Text("▲", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+                                }
+                                Text(String.format("%02d", minute), fontSize = 40.sp, fontWeight = FontWeight.Black, color = OrbitPurple)
+                                Surface(
+                                    color = Color.White.copy(alpha = 0.05f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.clickable { minute = (minute - 5 + 60) % 60 }
+                                ) {
+                                    Text("▼", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+                                }
+                                Text("Min", color = MutedText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                            }
 
-                    Text("2. Location Details", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    Spacer(modifier = Modifier.height(12.dp))
+                            // AM/PM Toggle Pill Box
+                            Surface(
+                                color = Color(0xFF12131C),
+                                shape = RoundedCornerShape(16.dp),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+                                modifier = Modifier.padding(start = 8.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Surface(
+                                        color = if (period == "AM") OrbitCyan else Color.Transparent,
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.clickable { period = "AM" }
+                                    ) {
+                                        Text(
+                                            "AM",
+                                            color = if (period == "AM") Color.Black else MutedText,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Black,
+                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                        )
+                                    }
+                                    Surface(
+                                        color = if (period == "PM") OrbitCyan else Color.Transparent,
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.clickable { period = "PM" }
+                                    ) {
+                                        Text(
+                                            "PM",
+                                            color = if (period == "PM") Color.Black else MutedText,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Black,
+                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
-                    OutlinedTextField(
-                        value = locationAddress,
-                        onValueChange = { locationAddress = it },
-                        label = { Text("Complete Location Address") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrbitCyan)
-                    )
+                // Shoot Location Input Card
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Shoot Location *", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0C10)),
+                        shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text("📍", fontSize = 14.sp)
+                            BasicTextField(
+                                value = locationAddress,
+                                onValueChange = { locationAddress = it },
+                                modifier = Modifier.weight(1f),
+                                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
+                                decorationBox = { innerTextField ->
+                                    if (locationAddress.isEmpty()) {
+                                        Text("Enter shoot location", color = Color(0xFF71717A), fontSize = 14.sp)
+                                    }
+                                    innerTextField()
+                                }
+                            )
+                            Surface(
+                                color = Color.Transparent,
+                                shape = RoundedCornerShape(20.dp),
+                                border = BorderStroke(1.dp, OrbitCyan),
+                                modifier = Modifier.clickable { locationAddress = "Live Location @ Bandra West, Mumbai" }
+                            ) {
+                                Text("🎯 LOCATE ME", color = OrbitCyan, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+                            }
+                        }
+                    }
+                }
 
-                    Spacer(modifier = Modifier.height(12.dp))
-
+                // Additional Notes Text field
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Additional Notes", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     OutlinedTextField(
                         value = specialNotes,
                         onValueChange = { specialNotes = it },
-                        label = { Text("Instructions for Partner / Editor (Optional)") },
+                        placeholder = { Text("Any special requests...", color = Color(0xFF71717A)) },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3,
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrbitCyan)
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    GradientButton(
-                        text = "Proceed to Payment Review →",
-                        onClick = { step = 2 },
-                        modifier = Modifier.fillMaxWidth()
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = OrbitCyan,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
+                            focusedContainerColor = Color(0xFF0A0C10),
+                            unfocusedContainerColor = Color(0xFF0A0C10)
+                        ),
+                        shape = RoundedCornerShape(20.dp)
                     )
                 }
+
+                // Action Bar
+                GradientButton(
+                    text = "Review Order →",
+                    onClick = { step = 2 },
+                    modifier = Modifier.fillMaxWidth().height(54.dp)
+                )
             } else {
-                GlassCard {
-                    Text("Order & Payment Summary", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    Divider(modifier = Modifier.padding(vertical = 12.dp), color = OrbitBorder)
+                // Step 2: Review Session Details & Choose Payment Method
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0C10)),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("✓", color = OrbitCyan, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text("Review Session Details", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
 
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Selected Tier", color = MutedText)
-                        Text(packageId.uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Shoot Date", color = MutedText)
-                        Text(shootDate, color = Color.White)
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Time Slot", color = MutedText)
-                        Text(timeSlot, color = Color.White)
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Location", color = MutedText)
-                        Text(if (locationAddress.isBlank()) "Default Studio Address" else locationAddress, color = Color.White)
-                    }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Package Type:", color = MutedText, fontSize = 13.sp)
+                            Text(packageId.uppercase(), color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Scheduled Date:", color = MutedText, fontSize = 13.sp)
+                            Text("Booked for immediately ⚡", color = OrbitCyan, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Scheduled Time Slot:", color = MutedText, fontSize = 13.sp)
+                            Text("Direct matching en-route", color = OrbitCyan, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Shoot Location:", color = MutedText, fontSize = 13.sp)
+                            Text(if (locationAddress.isBlank()) "Mumbai, Maharashtra" else locationAddress, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Client Contact:", color = MutedText, fontSize = 13.sp)
+                            Text("Test User (+91 9876543210)", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        }
 
-                    Divider(modifier = Modifier.padding(vertical = 16.dp), color = OrbitBorder)
+                        Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
 
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Total Price", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("₹4,999.00", fontSize = 22.sp, fontWeight = FontWeight.Black, color = OrbitCyan)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("Subtotal Sum:", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text("₹1,999", color = OrbitCyan, fontWeight = FontWeight.Black, fontSize = 28.sp)
+                        }
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                // Choose Payment Method Card
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0C10)),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("💳", fontSize = 14.sp)
+                            Text("Choose Payment Method", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                            Surface(
+                                color = if (selectedPaymentMethod == "upi") Color(0xFF0A1624) else Color(0xFF12131D),
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, if (selectedPaymentMethod == "upi") OrbitCyan else Color.White.copy(alpha = 0.1f)),
+                                modifier = Modifier.weight(1f).clickable { selectedPaymentMethod = "upi" }
+                            ) {
+                                Text("UPI EXPRESS ⚡", color = if (selectedPaymentMethod == "upi") OrbitCyan else MutedText, fontSize = 12.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.padding(14.dp))
+                            }
+
+                            Surface(
+                                color = if (selectedPaymentMethod == "card") Color(0xFF1A0A28) else Color(0xFF12131D),
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, if (selectedPaymentMethod == "card") OrbitPurple else Color.White.copy(alpha = 0.1f)),
+                                modifier = Modifier.weight(1f).clickable { selectedPaymentMethod = "card" }
+                            ) {
+                                Text("RAZORPAY LINK CARD", color = if (selectedPaymentMethod == "card") OrbitPurple else MutedText, fontSize = 12.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.padding(14.dp))
+                            }
+                        }
+
+                        Text("🔐 All simulated payments are completely dummy checkouts and process state instantly.", color = Color(0xFF71717A), fontSize = 11.sp)
+                    }
+                }
+
+                // Action Buttons
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = { step = 1 },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.05f)),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+                        modifier = Modifier.weight(1f).height(54.dp)
+                    ) {
+                        Text("← Back", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
 
                     GradientButton(
-                        text = "Pay & Confirm Booking",
+                        text = "Authorize & Pay ✓",
                         onClick = onBookingComplete,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = "← Modify Booking Details",
-                        color = MutedText,
-                        fontSize = 14.sp,
-                        modifier = Modifier.clickable { step = 1 }.align(Alignment.CenterHorizontally)
+                        modifier = Modifier.weight(2f).height(54.dp)
                     )
                 }
             }

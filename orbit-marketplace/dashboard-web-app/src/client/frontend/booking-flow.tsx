@@ -626,103 +626,128 @@ export function BookingFlow() {
           )}
 
           {step === 3 && selectedPackage && (
-            <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="orbit-card rounded-2xl p-4 sm:p-6 md:p-8">
+            <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="orbit-card rounded-2xl p-4 sm:p-6 md:p-8 space-y-6">
               {paymentStep === "review" && (
                 <>
-                  <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-6 flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-orbit-cyan" />
-                    <span>Review & Secure Payment</span>
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    {/* Order Summary */}
-                    <div className="orbit-card rounded-xl p-4 sm:p-5 space-y-3 bg-white/[0.02] border border-orbit-border/50">
-                      <div className="text-xs sm:text-sm font-semibold text-orbit-cyan uppercase tracking-wider">Order Summary</div>
-                      <div className="space-y-2 text-xs sm:text-sm">
-                        {[
-                          { label: "Package", value: selectedPackage.name },
-                          { label: "Date", value: bookingDate?.toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" }) },
-                          { label: "Time", value: bookingTimeSlot },
-                          { label: "Location", value: bookingLocation ? bookingLocation.split(" @")[0] : "" },
-                        ].map((row) => (
-                          <div key={row.label} className="flex justify-between items-start gap-4">
-                            <span className="text-muted-foreground shrink-0">{row.label}</span>
-                            <span className={`font-medium text-right ${row.label === "Location" ? "break-words max-w-[280px] sm:max-w-[360px]" : "max-w-[200px] truncate"}`}>
-                              {row.value}
-                            </span>
-                          </div>
-                        ))}
-                        <Separator className="bg-orbit-border" />
-                        <div className="flex justify-between text-base">
-                          <span className="font-semibold">Total Amount</span>
-                          <span className="font-black text-gradient-orbit">{formatCurrency(selectedPackage.price)}</span>
-                        </div>
-                      </div>
+                  {/* Card 1: Review Session Details */}
+                  <div className="bg-[#0A0C10]/95 border border-white/10 rounded-2xl p-6 space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-bold text-white mb-2">
+                      <CheckCircle2 className="w-5 h-5 text-[#00F0FF]" />
+                      <span>Review Session Details</span>
                     </div>
 
-                    {/* Payment Selector - UPI & Razorpay Options */}
-                    <div className="space-y-3">
-                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Payment Method</label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {/* UPI Option */}
-                        <div 
-                          onClick={() => setPaymentMethod("upi")}
-                          className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between relative ${
-                            paymentMethod === "upi" 
-                              ? "border-orbit-cyan bg-orbit-cyan/[0.03] orbit-glow" 
-                              : "border-orbit-border bg-white/[0.01] hover:border-orbit-cyan/50 hover:bg-white/[0.02]"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="w-9 h-9 rounded-lg bg-orbit-cyan/10 flex items-center justify-center text-orbit-cyan font-bold text-xs">
-                              UPI
-                            </div>
-                            <span className="text-[9px] font-black text-orbit-cyan bg-orbit-cyan/15 px-2 py-0.5 rounded uppercase tracking-wider">
-                              Popular
-                            </span>
-                          </div>
-                          <div className="mt-4">
-                            <span className="font-bold text-xs sm:text-sm block text-white">UPI / QR Payment</span>
-                            <span className="text-[10px] sm:text-xs text-muted-foreground block mt-0.5">Google Pay, PhonePe, Paytm, QR</span>
-                          </div>
-                          {paymentMethod === "upi" && (
-                            <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-orbit-cyan animate-ping" />
-                          )}
-                        </div>
-
-                        {/* Standard Checkout */}
-                        <div 
-                          onClick={() => setPaymentMethod("card")}
-                          className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
-                            paymentMethod === "card" 
-                              ? "border-orbit-purple bg-orbit-purple/[0.03] orbit-glow-purple" 
-                              : "border-orbit-border bg-white/[0.01] hover:border-orbit-purple/50 hover:bg-white/[0.02]"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="w-9 h-9 rounded-lg bg-orbit-purple/10 flex items-center justify-center text-orbit-purple font-bold text-xs">
-                              CARD
-                            </div>
-                          </div>
-                          <div className="mt-4">
-                            <span className="font-bold text-xs sm:text-sm block text-white">Cards & Netbanking</span>
-                            <span className="text-[10px] sm:text-xs text-muted-foreground block mt-0.5">Credit/Debit Card, Netbanking, Wallets</span>
-                          </div>
-                        </div>
+                    <div className="space-y-3 text-xs sm:text-sm">
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-400">Package Type:</span>
+                        <span className="font-black text-white uppercase">{selectedPackage.name}</span>
                       </div>
-                    </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-400">Scheduled Date:</span>
+                        <span className="font-bold text-[#00F0FF] flex items-center gap-1">
+                          {bookingDate ? bookingDate.toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" }) : "Booked for immediately ⚡"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-400">Scheduled Time Slot:</span>
+                        <span className="font-bold text-[#00F0FF]">
+                          {bookingTimeSlot || "Direct matching en-route"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-400">Shoot Location:</span>
+                        <span className="font-semibold text-white truncate max-w-[220px] sm:max-w-[320px] text-right">
+                          {bookingLocation || "Mumbai, Maharashtra"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-400">Client Contact:</span>
+                        <span className="font-semibold text-white">
+                          {user.name || "Test User"} ({cleanPhone ? `+91 ${cleanPhone}` : "+91 9876543210"})
+                        </span>
+                      </div>
 
-                    <div className="p-4 rounded-xl border border-orbit-border/50 bg-white/[0.01] flex items-start gap-2.5">
-                      <Lock className="w-4 h-4 text-orbit-cyan shrink-0 mt-0.5" />
-                      <p className="text-[11px] text-muted-foreground leading-relaxed">
-                        {paymentMethod === "upi" ? (
-                          "By clicking \"Pay & Confirm\", Razorpay will directly launch your UPI application selection (Google Pay, PhonePe, Paytm, etc.) or QR scanner page to complete the transaction instantly."
-                        ) : (
-                          "By clicking \"Pay & Confirm\", you will be redirected to Razorpay's secure checkout page to complete your payment with credit/debit cards, net banking, or digital wallets safely."
-                        )}
-                      </p>
+                      <div className="h-px bg-white/10 my-3" />
+
+                      <div className="flex justify-between items-center pt-1">
+                        <span className="text-lg font-bold text-white">Subtotal Sum:</span>
+                        <span className="text-3xl font-black text-[#00F0FF] drop-shadow-[0_0_12px_rgba(0,240,255,0.4)]">
+                          {formatCurrency(selectedPackage.price)}
+                        </span>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Card 2: Choose Payment Method */}
+                  <div className="bg-[#0A0C10]/95 border border-white/10 rounded-2xl p-6 space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-bold text-white mb-2">
+                      <CreditCard className="w-5 h-5 text-[#A056FF]" />
+                      <span>Choose Payment Method</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* UPI Option */}
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("upi")}
+                        className={`p-4 rounded-xl border text-center font-extrabold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                          paymentMethod === "upi"
+                            ? "bg-[#0A1624] border-[#00F0FF] text-[#00F0FF] shadow-[0_0_15px_rgba(0,240,255,0.3)]"
+                            : "bg-[#12131D] border-white/10 text-zinc-400 hover:text-white"
+                        }`}
+                      >
+                        <span>UPI EXPRESS ⚡</span>
+                      </button>
+
+                      {/* Razorpay Link Card */}
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("card")}
+                        className={`p-4 rounded-xl border text-center font-extrabold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                          paymentMethod === "card"
+                            ? "bg-[#1A0A28] border-[#A056FF] text-[#A056FF] shadow-[0_0_15px_rgba(160,86,255,0.3)]"
+                            : "bg-[#12131D] border-white/10 text-zinc-400 hover:text-white"
+                        }`}
+                      >
+                        <span>RAZORPAY LINK CARD</span>
+                      </button>
+                    </div>
+
+                    <div className="text-[11px] text-zinc-500 flex items-center gap-1.5 pt-1">
+                      <span>🔐 All simulated payments are completely dummy checkouts and process state instantly.</span>
+                    </div>
+                  </div>
+
+                  {/* Bottom Action Bar */}
+                  <div className="mt-8 flex items-center justify-between gap-4 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setStep(2)}
+                      className="px-6 py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-bold text-sm border border-white/10 flex items-center gap-2 transition-all cursor-pointer"
+                    >
+                      <ArrowLeft className="w-4 h-4" /> Back
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleConfirmPayment}
+                      disabled={isProcessing}
+                      className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-[#00D2FF] via-[#7000FF] to-[#A056FF] text-white font-extrabold text-sm flex items-center gap-2 shadow-[0_0_25px_rgba(0,210,255,0.35)] hover:shadow-[0_0_35px_rgba(0,210,255,0.55)] active:scale-[0.99] transition-all cursor-pointer"
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Authorizing Payment...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Authorize & Pay</span>
+                          <CheckCircle2 className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
 
                   <div className="mt-8 flex justify-between">
                     <Button variant="outline" onClick={() => setStep(2)} className="border-orbit-border text-foreground hover:bg-white/5 h-11 rounded-lg text-xs font-bold">
