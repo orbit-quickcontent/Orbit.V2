@@ -77,10 +77,13 @@ fun MainClientNavigationHost() {
                 androidx.compose.animation.AnimatedContent(
                     targetState = currentTab,
                     transitionSpec = {
-                        androidx.compose.animation.fadeIn(
-                            animationSpec = androidx.compose.animation.core.tween(180)
-                        ) togetherWith androidx.compose.animation.fadeOut(
-                            animationSpec = androidx.compose.animation.core.tween(180)
+                        androidx.compose.animation.ContentTransform(
+                            targetContentEnter = androidx.compose.animation.fadeIn(
+                                animationSpec = androidx.compose.animation.core.tween(180)
+                            ),
+                            initialContentExit = androidx.compose.animation.fadeOut(
+                                animationSpec = androidx.compose.animation.core.tween(180)
+                            )
                         )
                     },
                     label = "ScreenTransition"
@@ -134,7 +137,7 @@ fun ClientBottomNavigationBar(
         targetValue = selectedIndex.toFloat(),
         animationSpec = androidx.compose.animation.core.spring(
             dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
-            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumHigh
+            stiffness = androidx.compose.animation.core.Spring.StiffnessHigh
         ),
         label = "slidingIndicatorOffset"
     )
