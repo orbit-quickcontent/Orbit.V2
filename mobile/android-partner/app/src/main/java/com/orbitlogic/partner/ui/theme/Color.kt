@@ -2,23 +2,23 @@ package com.orbitlogic.partner.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val SpaceNavy = Color(0xFF0E0E0E)         // Background
-val SpaceNavyLight = Color(0xFF131313)    // Surface
-val SpaceNavyLighter = Color(0xFF1C1B1B)  // Surface Container Low / Card Fill
-val SurfaceBright = Color(0xFF3A3939)
+val SpaceNavy = Color(0xFF0A0C10)         // Pitch Space Navy (Client App Background)
+val SpaceNavyLight = Color(0xFF0F1115)    // Liquid Glass Container Background
+val SpaceNavyLighter = Color(0xFF1C1D2A)  // Liquid Glass Pill Card Fill
+val SurfaceBright = Color(0xFF2D2F3E)
 
-val OrbitGreen = Color(0xFF22C55E)        // Primary Accent (Online / Earned)
+val OrbitCyan = Color(0xFF00F0FF)         // Primary Accent (Client Cyan)
+val OrbitCyanBg = Color(0xFF00F0FF).copy(alpha = 0.12f)
+
+val OrbitPurple = Color(0xFFA056FF)       // Secondary Accent (Client Purple)
+val OrbitPurpleBg = Color(0xFFA056FF).copy(alpha = 0.12f)
+
+val OrbitGreen = Color(0xFF22C55E)        // Online / Financial Indicator Green
 val OrbitGreenContainer = Color(0xFF10B981)
 
-val OrbitPurple = Color(0xFFA855F7)       // Partner Pro Accent
-val OrbitPurpleBg = Color(0xFF2A1A3A)     // Partner Badge Container
+val OrbitBorder = Color(0x26FFFFFF)       // Border White 15%
+val OrbitBorderVariant = Color(0x3DFFFFFF)
 
-val OrbitCyan = Color(0xFF0EA5E9)         // Tech Blue / Accent
-val OrbitCyanBg = Color(0xFF0C2A3A)
-
-val OrbitBorder = Color(0xFF27272A)       // Card Outline
-val OrbitBorderVariant = Color(0xFF3F3F46)
-
-val MutedText = Color(0xFFA3A3A3)         // Secondary Text
+val MutedText = Color(0xFF8E92A0)         // Muted Label Text
 val Destructive = Color(0xFFFF4444)
 val White = Color(0xFFFFFFFF)

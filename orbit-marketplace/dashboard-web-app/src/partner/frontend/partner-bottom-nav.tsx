@@ -3,33 +3,36 @@
 /**
  * 🟣 PARTNER FRONTEND | PartnerBottomNav
  *
- * Bottom navigation with 4 tabs: Home, Work, Earnings, Profile
- * Each tab navigates to its own view in the partner app.
+ * Apple Liquid Glass floating pill navigation bar matching the Client App & Liquid Glass Studio design.
+ * Features rounded card active state, liquid glass specular highlights, top cyan-purple gradient indicator line,
+ * glassmorphism backdrop filter, and smooth Framer Motion spring physics.
  *
- * Used by: partner-app.tsx
- * Category: Partner UI
+ * Layout: Home | Work | Earnings | Profile
  */
 
 import { motion } from "framer-motion";
-import { LayoutDashboard, Briefcase, Wallet, User } from "lucide-react";
+import { Home, Briefcase, Wallet, User } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { getInitials } from "@/lib/utils";
 import { type AppView } from "@/lib/types";
 
-const NAV_ITEMS: {
-  icon: React.ElementType;
+type NavItem = {
+  icon: React.ElementType | null;
   label: string;
   view: AppView;
   isProfile?: boolean;
-}[] = [
-  { icon: LayoutDashboard, label: "Home", view: "partner" },
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { icon: Home, label: "Home", view: "partner" },
   { icon: Briefcase, label: "Work", view: "partner-work" },
   { icon: Wallet, label: "Earnings", view: "partner-earnings" },
   { icon: User, label: "Profile", view: "profile", isProfile: true },
 ];
 
 export function PartnerBottomNav() {
-  const { currentView, setCurrentView, user, partnerActiveBooking } = useAppStore();
+  const { currentView, setCurrentView, user } = useAppStore();
+  const avatarInitial = getInitials(user.name) || "TU";
 
   const getIsActive = (view: AppView) => {
     if (view === "partner") return currentView === "partner";
@@ -39,140 +42,95 @@ export function PartnerBottomNav() {
     return false;
   };
 
-  const avatarGradient = user.avatar || "from-orbit-purple to-orbit-cyan";
-  const initials = getInitials(user.name);
-
-  const renderNavAvatar = (size: string, textSize: string) => {
-    if (user.avatarType === "photo" && user.avatarPhotoUrl) {
-      return (
-        <div className={`${size} rounded-full overflow-hidden`}>
-          <img src={user.avatarPhotoUrl} alt="Profile" className="w-full h-full object-cover" />
-        </div>
-      );
-    }
-    if (user.avatarType === "avatar" && user.avatarEmoji) {
-      return (
-        <div className={`${size} rounded-full bg-gradient-to-br from-orbit-purple/20 to-orbit-cyan/20 backdrop-blur-sm flex items-center justify-center ${textSize}`}>
-          {user.avatarEmoji}
-        </div>
-      );
-    }
-    return (
-      <div className={`${size} rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center ${textSize} font-bold text-white`}>
-        {initials}
-      </div>
-    );
-  };
-
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50">
-      <div className="px-4 sm:px-6 pb-[env(safe-area-inset-bottom,8px)] pt-1">
-        <div className="orbit-nav-pill max-w-lg mx-auto">
-          <div className="flex items-center justify-around h-[52px] sm:h-[56px] relative">
-            {NAV_ITEMS.map((navItem, idx) => {
-              const isActive = getIsActive(navItem.view);
-              const Icon = navItem.icon;
+    <nav className="fixed bottom-4 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
+      {/* Hidden SVG Filter for Liquid Glass Backdrop Effect */}
+      <svg style={{ display: "none" }}>
+        <filter id="liquid-glass-filter-partner" colorInterpolationFilters="linearRGB" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse">
+          <feDisplacementMap in="SourceGraphic" in2="SourceGraphic" scale="12" xChannelSelector="R" yChannelSelector="B" x="0%" y="0%" width="100%" height="100%" result="displacementMap" />
+          <feGaussianBlur stdDeviation="2 2" x="0%" y="0%" width="100%" height="100%" in="displacementMap" edgeMode="none" result="blur" />
+        </filter>
+      </svg>
 
-              // ─── Profile Tab ────────────────────────────
-              if (navItem.isProfile) {
-                return (
-                  <button
-                    key={navItem.view}
-                    onClick={() => setCurrentView(navItem.view)}
-                    className="relative flex flex-col items-center justify-center gap-0.5 w-14 sm:w-18 h-full group"
+      {/* Floating Apple Liquid Glass Outer Container */}
+      <div className="pointer-events-auto w-full max-w-md bg-[rgba(15,17,21,0.85)] backdrop-blur-2xl border border-white/10 rounded-[32px] p-1.5 shadow-[inset_1.5px_1.5px_1px_0_rgba(255,255,255,0.2),inset_-1.5px_-1.5px_2px_1px_rgba(255,255,255,0.05),0_12px_40px_rgba(0,0,0,0.85)]">
+        <div className="flex items-center justify-between relative h-14 px-1">
+          {NAV_ITEMS.map((item, idx) => {
+            const isActive = getIsActive(item.view);
+            const Icon = item.icon;
+            const isFirst = idx === 0;
+            const isLast = idx === NAV_ITEMS.length - 1;
+
+            const cornerRadiusClass = isFirst
+              ? "rounded-l-[26px] rounded-r-2xl"
+              : isLast
+              ? "rounded-l-2xl rounded-r-[26px]"
+              : "rounded-2xl";
+
+            return (
+              <button
+                key={item.view}
+                onClick={() => setCurrentView(item.view)}
+                className="relative flex-1 flex flex-col items-center justify-center h-full rounded-2xl transition-all duration-300 group cursor-pointer active:scale-95 hover:scale-[1.03]"
+              >
+                {/* Active Liquid Glass Pill Container & Top Gradient Indicator */}
+                {isActive && (
+                  <motion.div
+                    layoutId="activePartnerNavBackground"
+                    className={`absolute inset-0 bg-gradient-to-b from-[#1C1D2A]/90 to-[#12131D]/95 border border-white/15 ${cornerRadiusClass} shadow-[inset_1.5px_1.5px_1px_0_rgba(255,255,255,0.25),inset_-1.5px_-1.5px_2px_1px_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.4)] overflow-hidden`}
+                    transition={{ type: "spring", stiffness: 500, damping: 38, mass: 0.8 }}
                   >
-                    {/* Active indicator */}
-                    {isActive && (
-                      <motion.div
-                        layoutId="partnerNavIndicator"
-                        className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-5 h-[3px] rounded-full bg-gradient-to-r from-orbit-purple to-orbit-cyan"
-                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                      />
-                    )}
+                    {/* Top cyan-purple gradient line indicator */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-9 h-[3px] bg-gradient-to-r from-[#00F0FF] via-[#7000FF] to-[#A056FF] rounded-full shadow-[0_0_10px_#00F0FF]" />
+                  </motion.div>
+                )}
 
-                    <div className={`relative z-10 transition-all duration-200 ${
-                      isActive
-                        ? "ring-2 ring-white/30 scale-110"
-                        : "opacity-50 group-hover:opacity-80 group-hover:scale-105"
-                    }`}>
-                      {renderNavAvatar("w-5 h-5 sm:w-6 sm:h-6", "text-[8px] sm:text-[10px]")}
-                    </div>
-
-                    <span
-                      className={`relative z-10 text-[8px] sm:text-[10px] leading-tight transition-colors duration-200 ${
+                {/* Icon & Label Rendering */}
+                <div className="relative z-10 flex flex-col items-center gap-0.5">
+                  {item.isProfile ? (
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-200 ${
                         isActive
-                          ? "text-foreground font-bold"
-                          : "text-muted-foreground/40 font-medium group-hover:text-muted-foreground/70"
+                          ? "bg-gradient-to-r from-[#00F0FF] to-[#A056FF] text-black shadow-[0_0_12px_rgba(0,240,255,0.6)]"
+                          : "bg-[#1E2029] border border-white/10 text-[#8E92A0] group-hover:text-zinc-200"
                       }`}
                     >
-                      {navItem.label}
-                    </span>
-                  </button>
-                );
-              }
-
-              // ─── Regular Tabs ───────────────────────────
-              return (
-                <button
-                  key={navItem.label + idx}
-                  onClick={() => setCurrentView(navItem.view)}
-                  className="relative flex flex-col items-center justify-center gap-0.5 w-14 sm:w-18 h-full group"
-                >
-                  {/* Active indicator bar */}
-                  {isActive && (
-                    <motion.div
-                      layoutId="partnerNavIndicator"
-                      className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-5 h-[3px] rounded-full bg-gradient-to-r from-orbit-cyan to-orbit-purple"
-                      transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                    />
+                      {user.avatarPhotoUrl ? (
+                        <img src={user.avatarPhotoUrl} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        avatarInitial
+                      )}
+                    </div>
+                  ) : (
+                    Icon && (
+                      <Icon
+                        className={`w-5 h-5 transition-all duration-200 ${
+                          isActive
+                            ? "text-[#00F0FF] scale-110 drop-shadow-[0_0_8px_rgba(0,240,255,0.6)]"
+                            : "text-[#8E92A0] group-hover:text-zinc-200"
+                        }`}
+                        strokeWidth={isActive ? 2.5 : 1.8}
+                      />
+                    )
                   )}
 
-                  <div className="relative z-10">
-                    <div
-                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-all duration-200 ${
-                        isActive
-                          ? "bg-gradient-to-br from-orbit-cyan/15 to-orbit-purple/15 scale-105"
-                          : "group-hover:bg-white/[0.04] group-hover:scale-105"
-                      }`}
-                    >
-                      <Icon
-                        className={`w-[16px] h-[16px] sm:w-[18px] sm:h-[18px] transition-all duration-200 ${
-                          isActive
-                            ? navItem.view === "partner-earnings"
-                              ? "text-green-400"
-                              : navItem.view === "partner-work"
-                                ? "text-green-400"
-                                : "text-orbit-cyan"
-                            : "text-muted-foreground/40 group-hover:text-muted-foreground/70"
-                        }`}
-                        strokeWidth={isActive ? 2.2 : 1.8}
-                      />
-                    </div>
-                  </div>
-
+                  {/* Label */}
                   <span
-                    className={`relative z-10 text-[8px] sm:text-[10px] leading-tight transition-colors duration-200 ${
-                      isActive
-                        ? "text-foreground font-bold"
-                        : "text-muted-foreground/40 font-medium group-hover:text-muted-foreground/70"
+                    className={`text-[10px] font-semibold tracking-tight transition-colors duration-200 ${
+                      isActive ? "text-[#00F0FF]" : "text-[#8E92A0] group-hover:text-zinc-200"
                     }`}
                   >
-                    {navItem.label}
+                    {item.label}
                   </span>
+                </div>
 
-                  {/* Work badge — shows when active booking */}
-                  {navItem.label === "Work" && partnerActiveBooking && (
-                    <div className="absolute top-0.5 right-3 sm:right-4 w-2 h-2 rounded-full bg-orbit-purple animate-pulse z-20" />
-                  )}
-
-                  {/* Earnings dot */}
-                  {navItem.label === "Earnings" && (
-                    <div className="absolute top-0.5 right-3 sm:right-4 w-2 h-2 rounded-full bg-green-400 z-20" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                {/* Green Notification Dot for Earnings tab */}
+                {item.view === "partner-earnings" && (
+                  <div className="absolute top-2 right-4 w-2 h-2 rounded-full bg-[#22C55E] shadow-[0_0_6px_#22C55E] z-20" />
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
     </nav>
