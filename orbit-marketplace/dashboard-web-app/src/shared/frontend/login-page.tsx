@@ -238,7 +238,7 @@ export default function LoginPage() {
       toast.dismiss(loadingToast);
 
       const targetRole = selectedRole || "USER";
-      await login(targetRole);
+      await login(targetRole, { email: gEmail, name: gName, phone: phone || "" });
 
       toast.success("Signed in with Google!", { 
         description: `Welcome aboard ${gName}!` 
@@ -264,7 +264,7 @@ export default function LoginPage() {
         setUser({ name: gName, email: gEmail, authProvider: "google" as const, isVerified: true });
         setIsSocialLogin(true);
         const targetRole = selectedRole || "USER";
-        await login(targetRole);
+        await login(targetRole, { email: gEmail, name: gName, phone: phone || "" });
         toast.success("Signed in with Google (Demo Mode)", {
           description: `Welcome aboard ${gName}!`
         });
@@ -272,7 +272,7 @@ export default function LoginPage() {
     } finally {
       setIsAuthenticating(false);
     }
-  }, [setUser, isAuthenticating, selectedRole, login]);
+  }, [setUser, isAuthenticating, selectedRole, login, phone]);
 
   // Apple OAuth
   const handleAppleLogin = useCallback(async () => {
@@ -297,7 +297,7 @@ export default function LoginPage() {
       
       toast.dismiss(loadingToast);
       const targetRole = selectedRole || "USER";
-      await login(targetRole);
+      await login(targetRole, { email: aEmail, name: aName, phone: phone || "" });
       toast.success("Signed in with Apple!", { 
         description: `Welcome aboard ${aName}!` 
       });
@@ -317,7 +317,7 @@ export default function LoginPage() {
         setUser({ name: aName, email: aEmail, authProvider: "apple" as const, isVerified: true });
         setIsSocialLogin(true);
         const targetRole = selectedRole || "USER";
-        await login(targetRole);
+        await login(targetRole, { email: aEmail, name: aName, phone: phone || "" });
         toast.success("Signed in with Apple (Demo Mode)", {
           description: `Welcome aboard ${aName}!`
         });
@@ -325,7 +325,7 @@ export default function LoginPage() {
     } finally {
       setIsAuthenticating(false);
     }
-  }, [setUser, isAuthenticating, selectedRole, login]);
+  }, [setUser, isAuthenticating, selectedRole, login, phone]);
 
   // Render the current avatar preview based on mode
   const renderAvatarPreview = () => {

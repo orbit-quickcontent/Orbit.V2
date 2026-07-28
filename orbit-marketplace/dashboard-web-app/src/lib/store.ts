@@ -107,7 +107,7 @@ interface AppState {
   // Auth
   isAuthenticated: boolean;
   userRole: UserRole;
-  login: (role: UserRole) => Promise<void>;
+  login: (role: UserRole, customUserData?: { email?: string; name?: string; phone?: string }) => Promise<void>;
   logout: () => void;
 
   // Navigation
@@ -232,15 +232,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Auth
   isAuthenticated: false,
   userRole: "USER",
-  login: async (role) => {
+  login: async (role, customUserData) => {
     let pid = get().partnerId;
-    const email = get().user.email;
-    const name = get().user.name;
-    const phone = get().user.phone;
+    const email = customUserData?.email || get().user.email || "creator@orbitlogic.io";
+    const name = customUserData?.name || get().user.name || email.split("@")[0];
+    const phone = customUserData?.phone || get().user.phone || "";
+
+    // Sync user state in Zustand store
+    get().setUser({ email, name, phone });
 
     if (email) {
       try {
-        // Sync user profile to backend API / Firestore
+        // Sync user profile directly to backend API / Supabase Postgres
         const userRes = await fetch("/api/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -258,7 +261,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           }
         }
       } catch (err) {
-        console.error("[Store] Error syncing user on login:", err);
+        console.error("[Store] Error syncing user on login to Supabase:", err);
       }
     }
 

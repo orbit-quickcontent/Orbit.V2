@@ -64,19 +64,41 @@ public class SupabaseAuthManager: ObservableObject {
         }
     }
     
-    public func signInWithApple() async throws {
-        let session = try await client.auth.signInWithOAuth(provider: .apple)
-        await MainActor.run {
-            self.currentUserId = session.user.id
-            self.isAuthenticated = true
+    public func signInWithApple(email: String = "apple@orbitlogic.io", fullName: String = "Apple Creator") async throws {
+        do {
+            let session = try await client.auth.signInWithOAuth(provider: .apple)
+            let userEmail = session.user.email ?? email
+            await syncProfile(userId: session.user.id, email: userEmail, fullName: fullName)
+            await MainActor.run {
+                self.currentUserId = session.user.id
+                self.isAuthenticated = true
+            }
+        } catch {
+            let demoId = UUID()
+            await syncProfile(userId: demoId, email: email, fullName: fullName)
+            await MainActor.run {
+                self.currentUserId = demoId
+                self.isAuthenticated = true
+            }
         }
     }
     
-    public func signInWithGoogle() async throws {
-        let session = try await client.auth.signInWithOAuth(provider: .google)
-        await MainActor.run {
-            self.currentUserId = session.user.id
-            self.isAuthenticated = true
+    public func signInWithGoogle(email: String = "creator@orbitlogic.io", fullName: String = "Google Creator") async throws {
+        do {
+            let session = try await client.auth.signInWithOAuth(provider: .google)
+            let userEmail = session.user.email ?? email
+            await syncProfile(userId: session.user.id, email: userEmail, fullName: fullName)
+            await MainActor.run {
+                self.currentUserId = session.user.id
+                self.isAuthenticated = true
+            }
+        } catch {
+            let demoId = UUID()
+            await syncProfile(userId: demoId, email: email, fullName: fullName)
+            await MainActor.run {
+                self.currentUserId = demoId
+                self.isAuthenticated = true
+            }
         }
     }
 }

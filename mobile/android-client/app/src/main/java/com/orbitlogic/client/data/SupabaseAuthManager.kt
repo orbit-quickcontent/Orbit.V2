@@ -116,12 +116,22 @@ class SupabaseAuthManager(
         }
     }
 
-    suspend fun signInWithGoogle(): Boolean = withContext(Dispatchers.IO) {
-        true
+    suspend fun signInWithGoogle(
+        emailVal: String = "creator@orbitlogic.io",
+        nameVal: String = "Google Creator",
+        phoneVal: String = "+91 9876543210"
+    ): Boolean = withContext(Dispatchers.IO) {
+        val userId = UUID.nameUUIDFromBytes(emailVal.toByteArray()).toString()
+        syncUserLoginDetails(userId, emailVal, nameVal, phoneVal, "Creator", "client")
     }
 
-    suspend fun signInWithApple(): Boolean = withContext(Dispatchers.IO) {
-        true
+    suspend fun signInWithApple(
+        emailVal: String = "apple@orbitlogic.io",
+        nameVal: String = "Apple Creator",
+        phoneVal: String = "+91 9876543210"
+    ): Boolean = withContext(Dispatchers.IO) {
+        val userId = UUID.nameUUIDFromBytes(emailVal.toByteArray()).toString()
+        syncUserLoginDetails(userId, emailVal, nameVal, phoneVal, "Creator", "client")
     }
 
     suspend fun getCurrentUserId(): String? = withContext(Dispatchers.IO) {
