@@ -131,6 +131,20 @@ fun ClientBottomNavigationBar(
     val movementDelta = kotlin.math.abs(animatedIndex - selectedIndex.toFloat())
     val stretchFactor = 1.0f + (movementDelta * 0.25f).coerceAtMost(0.35f)
 
+    // Calculate edge curve factors so end/start corners curve seamlessly to match outer capsule box
+    val leftCurveFactor = (1.0f - animatedIndex).coerceIn(0.0f, 1.0f)
+    val rightCurveFactor = (animatedIndex - (tabs.size - 2).toFloat()).coerceIn(0.0f, 1.0f)
+
+    val startCornerRadius = 16.dp + (10.dp * leftCurveFactor)
+    val endCornerRadius = 16.dp + (10.dp * rightCurveFactor)
+
+    val dynamicPillShape = RoundedCornerShape(
+        topStart = startCornerRadius,
+        bottomStart = startCornerRadius,
+        topEnd = endCornerRadius,
+        bottomEnd = endCornerRadius
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -157,18 +171,18 @@ fun ClientBottomNavigationBar(
                 val overflowX = (dynamicWidth - tabWidth) / 2f
                 val finalOffset = (baseIndicatorOffset - overflowX).coerceIn(0.dp, maxWidth - dynamicWidth)
 
-                // Smooth Dynamic Resizing Active Option Background Pill + Top Glow Bar
+                // Smooth Dynamic Resizing Active Option Background Pill + Top Glow Bar with Curved Edges
                 Box(
                     modifier = Modifier
                         .offset(x = finalOffset)
                         .width(dynamicWidth)
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(dynamicPillShape)
                         .background(Color(0xFF161824).copy(alpha = 0.95f))
                         .border(
                             width = 1.dp,
                             color = Color.White.copy(alpha = 0.18f),
-                            shape = RoundedCornerShape(20.dp)
+                            shape = dynamicPillShape
                         )
                 ) {
                     // Top gradient line indicator resizing dynamically with the shape box

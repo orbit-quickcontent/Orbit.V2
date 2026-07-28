@@ -903,13 +903,28 @@ struct ClientBottomNavigationBar: View {
                 }) {
                     ZStack(alignment: .top) {
                         if isSelected {
-                            RoundedRectangle(cornerRadius: 18)
-                                .fill(Color(red: 23/255, green: 22/255, blue: 34/255))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 18)
-                                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                            let isFirst = tab.key == tabs.first?.key
+                            let isLast = tab.key == tabs.last?.key
+                            let leadingRadius: CGFloat = isFirst ? 24 : 16
+                            let trailingRadius: CGFloat = isLast ? 24 : 16
+
+                            UnevenRoundedRectangle(
+                                topLeadingRadius: leadingRadius,
+                                bottomLeadingRadius: leadingRadius,
+                                bottomTrailingRadius: trailingRadius,
+                                topTrailingRadius: trailingRadius
+                            )
+                            .fill(Color(red: 23/255, green: 22/255, blue: 34/255))
+                            .overlay(
+                                UnevenRoundedRectangle(
+                                    topLeadingRadius: leadingRadius,
+                                    bottomLeadingRadius: leadingRadius,
+                                    bottomTrailingRadius: trailingRadius,
+                                    topTrailingRadius: trailingRadius
                                 )
-                                .matchedGeometryEffect(id: "activeTabIndicator", in: animation)
+                                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                            )
+                            .matchedGeometryEffect(id: "activeTabIndicator", in: animation)
                             
                             // Top gradient line indicator dynamically resizing to fit the target box
                             RoundedRectangle(cornerRadius: 2)
