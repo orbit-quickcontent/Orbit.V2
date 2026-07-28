@@ -749,20 +749,6 @@ export function BookingFlow() {
                 </>
               )}
 
-                  <div className="mt-8 flex justify-between">
-                    <Button variant="outline" onClick={() => setStep(2)} className="border-orbit-border text-foreground hover:bg-white/5 h-11 rounded-lg text-xs font-bold">
-                      <ArrowLeft className="w-4 h-4 mr-2" />Back
-                    </Button>
-                    <Button
-                      onClick={handlePayment}
-                      disabled={isProcessing}
-                      className="bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold px-8 h-11 rounded-lg text-xs"
-                    >
-                      {isProcessing ? "Processing..." : `Pay & Confirm ${formatCurrency(selectedPackage.price)}`}
-                    </Button>
-                  </div>
-                </>
-              )}
 
               {paymentStep === "processing" && (
                 <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
