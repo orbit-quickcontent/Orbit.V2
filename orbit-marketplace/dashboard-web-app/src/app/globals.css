@@ -268,6 +268,8 @@
     inset 1.5px 1.5px 1px 0 rgba(255, 255, 255, 0.22),
     inset -1.5px -1.5px 2px 1px rgba(255, 255, 255, 0.05),
     0 12px 40px rgba(0, 0, 0, 0.85);
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .liquid-glass-pill {
@@ -279,11 +281,14 @@
     inset 1.5px 1.5px 1px 0 rgba(255, 255, 255, 0.28),
     inset -1.5px -1.5px 2px 1px rgba(255, 255, 255, 0.1),
     0 4px 16px rgba(0, 0, 0, 0.4);
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .liquid-glass-indicator {
   background: linear-gradient(90deg, #00F0FF 0%, #7000FF 50%, #A056FF 100%);
   box-shadow: 0 0 10px #00F0FF, 0 0 20px rgba(160, 86, 255, 0.5);
+  transform: translateZ(0);
 }
 
 .orbit-nav-pill {
@@ -296,6 +301,28 @@
     inset 1.5px 1.5px 1px 0 rgba(255, 255, 255, 0.2),
     inset -1.5px -1.5px 2px 1px rgba(255, 255, 255, 0.05),
     0 12px 40px rgba(0, 0, 0, 0.85);
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Low-End Mobile GPU Fallbacks (1GB - 3GB RAM Budget Android Devices) */
+@supports not (backdrop-filter: blur(1px)) {
+  .liquid-glass-card,
+  .liquid-glass-pill,
+  .orbit-nav-pill {
+    background: #13151D !important;
+    border: 1px solid #272A36 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.9) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Custom Fonts Utility Classes */
