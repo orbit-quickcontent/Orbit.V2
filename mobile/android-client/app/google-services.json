@@ -9,6 +9,64 @@
       "client_info": {
         "mobilesdk_app_id": "1:85716872139:android:957fed1102d0b41bffe44e",
         "android_client_info": {
+          "package_name": "com.orbitlogic.client"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "85716872139-k9jgvem35p0bsqb5bdrvob8q9p9sv4qo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBbBOoBVM8g6DWQ6gXQZxPQhXbb1IgdpGQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "85716872139-k9jgvem35p0bsqb5bdrvob8q9p9sv4qo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:85716872139:android:957fed1102d0b41bffe44e",
+        "android_client_info": {
+          "package_name": "com.orbitlogic.partner"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "85716872139-k9jgvem35p0bsqb5bdrvob8q9p9sv4qo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBbBOoBVM8g6DWQ6gXQZxPQhXbb1IgdpGQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "85716872139-k9jgvem35p0bsqb5bdrvob8q9p9sv4qo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:85716872139:android:957fed1102d0b41bffe44e",
+        "android_client_info": {
           "package_name": "com.orbit.quickcontent3"
         }
       },
