@@ -114,6 +114,19 @@ fun ClientBottomNavigationBar(
     currentTab: String,
     onSelectTab: (String) -> Unit
 ) {
+    val tabs = remember { listOf("home", "packages", "tracking", "profile") }
+    val selectedIndex = tabs.indexOf(currentTab).coerceAtLeast(0)
+
+    // Smooth physics-based spring animation for sliding option indicator
+    val animatedIndex by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = selectedIndex.toFloat(),
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+        ),
+        label = "slidingIndicatorOffset"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -129,15 +142,54 @@ fun ClientBottomNavigationBar(
                 .fillMaxWidth()
                 .height(64.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(6.dp)
             ) {
-                BottomNavItem("Home", "home", currentTab == "home") { onSelectTab("home") }
-                BottomNavItem("Packages", "packages", currentTab == "packages") { onSelectTab("packages") }
-                BottomNavItem("Track", "tracking", currentTab == "tracking") { onSelectTab("tracking") }
-                BottomNavItem("Profile", "profile", currentTab == "profile") { onSelectTab("profile") }
+                val tabWidth = maxWidth / tabs.size
+                val indicatorOffset = tabWidth * animatedIndex
+
+                // Smooth Sliding Active Option Background Pill + Top Glow Bar
+                Box(
+                    modifier = Modifier
+                        .offset(x = indicatorOffset)
+                        .width(tabWidth)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFF161824).copy(alpha = 0.95f))
+                        .border(
+                            width = 1.dp,
+                            color = Color.White.copy(alpha = 0.18f),
+                            shape = RoundedCornerShape(20.dp)
+                        )
+                ) {
+                    // Top gradient line indicator attached to the sliding selection pill
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .width(34.dp)
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(Color(0xFF00F0FF), Color(0xFFA056FF))
+                                )
+                            )
+                    )
+                }
+
+                // Row of Nav Items
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    BottomNavItem("Home", "home", currentTab == "home") { onSelectTab("home") }
+                    BottomNavItem("Packages", "packages", currentTab == "packages") { onSelectTab("packages") }
+                    BottomNavItem("Track", "tracking", currentTab == "tracking") { onSelectTab("tracking") }
+                    BottomNavItem("Profile", "profile", currentTab == "profile") { onSelectTab("profile") }
+                }
             }
         }
     }
@@ -246,7 +298,7 @@ fun RowScope.BottomNavItem(
     onClick: () -> Unit
 ) {
     val tabScale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (isSelected) 1.04f else 1.0f,
+        targetValue = if (isSelected) 1.05f else 1.0f,
         animationSpec = androidx.compose.animation.core.spring(
             dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
             stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
@@ -254,7 +306,17 @@ fun RowScope.BottomNavItem(
         label = "tabScale"
     )
 
-    val iconColor = if (isSelected) Color(0xFF00F0FF) else Color(0xFF8E92A0)
+    val iconColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) Color(0xFF00F0FF) else Color(0xFF8E92A0),
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+        label = "iconColor"
+    )
+
+    val textColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) Color(0xFF00F0FF) else Color(0xFF8E92A0),
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+        label = "textColor"
+    )
 
     Box(
         modifier = Modifier
@@ -262,31 +324,9 @@ fun RowScope.BottomNavItem(
             .fillMaxHeight()
             .scale(tabScale)
             .clip(RoundedCornerShape(20.dp))
-            .background(if (isSelected) Color(0xFF161824).copy(alpha = 0.95f) else Color.Transparent)
-            .border(
-                width = 1.dp,
-                color = if (isSelected) Color.White.copy(alpha = 0.18f) else Color.Transparent,
-                shape = RoundedCornerShape(20.dp)
-            )
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        if (isSelected) {
-            // Top gradient line indicator
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .width(34.dp)
-                    .height(3.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(Color(0xFF00F0FF), Color(0xFFA056FF))
-                        )
-                    )
-            )
-        }
-
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -296,7 +336,17 @@ fun RowScope.BottomNavItem(
                 "packages" -> PackageVectorIcon(color = iconColor)
                 "tracking" -> TrackVectorIcon(color = iconColor)
                 "profile" -> {
-                    // Profile Avatar Badge matching exact image layout
+                    val avatarBorderColor by androidx.compose.animation.animateColorAsState(
+                        targetValue = if (isSelected) Color.White else Color.White.copy(alpha = 0.15f),
+                        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+                        label = "avatarBorderColor"
+                    )
+                    val avatarTextColor by androidx.compose.animation.animateColorAsState(
+                        targetValue = if (isSelected) Color.Black else Color(0xFF8E92A0),
+                        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+                        label = "avatarTextColor"
+                    )
+
                     Box(
                         modifier = Modifier
                             .size(22.dp)
@@ -305,14 +355,14 @@ fun RowScope.BottomNavItem(
                                 if (isSelected) Brush.horizontalGradient(listOf(Color(0xFF00F0FF), Color(0xFFA056FF)))
                                 else Brush.linearGradient(listOf(Color(0xFF222630), Color(0xFF16181E)))
                             )
-                            .border(1.dp, if (isSelected) Color.White else Color.White.copy(alpha = 0.15f), CircleShape),
+                            .border(1.dp, avatarBorderColor, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "TU",
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Black,
-                            color = if (isSelected) Color.Black else Color(0xFF8E92A0)
+                            color = avatarTextColor
                         )
                     }
                 }
@@ -322,7 +372,7 @@ fun RowScope.BottomNavItem(
                 text = label,
                 fontSize = 10.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) Color(0xFF00F0FF) else Color(0xFF8E92A0),
+                color = textColor,
                 modifier = Modifier.padding(top = 3.dp)
             )
         }

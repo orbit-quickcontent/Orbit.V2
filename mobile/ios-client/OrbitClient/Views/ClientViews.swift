@@ -882,6 +882,7 @@ struct ProfileView: View {
 struct ClientBottomNavigationBar: View {
     @Binding var currentTab: String
     var userInitials: String = "TU"
+    @Namespace private var animation
     
     let tabs: [(key: String, label: String, icon: String)] = [
         ("home", "Home", "🏠"),
@@ -895,20 +896,26 @@ struct ClientBottomNavigationBar: View {
             ForEach(tabs, id: \.key) { tab in
                 let isSelected = currentTab == tab.key
                 
-                Button(action: { currentTab = tab.key }) {
+                Button(action: {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                        currentTab = tab.key
+                    }
+                }) {
                     ZStack(alignment: .top) {
                         if isSelected {
                             RoundedRectangle(cornerRadius: 18)
                                 .fill(Color(red: 23/255, green: 22/255, blue: 34/255))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 18)
-                                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
                                 )
+                                .matchedGeometryEffect(id: "activeTabIndicator", in: animation)
                             
                             // Top gradient line indicator
                             RoundedRectangle(cornerRadius: 2)
                                 .fill(Theme.orbitGradient)
                                 .frame(width: 32, height: 3)
+                                .matchedGeometryEffect(id: "activeTabTopLine", in: animation)
                         }
                         
                         VStack(spacing: 2) {
