@@ -1,7 +1,7 @@
 package com.orbitlogic.client
 
 import android.app.Application
-import com.posthog.android.PostHogAndroid
+import com.posthog.android.PostHog
 import com.posthog.android.PostHogAndroidConfig
 import dagger.hilt.android.HiltAndroidApp
 
@@ -19,10 +19,10 @@ class OrbitClientApplication : Application() {
             apiKey = "phc_yLLboi9NdQU9rcdQanRyCqPDxwkHtmE7kU58eerTbMho",
             host = "https://us.i.posthog.com"
         )
-        PostHogAndroid.setup(this, config)
+        PostHog.setup(this, config)
 
         // Connection test event — check PostHog → Activity to verify
-        PostHogAndroid.shared.capture(
+        PostHog.capture(
             event = "connection_test",
             properties = mapOf("app" to "orbit-client-mobile")
         )

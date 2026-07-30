@@ -109,7 +109,7 @@ dependencies {
     implementation("io.socket:socket.io-client:2.1.0")
 
     // Analytics
-    implementation("com.posthog.android:posthog:3.+")
+    implementation("com.posthog:posthog-android:3.+")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
