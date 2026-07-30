@@ -729,7 +729,7 @@ export function BookingFlow() {
 
                     <button
                       type="button"
-                      onClick={handleConfirmPayment}
+                      onClick={handlePayment}
                       disabled={isProcessing}
                       className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-[#00D2FF] via-[#7000FF] to-[#A056FF] text-white font-extrabold text-sm flex items-center gap-2 shadow-[0_0_25px_rgba(0,210,255,0.35)] hover:shadow-[0_0_35px_rgba(0,210,255,0.55)] active:scale-[0.99] transition-all cursor-pointer"
                     >

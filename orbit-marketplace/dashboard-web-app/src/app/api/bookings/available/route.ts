@@ -1,5 +1,6 @@
-/**
- * Partner Backend | Available Bookings API Route
- * Re-exports from: @/partner/backend/booking-available-handlers
- */
-export { GET } from "@/partner/backend/booking-available-handlers";
+import { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/backend-proxy";
+
+export async function GET(req: NextRequest) {
+  return proxyToBackend(req, "/bookings/available");
+}

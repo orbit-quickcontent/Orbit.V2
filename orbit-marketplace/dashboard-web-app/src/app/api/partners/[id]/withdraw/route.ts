@@ -1,5 +1,10 @@
-/**
- * Partner Backend | Partner Withdrawal API Route
- * Re-exports from: @/partner/backend/partner-wallet-handlers
- */
-export { POST } from "@/partner/backend/partner-wallet-handlers";
+import { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/backend-proxy";
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  return proxyToBackend(req, `/partners/${id}/withdraw`);
+}

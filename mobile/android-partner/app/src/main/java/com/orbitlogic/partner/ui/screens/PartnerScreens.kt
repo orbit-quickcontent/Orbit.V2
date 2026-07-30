@@ -21,8 +21,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.orbitlogic.partner.R
 import com.orbitlogic.partner.ui.theme.*
 
 // ─── Custom UI Reusable Components ───────────────────────────────────────────
@@ -39,19 +40,19 @@ fun GradientButton(
         enabled = enabled,
         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
         contentPadding = PaddingValues(),
-        shape = RoundedCornerShape(14.dp),
-        modifier = modifier.height(48.dp)
+        shape = RoundedCornerShape(12.dp),
+        modifier = modifier.height(50.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    if (enabled) Brush.horizontalGradient(listOf(OrbitGreen, OrbitCyan))
-                    else Brush.horizontalGradient(listOf(Color.DarkGray, Color.Gray))
+                    if (enabled) Brush.linearGradient(listOf(OrbitCyan, OrbitPurple))
+                    else Brush.linearGradient(listOf(Color.DarkGray, Color.Gray))
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = text, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(text = text, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
     }
 }
@@ -60,15 +61,15 @@ fun GradientButton(
 fun GlassCard(
     modifier: Modifier = Modifier,
     borderColor: Color = OrbitBorder,
-    backgroundColor: Color = SpaceNavyLighter,
+    backgroundColor: Color = SpaceNavyLight,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         modifier = modifier
             .fillMaxWidth()
-            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(16.dp))
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -99,7 +100,8 @@ fun PartnerHeader(
                         modifier = Modifier
                             .size(42.dp)
                             .clip(CircleShape)
-                            .background(Brush.linearGradient(listOf(OrbitPurple, OrbitCyan))),
+                            .background(SpaceNavyLight)
+                            .border(1.dp, OrbitBorder, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -126,13 +128,13 @@ fun PartnerHeader(
                         Text("Good evening", color = MutedText, fontSize = 12.sp)
                         Spacer(modifier = Modifier.width(6.dp))
                         Surface(
-                            color = OrbitPurpleBg,
+                            color = Color(0xFF083344).copy(alpha = 0.4f),
                             shape = RoundedCornerShape(4.dp),
-                            border = BorderStroke(1.dp, OrbitPurple.copy(alpha = 0.4f))
+                            border = BorderStroke(1.dp, Color(0xFF164E63).copy(alpha = 0.5f))
                         ) {
                             Text(
                                 "PARTNER",
-                                color = OrbitPurple,
+                                color = OrbitCyan,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -207,6 +209,13 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
     var phone by remember { mutableStateOf("9876543210") }
     var avatarPreset by remember { mutableStateOf("Creator") }
 
+    val avatarEmoji = when (avatarPreset) {
+        "Creator" -> "🎨"
+        "Professional" -> "👔"
+        "Artist" -> "🎭"
+        else -> "🧭"
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -218,18 +227,26 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
         ) {
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Header Logo
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
+                Image(
+                    painter = painterResource(id = R.drawable.orbit_logo),
+                    contentDescription = "Orbit Logo",
+                    modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp))
+                )
+                Spacer(modifier = Modifier.width(10.dp))
                 Text("ORBIT", fontSize = 28.sp, fontWeight = FontWeight.Black, color = OrbitCyan, letterSpacing = 2.sp)
             }
 
             Surface(
-                color = OrbitPurpleBg,
+                color = OrbitCyan.copy(alpha = 0.1f),
                 shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.dp, OrbitPurple.copy(alpha = 0.5f)),
+                border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.3f)),
                 modifier = Modifier.padding(bottom = 16.dp)
             ) {
-                Text("PARTNER ACCOUNT", color = OrbitPurple, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), letterSpacing = 1.sp)
+                Text("PARTNER ACCOUNT", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), letterSpacing = 1.sp)
             }
 
             Text("Join the Orbit", fontSize = 32.sp, fontWeight = FontWeight.Black, color = White)
@@ -237,9 +254,9 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
 
             // Quick Demo Login Button
             Surface(
-                color = Color(0xFF1E1B4B),
+                color = SpaceNavyLight,
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color(0xFF6366F1)),
+                border = BorderStroke(1.dp, OrbitPurple.copy(alpha = 0.5f)),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 20.dp)
@@ -275,7 +292,7 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
                             .background(SpaceNavy),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("👤", fontSize = 36.sp)
+                        Text(avatarEmoji, fontSize = 36.sp)
                     }
                 }
 
@@ -317,36 +334,63 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    placeholder = { Text("Enter your name") },
+                    placeholder = { Text("Enter your name", color = MutedText) },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrbitCyan)
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = OrbitCyan,
+                        unfocusedBorderColor = OrbitBorder,
+                        focusedTextColor = White,
+                        unfocusedTextColor = White,
+                        focusedLabelColor = OrbitCyan,
+                        cursorColor = OrbitCyan
+                    )
                 )
 
                 Text("EMAIL ADDRESS *", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    placeholder = { Text("you@example.com") },
+                    placeholder = { Text("you@example.com", color = MutedText) },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrbitCyan)
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = OrbitCyan,
+                        unfocusedBorderColor = OrbitBorder,
+                        focusedTextColor = White,
+                        unfocusedTextColor = White,
+                        focusedLabelColor = OrbitCyan,
+                        cursorColor = OrbitCyan
+                    )
                 )
 
                 Text("PHONE", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
-                    placeholder = { Text("10-digit mobile number") },
+                    placeholder = { Text("10-digit mobile number", color = MutedText) },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 20.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrbitCyan)
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = OrbitCyan,
+                        unfocusedBorderColor = OrbitBorder,
+                        focusedTextColor = White,
+                        unfocusedTextColor = White,
+                        focusedLabelColor = OrbitCyan,
+                        cursorColor = OrbitCyan
+                    )
                 )
 
                 GradientButton(
                     text = "Continue to Studio →",
                     onClick = { onLoginSuccess("partner_token_${System.currentTimeMillis()}") },
+                    enabled = name.isNotBlank() && email.isNotBlank(),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

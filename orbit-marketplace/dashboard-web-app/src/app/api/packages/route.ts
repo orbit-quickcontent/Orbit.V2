@@ -1,5 +1,6 @@
-/**
- * Client Backend | Packages API Route
- * Re-exports from: @/client/backend/package-handlers
- */
-export { GET } from "@/client/backend/package-handlers";
+import { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/backend-proxy";
+
+export async function GET(req: NextRequest) {
+  return proxyToBackend(req, "/packages");
+}

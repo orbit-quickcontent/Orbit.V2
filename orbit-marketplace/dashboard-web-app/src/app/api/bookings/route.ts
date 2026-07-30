@@ -1,5 +1,10 @@
-/**
- * Client Backend | Bookings List API Route
- * Re-exports from: @/client/backend/booking-list-handlers
- */
-export { GET, POST } from "@/client/backend/booking-list-handlers";
+import { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/backend-proxy";
+
+export async function GET(req: NextRequest) {
+  return proxyToBackend(req, "/bookings");
+}
+
+export async function POST(req: NextRequest) {
+  return proxyToBackend(req, "/bookings");
+}

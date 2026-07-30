@@ -1,5 +1,10 @@
-/**
- * Partner Backend | Partners List API Route
- * Re-exports from: @/partner/backend/partner-list-handlers
- */
-export { GET, POST } from "@/partner/backend/partner-list-handlers";
+import { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/backend-proxy";
+
+export async function GET(req: NextRequest) {
+  return proxyToBackend(req, "/partners");
+}
+
+export async function POST(req: NextRequest) {
+  return proxyToBackend(req, "/partners");
+}

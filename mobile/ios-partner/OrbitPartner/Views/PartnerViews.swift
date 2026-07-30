@@ -57,19 +57,20 @@ struct PartnerLoginView: View {
             VStack(spacing: 24) {
                 Spacer().frame(height: 40)
                 
-                ZStack {
-                    Circle()
-                        .fill(LinearGradient(gradient: Gradient(colors: [Theme.orbitPurple, Theme.orbitCyan]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 64, height: 64)
-                    Text("P")
-                        .font(.system(size: 32, weight: .black))
-                        .foregroundColor(.white)
-                }
+                Image("orbit_logo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 64, height: 64)
+                    .cornerRadius(14)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Theme.border, lineWidth: 1)
+                    )
                 
                 VStack(spacing: 4) {
                     Text("ORBIT PARTNER")
                         .font(.system(size: 32, weight: .black))
-                        .foregroundColor(Theme.orbitPurple)
+                        .foregroundColor(Theme.orbitCyan)
                         .tracking(4)
                     Text("Videographer & Creator Portal")
                         .font(.subheadline)

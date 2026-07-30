@@ -92,6 +92,7 @@ router.post('/partners/link-bank', jsonParser, nextToExpress(partnerBankHandlers
 // Editor routes
 router.get('/editor/bookings', jsonParser, nextToExpress(editorBookingsRoute.GET));
 router.get('/editor/bookings/:id', jsonParser, nextToExpress(editorBookingDetailRoute.GET));
+router.post('/editor/bookings/:id', jsonParser, nextToExpress(editorBookingDetailRoute.POST));
 router.post('/editor/deliver', jsonParser, nextToExpress(editorDeliverRoute.POST));
 router.post('/upload-reel', jsonParser, nextToExpress(editorDeliverRoute.POST));
 

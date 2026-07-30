@@ -8,10 +8,13 @@ import java.net.URISyntaxException
 
 class SocketManager {
     private var socket: Socket? = null
-    private val socketUrl = "http://10.0.2.2:3001" // Android Emulator localhost mapping
+    private val socketUrl = "http://10.0.2.2:3003" // Android Emulator mapping to orbit-ws port 3003
 
-    fun connect(token: String, onNewDispatch: (String, String) -> Unit) {
-        if (socket?.connected() == true) return
+    fun connect(partnerId: String = "prt-arjun", token: String = "partner_token", onNewDispatch: (String, String) -> Unit) {
+        if (socket?.connected() == true) {
+            setPartnerOnline(partnerId)
+            return
+        }
 
         try {
             val options = IO.Options().apply {
@@ -20,14 +23,17 @@ class SocketManager {
             socket = IO.socket(socketUrl, options)
 
             socket?.on(Socket.EVENT_CONNECT) {
-                Log.d("SocketManager", "Partner Connected to WebSocket Server")
+                Log.d("SocketManager", "Partner Connected to Orbit Realtime WebSocket Server (port 3003)")
+                setPartnerOnline(partnerId)
             }
 
-            socket?.on("dispatchReceived") { args ->
+            socket?.on("booking:dispatched") { args ->
                 if (args.isNotEmpty()) {
                     val data = args[0] as? JSONObject
-                    val bookingId = data?.optString("bookingId") ?: ""
-                    val location = data?.optString("location") ?: ""
+                    val bookingObj = data?.optJSONObject("booking")
+                    val bookingId = bookingObj?.optString("id") ?: data?.optString("bookingId") ?: ""
+                    val location = bookingObj?.optString("location") ?: "Client Location"
+                    Log.d("SocketManager", "Partner dispatch received: $bookingId @ $location")
                     onNewDispatch(bookingId, location)
                 }
             }
@@ -42,13 +48,20 @@ class SocketManager {
         }
     }
 
+    fun setPartnerOnline(partnerId: String) {
+        val payload = JSONObject().apply {
+            put("partnerId", partnerId)
+        }
+        socket?.emit("partner:online", payload)
+    }
+
     fun sendLocationUpdate(lat: Double, lng: Double, bookingId: String) {
         val payload = JSONObject().apply {
             put("latitude", lat)
             put("longitude", lng)
             put("bookingId", bookingId)
         }
-        socket?.emit("locationChanged", payload)
+        socket?.emit("partner:location", payload)
     }
 
     fun disconnect() {

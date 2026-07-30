@@ -25,6 +25,11 @@ import com.orbitlogic.partner.ui.screens.*
 import com.orbitlogic.partner.ui.theme.*
 import dagger.hilt.android.AndroidEntryPoint
 
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,16 +49,20 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainPartnerNavigationHost() {
-    var isAuthenticated by remember { mutableStateOf(true) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefsManager = remember { com.orbitlogic.partner.storage.PrefsManager(context) }
+    var isAuthenticated by remember { mutableStateOf(prefsManager.isLoggedIn()) }
     var currentTab by remember { mutableStateOf("home") } // home, work, earnings, profile, nav, camera, sync
 
     if (!isAuthenticated) {
-        PartnerLoginScreen(onLoginSuccess = {
+        PartnerLoginScreen(onLoginSuccess = { token ->
+            prefsManager.saveAuthSession(token, "prt-arjun")
             isAuthenticated = true
             currentTab = "home"
         })
     } else {
         Scaffold(
+            containerColor = Color.Black,
             bottomBar = {
                 Box(
                     modifier = Modifier
@@ -71,6 +80,7 @@ fun MainPartnerNavigationHost() {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(Color.Black)
                     .padding(innerPadding)
             ) {
                 AnimatedContent(
@@ -93,7 +103,10 @@ fun MainPartnerNavigationHost() {
                             onGoToSettings = { currentTab = "profile" }
                         )
                         "profile" -> PartnerProfileScreen(
-                            onLogout = { isAuthenticated = false }
+                            onLogout = {
+                                prefsManager.clearSession()
+                                isAuthenticated = false
+                            }
                         )
                         "nav" -> MapNavigationScreen(
                             onStartShooting = { currentTab = "camera" }
@@ -128,10 +141,26 @@ fun PartnerBottomNavigationBar(
         label = "partnerNavSlidingIndex"
     )
 
+    val movementDelta = kotlin.math.abs(animatedIndex - selectedIndex.toFloat())
+    val stretchFactor = 1.0f + (movementDelta * 0.25f).coerceAtMost(0.35f)
+
+    val leftCurveFactor = (1.0f - animatedIndex).coerceIn(0.0f, 1.0f)
+    val rightCurveFactor = (animatedIndex - (tabs.size - 2).toFloat()).coerceIn(0.0f, 1.0f)
+
+    val startCornerRadius = 16.dp + (10.dp * leftCurveFactor)
+    val endCornerRadius = 16.dp + (10.dp * rightCurveFactor)
+
+    val dynamicPillShape = RoundedCornerShape(
+        topStart = startCornerRadius,
+        bottomStart = startCornerRadius,
+        topEnd = endCornerRadius,
+        bottomEnd = endCornerRadius
+    )
+
     Surface(
-        color = Color(0xD90F1115), // Apple VisionOS Translucent Liquid Glass Fill
+        color = SpaceNavyLight.copy(alpha = 0.90f),
         shape = RoundedCornerShape(32.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
         shadowElevation = 16.dp,
         modifier = Modifier
             .fillMaxWidth()
@@ -143,115 +172,232 @@ fun PartnerBottomNavigationBar(
                 .padding(4.dp)
         ) {
             val tabWidth = maxWidth / tabs.size
-
-            // Floating Active Pill Background with Corner Curvature
-            val leftCurveFactor = (1.0f - animatedIndex).coerceIn(0.0f, 1.0f)
-            val rightCurveFactor = (animatedIndex - (tabs.size - 2).toFloat()).coerceIn(0.0f, 1.0f)
-
-            val startCornerRadius = 16.dp + (10.dp * leftCurveFactor)
-            val endCornerRadius = 16.dp + (10.dp * rightCurveFactor)
+            val baseIndicatorOffset = tabWidth * animatedIndex
+            val dynamicWidth = tabWidth * stretchFactor
+            val overflowX = (dynamicWidth - tabWidth) / 2f
+            val finalOffset = (baseIndicatorOffset - overflowX).coerceIn(0.dp, maxWidth - dynamicWidth)
 
             Box(
                 modifier = Modifier
-                    .offset(x = tabWidth * animatedIndex)
-                    .width(tabWidth)
+                    .offset(x = finalOffset)
+                    .width(dynamicWidth)
                     .fillMaxHeight()
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = startCornerRadius,
-                            bottomStart = startCornerRadius,
-                            topEnd = endCornerRadius,
-                            bottomEnd = endCornerRadius
-                        )
-                    )
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color(0xE61C1D2A),
-                                Color(0xF212131D)
-                            )
-                        )
-                    )
+                    .clip(dynamicPillShape)
+                    .background(Color(0xFF161824).copy(alpha = 0.95f))
                     .border(
-                        1.dp,
-                        Color.White.copy(alpha = 0.18f),
-                        RoundedCornerShape(
-                            topStart = startCornerRadius,
-                            bottomStart = startCornerRadius,
-                            topEnd = endCornerRadius,
-                            bottomEnd = endCornerRadius
-                        )
+                        width = 1.dp,
+                        color = Color.White.copy(alpha = 0.18f),
+                        shape = dynamicPillShape
                     )
             ) {
-                // Top Cyan-Purple Gradient Line Indicator
+                val topLineWidth = (32.dp * stretchFactor).coerceIn(32.dp, 56.dp)
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .width(36.dp)
+                        .width(topLineWidth)
                         .height(3.dp)
                         .clip(RoundedCornerShape(2.dp))
                         .background(
                             Brush.horizontalGradient(
-                                listOf(Color(0xFF00F0FF), Color(0xFFA056FF))
+                                listOf(OrbitCyan, OrbitPurple)
                             )
                         )
                 )
             }
 
-            // Tab Items Row
             Row(
                 modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceAround,
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                tabs.forEach { tabKey ->
-                    val isSelected = currentTab == tabKey
-                    val label = when (tabKey) {
-                        "home" -> "Home"
-                        "work" -> "Work"
-                        "earnings" -> "Earnings"
-                        else -> "Profile"
-                    }
+                PartnerBottomNavItem("Home", "home", currentTab == "home") { onSelectTab("home") }
+                PartnerBottomNavItem("Work", "work", currentTab == "work") { onSelectTab("work") }
+                PartnerBottomNavItem("Earnings", "earnings", currentTab == "earnings") { onSelectTab("earnings") }
+                PartnerBottomNavItem("Profile", "profile", currentTab == "profile") { onSelectTab("profile") }
+            }
+        }
+    }
+}
 
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
+@Composable
+fun HomeVectorIcon(color: Color, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier = modifier.size(20.dp)) {
+        val w = size.width
+        val h = size.height
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.5f, h * 0.12f)
+            lineTo(w * 0.88f, h * 0.44f)
+            lineTo(w * 0.78f, h * 0.44f)
+            lineTo(w * 0.78f, h * 0.88f)
+            lineTo(w * 0.22f, h * 0.88f)
+            lineTo(w * 0.22f, h * 0.44f)
+            lineTo(w * 0.12f, h * 0.44f)
+            close()
+        }
+        drawPath(
+            path = path,
+            color = color,
+            style = Stroke(
+                width = 2.dp.toPx(),
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
+            )
+        )
+        val doorPath = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.40f, h * 0.88f)
+            lineTo(w * 0.40f, h * 0.62f)
+            lineTo(w * 0.60f, h * 0.62f)
+            lineTo(w * 0.60f, h * 0.88f)
+        }
+        drawPath(
+            path = doorPath,
+            color = color,
+            style = Stroke(
+                width = 1.8.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+        )
+    }
+}
+
+@Composable
+fun WorkVectorIcon(color: Color, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier = modifier.size(20.dp)) {
+        val w = size.width
+        val h = size.height
+        val boxPath = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.5f, h * 0.12f)
+            lineTo(w * 0.88f, h * 0.32f)
+            lineTo(w * 0.88f, h * 0.72f)
+            lineTo(w * 0.5f, h * 0.90f)
+            lineTo(w * 0.12f, h * 0.72f)
+            lineTo(w * 0.12f, h * 0.32f)
+            close()
+        }
+        drawPath(
+            path = boxPath,
+            color = color,
+            style = Stroke(
+                width = 1.8.dp.toPx(),
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
+            )
+        )
+        drawLine(color = color, start = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.52f), end = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.90f), strokeWidth = 1.8.dp.toPx())
+        drawLine(color = color, start = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.52f), end = androidx.compose.ui.geometry.Offset(w * 0.88f, h * 0.32f), strokeWidth = 1.8.dp.toPx())
+        drawLine(color = color, start = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.52f), end = androidx.compose.ui.geometry.Offset(w * 0.12f, h * 0.32f), strokeWidth = 1.8.dp.toPx())
+    }
+}
+
+@Composable
+fun EarningsVectorIcon(color: Color, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier = modifier.size(20.dp)) {
+        val center = androidx.compose.ui.geometry.Offset(size.width * 0.5f, size.height * 0.5f)
+        drawCircle(
+            color = color,
+            radius = size.width * 0.42f,
+            center = center,
+            style = Stroke(width = 1.8.dp.toPx())
+        )
+        drawCircle(
+            color = color,
+            radius = size.width * 0.24f,
+            center = center,
+            style = Stroke(width = 1.8.dp.toPx())
+        )
+        drawCircle(
+            color = color,
+            radius = size.width * 0.08f,
+            center = center
+        )
+    }
+}
+
+@Composable
+fun RowScope.PartnerBottomNavItem(
+    label: String,
+    tabKey: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val tabScale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isSelected) 1.05f else 1.0f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+        ),
+        label = "tabScale"
+    )
+
+    val iconColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) OrbitCyan else MutedText,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+        label = "iconColor"
+    )
+
+    val textColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) OrbitCyan else MutedText,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+        label = "textColor"
+    )
+
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .scale(tabScale)
+            .clip(RoundedCornerShape(20.dp))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            when (tabKey) {
+                "home" -> HomeVectorIcon(color = iconColor)
+                "work" -> WorkVectorIcon(color = iconColor)
+                "earnings" -> EarningsVectorIcon(color = iconColor)
+                "profile" -> {
+                    val avatarBorderColor by androidx.compose.animation.animateColorAsState(
+                        targetValue = if (isSelected) Color.White else Color.White.copy(alpha = 0.15f),
+                        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+                        label = "avatarBorderColor"
+                    )
+                    val avatarTextColor by androidx.compose.animation.animateColorAsState(
+                        targetValue = if (isSelected) Color.Black else MutedText,
+                        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+                        label = "avatarTextColor"
+                    )
+
+                    Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clickable { onSelectTab(tabKey) }
-                    ) {
-                        Box(contentAlignment = Alignment.TopEnd) {
-                            Text(
-                                text = when (tabKey) {
-                                    "home" -> "⊞"
-                                    "work" -> "💼"
-                                    "earnings" -> "💳"
-                                    else -> "👤"
-                                },
-                                fontSize = 15.sp,
-                                color = if (isSelected) Color(0xFF00F0FF) else MutedText
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isSelected) Brush.horizontalGradient(listOf(OrbitCyan, OrbitPurple))
+                                else Brush.linearGradient(listOf(Color(0xFF222630), Color(0xFF16181E)))
                             )
-                            if (tabKey == "earnings") {
-                                Box(
-                                    modifier = Modifier
-                                        .offset(x = 2.dp, y = (-2).dp)
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF22C55E))
-                                )
-                            }
-                        }
+                            .border(1.dp, avatarBorderColor, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
-                            text = label,
-                            fontSize = 10.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) Color(0xFF00F0FF) else MutedText,
-                            modifier = Modifier.padding(top = 2.dp)
+                            text = "P",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Black,
+                            color = avatarTextColor
                         )
                     }
                 }
             }
+
+            Text(
+                text = label,
+                fontSize = 10.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = textColor,
+                modifier = Modifier.padding(top = 3.dp)
+            )
         }
     }
 }

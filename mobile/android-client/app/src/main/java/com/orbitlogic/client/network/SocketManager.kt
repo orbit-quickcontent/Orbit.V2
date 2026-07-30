@@ -8,10 +8,15 @@ import java.net.URISyntaxException
 
 class SocketManager {
     private var socket: Socket? = null
-    private val socketUrl = "http://10.0.2.2:3001" // Android Emulator localhost mapping
+    private val socketUrl = "http://10.0.2.2:3003" // Android Emulator mapping to orbit-ws port 3003
 
-    fun connect(token: String, onBookingUpdate: (String, String) -> Unit) {
-        if (socket?.connected() == true) return
+    fun connect(token: String, bookingId: String? = null, onBookingUpdate: (String, String) -> Unit) {
+        if (socket?.connected() == true) {
+            if (!bookingId.isNullOrBlank()) {
+                subscribeToBooking(bookingId)
+            }
+            return
+        }
 
         try {
             val options = IO.Options().apply {
@@ -20,15 +25,28 @@ class SocketManager {
             socket = IO.socket(socketUrl, options)
 
             socket?.on(Socket.EVENT_CONNECT) {
-                Log.d("SocketManager", "Connected to WebSocket Server")
+                Log.d("SocketManager", "Connected to Orbit Realtime WebSocket Server (port 3003)")
+                if (!bookingId.isNullOrBlank()) {
+                    subscribeToBooking(bookingId)
+                }
             }
 
-            socket?.on("bookingUpdated") { args ->
+            socket?.on("booking:status-update") { args ->
                 if (args.isNotEmpty()) {
                     val data = args[0] as? JSONObject
-                    val bookingId = data?.optString("id") ?: ""
+                    val bId = data?.optString("bookingId") ?: ""
                     val status = data?.optString("status") ?: ""
-                    onBookingUpdate(bookingId, status)
+                    Log.d("SocketManager", "Booking status update received: $bId -> $status")
+                    onBookingUpdate(bId, status)
+                }
+            }
+
+            socket?.on("booking:partner-assigned") { args ->
+                if (args.isNotEmpty()) {
+                    val data = args[0] as? JSONObject
+                    val bId = data?.optString("bookingId") ?: ""
+                    Log.d("SocketManager", "Partner assigned for booking: $bId")
+                    onBookingUpdate(bId, "ACCEPTED")
                 }
             }
 
@@ -40,6 +58,13 @@ class SocketManager {
         } catch (e: URISyntaxException) {
             Log.e("SocketManager", "URL parsing exception", e)
         }
+    }
+
+    fun subscribeToBooking(bookingId: String) {
+        val payload = JSONObject().apply {
+            put("bookingId", bookingId)
+        }
+        socket?.emit("client:subscribe", payload)
     }
 
     fun disconnect() {

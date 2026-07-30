@@ -1,8 +1,6 @@
-/**
- * Health Check API
- */
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/backend-proxy";
 
-export async function GET() {
-  return NextResponse.json({ status: "ok", service: "Orbit API", version: "2.0" });
+export async function GET(req: NextRequest) {
+  return proxyToBackend(req, "/");
 }

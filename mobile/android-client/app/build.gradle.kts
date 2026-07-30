@@ -91,6 +91,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("io.socket:socket.io-client:2.1.0")
 
+    // Analytics
+    implementation("com.posthog.android:posthog:3.+")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
