@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
@@ -235,7 +236,7 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
                 if (!userEmail.isNullOrBlank()) email = userEmail
                 if (!userName.isNullOrBlank()) name = userName
                 coroutineScope.launch {
-                    supabaseAuthManager.signUpWithEmail(email, "OrbitPartner123!", name, phone, avatarPreset)
+                    supabaseAuthManager.signUpPartner(email, "OrbitPartner123!", name, phone)
                 }
                 onLoginSuccess(token)
             },
