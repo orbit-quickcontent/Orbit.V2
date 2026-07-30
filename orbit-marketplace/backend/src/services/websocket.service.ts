@@ -11,9 +11,19 @@ export function initWebSocketService() {
   const server = new HttpServer(app);
   const io = new SocketIOServer(server, {
     cors: {
-      origin: '*',
-      methods: ['GET', 'POST']
+      origin: [
+        'https://app.orbit-quickcontent.com',
+        'https://api.orbit-quickcontent.com',
+        'capacitor://localhost',
+        'http://localhost',
+        'http://localhost:3000'
+      ],
+      methods: ['GET', 'POST'],
+      credentials: true
     },
+    transports: ['websocket', 'polling'],
+    pingTimeout: 60000,
+    pingInterval: 25000,
     path: '/socket.io/'
   });
 

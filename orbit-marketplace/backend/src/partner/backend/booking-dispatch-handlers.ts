@@ -146,8 +146,8 @@ export async function POST(
       })
     }
 
-    // Take top 5
-    const partnersToDispatch = sortedPartners.slice(0, 5)
+    // Take top 20
+    const partnersToDispatch = sortedPartners.slice(0, 20)
     const newRound = (booking.dispatchRound || 0) + 1
 
     // 4. Create WorkDispatch records for each partner

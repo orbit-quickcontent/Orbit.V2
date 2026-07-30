@@ -53,7 +53,7 @@ export default function OTPVerification({ email, role, onVerified, onBack }: OTP
   const [verified, setVerified] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(30);
   const [demoOtp, setDemoOtp] = useState<string | null>(null);
-  const [useApiFallback, setUseApiFallback] = useState(false);
+  const useApiFallbackRef = useRef(false);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const verifyCalledRef = useRef(false);
 
@@ -88,14 +88,14 @@ export default function OTPVerification({ email, role, onVerified, onBack }: OTP
     try {
       let generatedOtp: string | undefined;
 
-      if (useApiFallback) {
+      if (useApiFallbackRef.current) {
         generatedOtp = sendOtpClientSide(email);
       } else {
         try {
           generatedOtp = await sendOtpViaApi(email);
         } catch (err: any) {
           console.warn("[OTP] API unavailable, using client-side OTP generation:", err);
-          setUseApiFallback(true);
+          useApiFallbackRef.current = true;
           generatedOtp = sendOtpClientSide(email);
         }
       }
@@ -114,7 +114,7 @@ export default function OTPVerification({ email, role, onVerified, onBack }: OTP
     } finally {
       setSendingOtp(false);
     }
-  }, [email, useApiFallback, sendOtpViaApi, sendOtpClientSide]);
+  }, [email, sendOtpViaApi, sendOtpClientSide]);
 
   const verifyOtp = useCallback(async () => {
     if (otp.length !== 6) return;
@@ -123,7 +123,7 @@ export default function OTPVerification({ email, role, onVerified, onBack }: OTP
     setError("");
 
     try {
-      if (useApiFallback) {
+      if (useApiFallbackRef.current) {
         // Client-side verification
         const storedOtp = clientOtpStore.get(email.toLowerCase().trim());
         if (storedOtp !== otp) {
@@ -170,7 +170,7 @@ export default function OTPVerification({ email, role, onVerified, onBack }: OTP
     } finally {
       setLoading(false);
     }
-  }, [email, otp, onVerified, useApiFallback]);
+  }, [email, otp, onVerified]);
 
   const handleResend = useCallback(() => {
     if (resendCooldown > 0) return;

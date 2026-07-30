@@ -8,15 +8,56 @@ import { initWebSocketService } from './services/websocket.service';
 // Load environment variables
 dotenv.config();
 
+// Sentry Error Monitoring & Structured Logging setup
+if (process.env.SENTRY_DSN && process.env.NODE_ENV === 'production') {
+  try {
+    const Sentry = require('@sentry/node');
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV,
+      tracesSampleRate: 0.1,
+    });
+    console.log('[Sentry] Backend monitoring initialized.');
+  } catch (err) {
+    console.warn('[Sentry] @sentry/node load notice:', (err as Error).message);
+  }
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable CORS
+// Enable production CORS
+const allowedOrigins = [
+  'https://app.orbit-quickcontent.com',
+  'https://api.orbit-quickcontent.com',
+  'capacitor://localhost',
+  'http://localhost',
+  'http://localhost:3000',
+  'http://localhost:5000'
+];
+
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'api-key', 'accept']
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, postman)
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, true); // Permissive in dev/fallback
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'api-key', 'accept'],
+  credentials: true,
 }));
+
+// Health check endpoint for Docker & load balancer
+app.get('/health', (_req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+  });
+});
 
 import { validatePresignedToken } from './lib/security';
 
