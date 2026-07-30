@@ -1369,28 +1369,30 @@ fun SafeMapView(
     location: LatLng,
     title: String
 ) {
-    var renderFailed by remember { mutableStateOf(false) }
-
-    if (!renderFailed) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isPlayServicesAvailable = remember(context) {
         try {
-            GoogleMap(
-                modifier = modifier,
-                cameraPositionState = cameraPositionState,
-                properties = MapProperties(isMyLocationEnabled = false),
-                uiSettings = MapUiSettings(zoomControlsEnabled = false)
-            ) {
-                Marker(
-                    state = MarkerState(position = location),
-                    title = title,
-                    snippet = "GPS Location"
-                )
-            }
-        } catch (t: Throwable) {
-            renderFailed = true
+            val availability = com.google.android.gms.common.GoogleApiAvailability.getInstance()
+            availability.isGooglePlayServicesAvailable(context) == com.google.android.gms.common.ConnectionResult.SUCCESS
+        } catch (e: Throwable) {
+            false
         }
     }
 
-    if (renderFailed) {
+    if (isPlayServicesAvailable) {
+        GoogleMap(
+            modifier = modifier,
+            cameraPositionState = cameraPositionState,
+            properties = MapProperties(isMyLocationEnabled = false),
+            uiSettings = MapUiSettings(zoomControlsEnabled = false)
+        ) {
+            Marker(
+                state = MarkerState(position = location),
+                title = title,
+                snippet = "GPS Location"
+            )
+        }
+    } else {
         Box(
             modifier = modifier.background(Color(0xFF0D0F17)),
             contentAlignment = Alignment.Center
@@ -1402,4 +1404,5 @@ fun SafeMapView(
         }
     }
 }
+
 
