@@ -1,6 +1,7 @@
 package com.orbitlogic.client.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -21,6 +22,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -29,7 +32,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.*
 import com.orbitlogic.client.R
 import com.orbitlogic.client.ui.theme.*
 
@@ -1658,106 +1665,619 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
     }
 }
 
-// ─── Screen 5: Live Shoot Tracker ────────────────────────────────────────────
+// ─── Startup Splash / Loading Screen ─────────────────────────────────────────
+
+@Composable
+fun ClientSplashScreen(onSplashFinished: () -> Unit) {
+    var progress by remember { mutableFloatStateOf(0f) }
+
+    LaunchedEffect(Unit) {
+        val startTime = System.currentTimeMillis()
+        while (progress < 1.0f) {
+            val elapsed = System.currentTimeMillis() - startTime
+            progress = (elapsed / 1800f).coerceAtMost(1.0f)
+            delay(16)
+        }
+        delay(200)
+        onSplashFinished()
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "halo")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotation"
+    )
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.scale(pulseScale)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .rotate(rotation)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.sweepGradient(
+                                listOf(
+                                    Color(0xFF00F0FF),
+                                    Color(0xFFA056FF),
+                                    Color(0xFF00F0FF)
+                                )
+                            )
+                        )
+                )
+                Box(
+                    modifier = Modifier
+                        .size(102.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF07090E)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.orbit_logo),
+                        contentDescription = "Orbit Logo",
+                        modifier = Modifier.size(54.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            Text(
+                text = "ORBIT",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Black,
+                color = Color.White,
+                letterSpacing = 6.sp
+            )
+
+            Text(
+                text = "PRO CINEMA • DELIVERED IN 60 MINS",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = OrbitCyan,
+                letterSpacing = 2.sp,
+                modifier = Modifier.padding(top = 6.dp)
+            )
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            Box(
+                modifier = Modifier
+                    .width(220.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color(0xFF1E202E))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(progress)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFF00F0FF), Color(0xFFA056FF))
+                            )
+                        )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val statusText = when {
+                progress < 0.35f -> "Initializing Cinema Engine..."
+                progress < 0.70f -> "Connecting to Supabase RLS..."
+                progress < 0.95f -> "Establishing Real-time Socket :3003..."
+                else -> "Ready"
+            }
+
+            Text(
+                text = statusText,
+                color = MutedText,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+// ─── Screen 5: Live Booking Tracker (Web App Parity & Google Maps) ────────────
 
 @Composable
 fun TrackingScreen(bookingId: String) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var isCancelled by remember { mutableStateOf(false) }
+
+    // Lat/Lng for Dr Dadasaheb Bhadkamkar Marg, Mumbai 400004
+    val bookingLocation = remember { LatLng(18.95823563155963, 72.81710824) }
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(bookingLocation, 15f)
+    }
+
+    // Infinite pulse transition for active partner status icon
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.96f,
+        targetValue = 1.10f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "stepperPulse"
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SpaceNavy)
+            .background(Color(0xFF05060A))
     ) {
         ClientTopAppBar()
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Streamlined Header
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 1. Top Cancel Booking Button (Matching Screenshot)
+            Surface(
+                color = Color(0xFF1E0A0A),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.8f)),
+                modifier = Modifier
+                    .clickable { isCancelled = true }
+                    .padding(bottom = 16.dp)
             ) {
-                Column {
-                    Text("Live Shoot", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                    Text("ID: $bookingId", color = MutedText, fontSize = 12.sp)
-                }
-                Surface(
-                    color = OrbitCyan.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.35f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(OrbitCyan))
-                        Text("SHOOTING", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    }
-                }
-            }
-
-            // Compact Status & Progress Card
-            GlassCard(borderColor = OrbitCyan.copy(alpha = 0.3f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Shooting in Progress", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    Text("Step 3 of 5", fontSize = 11.sp, color = OrbitCyan, fontWeight = FontWeight.Bold)
-                }
-                Text("Partner is recording footage on location.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
-
-                LinearProgressIndicator(
-                    progress = { 0.6f },
-                    color = OrbitCyan,
-                    trackColor = OrbitBorder,
-                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp))
+                Text(
+                    text = if (isCancelled) "Booking Cancelled" else "Cancel booking",
+                    color = Color(0xFFEF4444),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Sleek Minimal Partner Card
-            GlassCard {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+            // 2. Main Web-style Stepper Container (Matching Screenshot)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, Color(0xFF1E2132)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(vertical = 18.dp, horizontal = 12.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier.size(44.dp).clip(CircleShape).background(Brush.linearGradient(listOf(OrbitPurple, OrbitCyan))),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("AR", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Step 1: Payment Confirmed
+                        item {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.width(110.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(OrbitCyan.copy(alpha = 0.2f))
+                                        .border(1.dp, OrbitCyan, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("🌊", fontSize = 16.sp)
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Payment Confirmed",
+                                    color = OrbitCyan,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                        // Step 2: Partner Dispatched (Active Step in Screenshot)
+                        item {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.width(150.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .scale(pulseScale)
+                                        .size(46.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            Brush.radialGradient(
+                                                listOf(Color(0xFF00F0FF), Color(0xFF0A2540))
+                                            )
+                                        )
+                                        .border(2.dp, Color(0xFF00F0FF), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("👥", fontSize = 20.sp)
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Partner Dispatched",
+                                    color = OrbitCyan,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black,
+                                    textAlign = TextAlign.Center
+                                )
+                                Text(
+                                    text = "Visual Architect assigned and notified.",
+                                    color = MutedText,
+                                    fontSize = 9.sp,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
+                        }
 
+                        // Step 3: En Route
+                        item {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.width(90.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF141622))
+                                        .border(1.dp, Color(0xFF282C40), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("🧭", fontSize = 14.sp)
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "En Route",
+                                    color = MutedText,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+
+                        // Step 4: Shooting
+                        item {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.width(90.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF141622))
+                                        .border(1.dp, Color(0xFF282C40), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("📷", fontSize = 14.sp)
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Shooting",
+                                    color = MutedText,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+
+                        // Step 5: Syncing
+                        item {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.width(90.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF141622))
+                                        .border(1.dp, Color(0xFF282C40), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("📤", fontSize = 14.sp)
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Syncing",
+                                    color = MutedText,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+
+                        // Step 6: Editing
+                        item {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.width(90.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF141622))
+                                        .border(1.dp, Color(0xFF282C40), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("🎬", fontSize = 14.sp)
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Editing",
+                                    color = MutedText,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+
+                        // Step 7: Delivered
+                        item {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.width(90.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF141622))
+                                        .border(1.dp, Color(0xFF282C40), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("✓", color = MutedText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Delivered",
+                                    color = MutedText,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Four Bento Grid Cards (Matching Screenshot)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Card 1: Sync
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color(0xFF1E2132)),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("📤", fontSize = 12.sp)
+                            Text("Sync", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("—", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                }
+
+                // Card 2: ETA
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color(0xFF1E2132)),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("⏱", fontSize = 12.sp)
+                            Text("ETA", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("—", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                }
+
+                // Card 3: Package
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color(0xFF1E2132)),
+                    modifier = Modifier.weight(1.3f)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("🎬", fontSize = 12.sp)
+                            Text("Package", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text("Personalized", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color.White)
+                    }
+                }
+
+                // Card 4: Status
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color(0xFF1E2132)),
+                    modifier = Modifier.weight(1.2f)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("🎯", fontSize = 12.sp)
+                            Text("Status", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(
+                            color = Color(0xFF052C38),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.5f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(OrbitCyan))
+                                Text("In Progress", color = OrbitCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 4. Live Map Card (Google Maps API Integration)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, Color(0xFF1E2132)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .padding(bottom = 16.dp)
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = cameraPositionState,
+                        properties = MapProperties(isMyLocationEnabled = false),
+                        uiSettings = MapUiSettings(zoomControlsEnabled = false)
+                    ) {
+                        Marker(
+                            state = MarkerState(position = bookingLocation),
+                            title = "Shoot Location",
+                            snippet = "Dr Dadasaheb Bhadkamkar Marg, 400004"
+                        )
+                    }
+
+                    // Map Overlay Label
+                    Surface(
+                        color = Color(0xFF05060A).copy(alpha = 0.85f),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFF22C55E)))
+                            Text("LIVE GPS TRACKER", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+            }
+
+            // 5. Booking Details Container (Matching Screenshot)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, Color(0xFF1E2132)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text(
+                        text = "Booking Details",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         Column {
-                            Text("Alex Rivera", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 15.sp)
-                            Text("4.9 ★ • iPhone 15 Pro Max", color = MutedText, fontSize = 12.sp)
+                            Text("Date", color = MutedText, fontSize = 13.sp)
+                            Text("Thu, 30 Jul", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(top = 2.dp))
+                        }
+                        Column(horizontalAlignment = Alignment.Start, modifier = Modifier.padding(end = 60.dp)) {
+                            Text("Time", color = MutedText, fontSize = 13.sp)
+                            Text("7:15 PM", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(top = 2.dp))
                         }
                     }
 
-                    Surface(
-                        color = Color.White.copy(alpha = 0.08f),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.clickable { }
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Contact", color = OrbitCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Location", color = MutedText, fontSize = 13.sp)
+                            Text("Dr Dadasaheb Bhadkamkar Marg, 400004, India", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp))
+                            Text("@18.95823563155963,72.81710824", color = MutedText, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(horizontalAlignment = Alignment.Start) {
+                            Text("Amount", color = MutedText, fontSize = 13.sp)
+                            Text("₹1,999", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, modifier = Modifier.padding(top = 2.dp))
+                        }
                     }
                 }
             }
         }
     }
 }
+
 
 // ─── Screen 6: Profile & Account Settings ────────────────────────────────────
 
