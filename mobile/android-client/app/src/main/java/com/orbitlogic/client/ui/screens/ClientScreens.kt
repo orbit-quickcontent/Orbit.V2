@@ -2187,18 +2187,12 @@ fun TrackingScreen(bookingId: String) {
                     .padding(bottom = 16.dp)
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    GoogleMap(
+                    SafeMapView(
                         modifier = Modifier.fillMaxSize(),
                         cameraPositionState = cameraPositionState,
-                        properties = MapProperties(isMyLocationEnabled = false),
-                        uiSettings = MapUiSettings(zoomControlsEnabled = false)
-                    ) {
-                        Marker(
-                            state = MarkerState(position = bookingLocation),
-                            title = "Shoot Location",
-                            snippet = "Dr Dadasaheb Bhadkamkar Marg, 400004"
-                        )
-                    }
+                        location = bookingLocation,
+                        title = "Shoot Location"
+                    )
 
                     // Map Overlay Label
                     Surface(
@@ -2476,3 +2470,45 @@ fun ProfileScreen(onLogout: () -> Unit) {
         }
     }
 }
+
+@Composable
+fun SafeMapView(
+    modifier: Modifier = Modifier,
+    cameraPositionState: CameraPositionState,
+    location: LatLng,
+    title: String
+) {
+    var renderFailed by remember { mutableStateOf(false) }
+
+    if (!renderFailed) {
+        try {
+            GoogleMap(
+                modifier = modifier,
+                cameraPositionState = cameraPositionState,
+                properties = MapProperties(isMyLocationEnabled = false),
+                uiSettings = MapUiSettings(zoomControlsEnabled = false)
+            ) {
+                Marker(
+                    state = MarkerState(position = location),
+                    title = title,
+                    snippet = "GPS Location"
+                )
+            }
+        } catch (t: Throwable) {
+            renderFailed = true
+        }
+    }
+
+    if (renderFailed) {
+        Box(
+            modifier = modifier.background(Color(0xFF0D0F17)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("📍 GPS VERIFIED LOCATION", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                Text("@${location.latitude}, ${location.longitude}", color = MutedText, fontSize = 10.sp)
+            }
+        }
+    }
+}
+

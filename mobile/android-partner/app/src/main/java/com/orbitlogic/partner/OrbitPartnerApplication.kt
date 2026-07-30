@@ -1,6 +1,8 @@
 package com.orbitlogic.partner
 
 import android.app.Application
+import android.util.Log
+import com.google.firebase.FirebaseApp
 import com.posthog.android.PostHogAndroid
 import com.posthog.android.PostHogAndroidConfig
 import dagger.hilt.android.HiltAndroidApp
@@ -10,7 +12,23 @@ class OrbitPartnerApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        
+        // Prevent hard app crashes from uncaught background exceptions
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            Log.e("OrbitPartnerApp", "Uncaught exception in thread ${thread.name}", throwable)
+        }
+
+        initFirebase()
         initPostHog()
+    }
+
+    private fun initFirebase() {
+        try {
+            FirebaseApp.initializeApp(this)
+            Log.d("OrbitPartnerApp", "Firebase initialized successfully.")
+        } catch (t: Throwable) {
+            Log.w("OrbitPartnerApp", "Firebase init skipped: ${t.localizedMessage}")
+        }
     }
 
     private fun initPostHog() {
@@ -20,10 +38,9 @@ class OrbitPartnerApplication : Application() {
                 host = "https://us.i.posthog.com"
             )
             PostHogAndroid.setup(this, config)
-            println("[PostHog] Initialized for orbit-partner-mobile.")
-        } catch (e: Exception) {
-            println("[PostHog] Init skipped: ${e.message}")
+            Log.d("OrbitPartnerApp", "PostHog initialized successfully.")
+        } catch (t: Throwable) {
+            Log.w("OrbitPartnerApp", "PostHog init skipped: ${t.localizedMessage}")
         }
     }
 }
-

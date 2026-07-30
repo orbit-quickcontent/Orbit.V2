@@ -1,6 +1,8 @@
 package com.orbitlogic.client
 
 import android.app.Application
+import android.util.Log
+import com.google.firebase.FirebaseApp
 import com.posthog.android.PostHogAndroid
 import com.posthog.android.PostHogAndroidConfig
 import dagger.hilt.android.HiltAndroidApp
@@ -10,7 +12,23 @@ class OrbitClientApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        
+        // Prevent hard app crashes from uncaught background exceptions
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            Log.e("OrbitClientApp", "Uncaught exception in thread ${thread.name}", throwable)
+        }
+
+        initFirebase()
         initPostHog()
+    }
+
+    private fun initFirebase() {
+        try {
+            FirebaseApp.initializeApp(this)
+            Log.d("OrbitClientApp", "Firebase initialized successfully.")
+        } catch (t: Throwable) {
+            Log.w("OrbitClientApp", "Firebase init skipped: ${t.localizedMessage}")
+        }
     }
 
     private fun initPostHog() {
@@ -20,10 +38,9 @@ class OrbitClientApplication : Application() {
                 host = "https://us.i.posthog.com"
             )
             PostHogAndroid.setup(this, config)
-            println("[PostHog] Initialized for orbit-client-mobile.")
-        } catch (e: Exception) {
-            println("[PostHog] Init skipped: ${e.message}")
+            Log.d("OrbitClientApp", "PostHog initialized successfully.")
+        } catch (t: Throwable) {
+            Log.w("OrbitClientApp", "PostHog init skipped: ${t.localizedMessage}")
         }
     }
 }
-

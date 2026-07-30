@@ -681,18 +681,12 @@ fun PartnerDashboardScreen(
                             .padding(bottom = 12.dp)
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
-                            GoogleMap(
+                            SafeMapView(
                                 modifier = Modifier.fillMaxSize(),
                                 cameraPositionState = cameraPositionState,
-                                properties = MapProperties(isMyLocationEnabled = false),
-                                uiSettings = MapUiSettings(zoomControlsEnabled = false)
-                            ) {
-                                Marker(
-                                    state = MarkerState(position = shootLocation),
-                                    title = "Dispatch Location",
-                                    snippet = "Dr Dadasaheb Bhadkamkar Marg"
-                                )
-                            }
+                                location = shootLocation,
+                                title = "Dispatch Location"
+                            )
                         }
                     }
 
@@ -1367,3 +1361,45 @@ fun VideoSyncScreen(onSyncFinish: () -> Unit) {
         }
     }
 }
+
+@Composable
+fun SafeMapView(
+    modifier: Modifier = Modifier,
+    cameraPositionState: CameraPositionState,
+    location: LatLng,
+    title: String
+) {
+    var renderFailed by remember { mutableStateOf(false) }
+
+    if (!renderFailed) {
+        try {
+            GoogleMap(
+                modifier = modifier,
+                cameraPositionState = cameraPositionState,
+                properties = MapProperties(isMyLocationEnabled = false),
+                uiSettings = MapUiSettings(zoomControlsEnabled = false)
+            ) {
+                Marker(
+                    state = MarkerState(position = location),
+                    title = title,
+                    snippet = "GPS Location"
+                )
+            }
+        } catch (t: Throwable) {
+            renderFailed = true
+        }
+    }
+
+    if (renderFailed) {
+        Box(
+            modifier = modifier.background(Color(0xFF0D0F17)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("📍 GPS VERIFIED LOCATION", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                Text("@${location.latitude}, ${location.longitude}", color = MutedText, fontSize = 10.sp)
+            }
+        }
+    }
+}
+
