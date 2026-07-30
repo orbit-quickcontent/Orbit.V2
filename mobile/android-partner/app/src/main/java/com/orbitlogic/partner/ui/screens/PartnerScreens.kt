@@ -1,6 +1,7 @@
 package com.orbitlogic.partner.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,6 +17,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -23,6 +26,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
+import kotlinx.coroutines.delay
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.*
 import com.orbitlogic.partner.R
 import com.orbitlogic.partner.ui.theme.*
 
@@ -395,6 +402,148 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
     }
 }
 
+// ─── Startup Splash / Loading Screen ─────────────────────────────────────────
+
+@Composable
+fun PartnerSplashScreen(onSplashFinished: () -> Unit) {
+    var progress by remember { mutableFloatStateOf(0f) }
+
+    LaunchedEffect(Unit) {
+        val startTime = System.currentTimeMillis()
+        while (progress < 1.0f) {
+            val elapsed = System.currentTimeMillis() - startTime
+            progress = (elapsed / 1800f).coerceAtMost(1.0f)
+            delay(16)
+        }
+        delay(200)
+        onSplashFinished()
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "halo")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotation"
+    )
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.scale(pulseScale)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .rotate(rotation)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.sweepGradient(
+                                listOf(
+                                    Color(0xFF00F0FF),
+                                    Color(0xFFA056FF),
+                                    Color(0xFF00F0FF)
+                                )
+                            )
+                        )
+                )
+                Box(
+                    modifier = Modifier
+                        .size(102.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF07090E)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.orbit_logo),
+                        contentDescription = "Orbit Logo",
+                        modifier = Modifier.size(54.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            Text(
+                text = "ORBIT PARTNER",
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Black,
+                color = Color.White,
+                letterSpacing = 4.sp
+            )
+
+            Text(
+                text = "VISUAL ARCHITECT NETWORK • REAL-TIME DISPATCH",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = OrbitCyan,
+                letterSpacing = 2.sp,
+                modifier = Modifier.padding(top = 6.dp)
+            )
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            Box(
+                modifier = Modifier
+                    .width(220.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color(0xFF1E202E))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(progress)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFF00F0FF), Color(0xFFA056FF))
+                            )
+                        )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val statusText = when {
+                progress < 0.35f -> "Initializing Partner Network..."
+                progress < 0.70f -> "Syncing Supabase Auth & RLS..."
+                progress < 0.95f -> "Connecting to WebSocket :3003..."
+                else -> "Online"
+            }
+
+            Text(
+                text = statusText,
+                color = MutedText,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
 // ─── Screen 2: Partner Available Work (Dashboard) ────────────────────────────
 
 @Composable
@@ -404,6 +553,11 @@ fun PartnerDashboardScreen(
 ) {
     var isOnline by remember { mutableStateOf(true) }
     var activeDispatchId by remember { mutableStateOf<String?>("booking-dispatch-101") }
+
+    val shootLocation = remember { LatLng(18.95823563155963, 72.81710824) }
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(shootLocation, 15f)
+    }
 
     Column(
         modifier = Modifier
@@ -438,7 +592,33 @@ fun PartnerDashboardScreen(
                     Text("Payout Fee: ₹700.00 • Distance: 2.4 KM away", color = OrbitGreen, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
                     Text("Client: Creative Brand Studio • Slot: 10:00 AM Today", color = MutedText, fontSize = 12.sp)
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Embedded Google Maps View for Shoot Dispatch
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, Color(0xFF1E2132)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp)
+                            .padding(bottom = 12.dp)
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            GoogleMap(
+                                modifier = Modifier.fillMaxSize(),
+                                cameraPositionState = cameraPositionState,
+                                properties = MapProperties(isMyLocationEnabled = false),
+                                uiSettings = MapUiSettings(zoomControlsEnabled = false)
+                            ) {
+                                Marker(
+                                    state = MarkerState(position = shootLocation),
+                                    title = "Dispatch Location",
+                                    snippet = "Dr Dadasaheb Bhadkamkar Marg"
+                                )
+                            }
+                        }
+                    }
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Button(

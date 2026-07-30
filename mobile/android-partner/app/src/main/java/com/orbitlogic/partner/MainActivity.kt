@@ -51,10 +51,13 @@ class MainActivity : ComponentActivity() {
 fun MainPartnerNavigationHost() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefsManager = remember { com.orbitlogic.partner.storage.PrefsManager(context) }
+    var isAppLoading by remember { mutableStateOf(true) }
     var isAuthenticated by remember { mutableStateOf(prefsManager.isLoggedIn()) }
     var currentTab by remember { mutableStateOf("home") } // home, work, earnings, profile, nav, camera, sync
 
-    if (!isAuthenticated) {
+    if (isAppLoading) {
+        PartnerSplashScreen(onSplashFinished = { isAppLoading = false })
+    } else if (!isAuthenticated) {
         PartnerLoginScreen(onLoginSuccess = { token ->
             prefsManager.saveAuthSession(token, "prt-arjun")
             isAuthenticated = true
