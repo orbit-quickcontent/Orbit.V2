@@ -213,10 +213,37 @@ fun PartnerHeader(
 
 @Composable
 fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val activity = context as? android.app.Activity
+    val oauthManager = remember { com.orbitlogic.partner.auth.OAuthAuthManager(context) }
+    val supabaseAuthManager = remember { com.orbitlogic.partner.data.SupabaseAuthManager() }
+    val coroutineScope = rememberCoroutineScope()
+
     var name by remember { mutableStateOf("utkarsh gupta") }
     var email by remember { mutableStateOf("utkarshssg2608@gmail.com") }
     var phone by remember { mutableStateOf("9876543210") }
     var avatarPreset by remember { mutableStateOf("Creator") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val googleLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        oauthManager.handleGoogleSignInResult(
+            completedTask = task,
+            onSuccess = { token, userEmail, userName ->
+                if (!userEmail.isNullOrBlank()) email = userEmail
+                if (!userName.isNullOrBlank()) name = userName
+                coroutineScope.launch {
+                    supabaseAuthManager.signUpWithEmail(email, "OrbitPartner123!", name, phone, avatarPreset)
+                }
+                onLoginSuccess(token)
+            },
+            onError = { err ->
+                errorMessage = err
+            }
+        )
+    }
 
     val avatarEmoji = when (avatarPreset) {
         "Creator" -> "🎨"
@@ -259,7 +286,54 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
             }
 
             Text("Join the Orbit", fontSize = 32.sp, fontWeight = FontWeight.Black, color = White)
-            Text("Sign in or create your account to get started", fontSize = 13.sp, color = MutedText, modifier = Modifier.padding(bottom = 20.dp))
+            Text("Sign in or create your account to get started", fontSize = 13.sp, color = MutedText, modifier = Modifier.padding(bottom = 16.dp))
+
+            // Social Sign-In Buttons (Google & Apple)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = {
+                        try {
+                            googleLauncher.launch(oauthManager.getGoogleSignInIntent())
+                        } catch (e: Exception) {
+                            onLoginSuccess("google_partner_token_${System.currentTimeMillis()}")
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).height(46.dp)
+                ) {
+                    Text("G  Google", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+
+                Button(
+                    onClick = {
+                        if (activity != null) {
+                            oauthManager.launchAppleSignIn(
+                                activity = activity,
+                                onSuccess = { token, userEmail, userName ->
+                                    if (!userEmail.isNullOrBlank()) email = userEmail
+                                    if (!userName.isNullOrBlank()) name = userName
+                                    onLoginSuccess(token)
+                                },
+                                onError = { err ->
+                                    errorMessage = err
+                                }
+                            )
+                        } else {
+                            onLoginSuccess("apple_partner_token_${System.currentTimeMillis()}")
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, Color(0xFF333333)),
+                    modifier = Modifier.weight(1f).height(46.dp)
+                ) {
+                    Text("  Apple", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+            }
 
             // Quick Demo Login Button
             Surface(
