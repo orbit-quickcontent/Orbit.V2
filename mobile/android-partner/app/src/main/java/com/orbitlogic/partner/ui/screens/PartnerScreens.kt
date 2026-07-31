@@ -483,16 +483,16 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
 
 @Composable
 fun PartnerSplashScreen(onSplashFinished: () -> Unit) {
-    var progress by remember { mutableFloatStateOf(0f) }
+    var startAnim by remember { mutableStateOf(false) }
+    val progress by animateFloatAsState(
+        targetValue = if (startAnim) 1f else 0f,
+        animationSpec = tween(durationMillis = 1200, easing = LinearOutSlowInEasing),
+        label = "splashProgress"
+    )
 
     LaunchedEffect(Unit) {
-        val startTime = System.currentTimeMillis()
-        while (progress < 1.0f) {
-            val elapsed = System.currentTimeMillis() - startTime
-            progress = (elapsed / 1800f).coerceAtMost(1.0f)
-            delay(16)
-        }
-        delay(200)
+        startAnim = true
+        delay(1400)
         onSplashFinished()
     }
 
@@ -1330,13 +1330,16 @@ fun CameraScreen(onCompleteShoot: () -> Unit) {
 
 @Composable
 fun VideoSyncScreen(onSyncFinish: () -> Unit) {
-    var progress by remember { mutableFloatStateOf(0f) }
+    var startSync by remember { mutableStateOf(false) }
+    val progress by animateFloatAsState(
+        targetValue = if (startSync) 1f else 0f,
+        animationSpec = tween(durationMillis = 2000, easing = LinearEasing),
+        label = "syncProgress"
+    )
 
     LaunchedEffect(Unit) {
-        while (progress < 1f) {
-            kotlinx.coroutines.delay(150)
-            progress += 0.05f
-        }
+        startSync = true
+        delay(2200)
         onSyncFinish()
     }
 

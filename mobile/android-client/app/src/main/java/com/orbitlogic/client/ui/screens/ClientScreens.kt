@@ -1669,16 +1669,16 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
 
 @Composable
 fun ClientSplashScreen(onSplashFinished: () -> Unit) {
-    var progress by remember { mutableFloatStateOf(0f) }
+    var startAnim by remember { mutableStateOf(false) }
+    val progress by animateFloatAsState(
+        targetValue = if (startAnim) 1f else 0f,
+        animationSpec = tween(durationMillis = 1200, easing = LinearOutSlowInEasing),
+        label = "splashProgress"
+    )
 
     LaunchedEffect(Unit) {
-        val startTime = System.currentTimeMillis()
-        while (progress < 1.0f) {
-            val elapsed = System.currentTimeMillis() - startTime
-            progress = (elapsed / 1800f).coerceAtMost(1.0f)
-            delay(16)
-        }
-        delay(200)
+        startAnim = true
+        delay(1400)
         onSplashFinished()
     }
 
