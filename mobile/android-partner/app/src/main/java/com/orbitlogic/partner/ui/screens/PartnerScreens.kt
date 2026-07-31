@@ -220,9 +220,9 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
     val supabaseAuthManager = remember { com.orbitlogic.partner.data.SupabaseAuthManager() }
     val coroutineScope = rememberCoroutineScope()
 
-    var name by remember { mutableStateOf("utkarsh gupta") }
-    var email by remember { mutableStateOf("utkarshssg2608@gmail.com") }
-    var phone by remember { mutableStateOf("9876543210") }
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
     var avatarPreset by remember { mutableStateOf("Creator") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -336,24 +336,7 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
                 }
             }
 
-            // Quick Demo Login Button
-            Surface(
-                color = SpaceNavyLight,
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, OrbitPurple.copy(alpha = 0.5f)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 20.dp)
-                    .clickable { onLoginSuccess("demo_session_partner_${System.currentTimeMillis()}") }
-            ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("⚡ Quick Partner Demo Login (1-Tap Access)", color = Color(0xFFA5B4FC), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                }
-            }
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Profile Picture Selection Card
             GlassCard(modifier = Modifier.padding(bottom = 16.dp)) {

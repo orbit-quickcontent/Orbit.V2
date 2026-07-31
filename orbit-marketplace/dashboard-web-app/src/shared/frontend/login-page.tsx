@@ -447,17 +447,6 @@ export default function LoginPage() {
             <p className="text-sm text-muted-foreground">
               Sign in or create your account to get started
             </p>
-
-            {/* Quick Demo Access Button */}
-            <div className="mt-3">
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin(selectedRole || "USER")}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#00B5FF] hover:underline bg-[#00B5FF]/10 px-3 py-1 rounded-full border border-[#00B5FF]/30 transition-all cursor-pointer"
-              >
-                ⚡ Instant Demo Login ({selectedRole === "PARTNER" ? "Partner" : "Client"})
-              </button>
-            </div>
           </div>
 
           <AnimatePresence mode="wait">

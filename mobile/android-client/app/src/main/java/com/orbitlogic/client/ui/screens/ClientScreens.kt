@@ -214,10 +214,10 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
     val coroutineScope = rememberCoroutineScope()
 
     var step by remember { mutableIntStateOf(1) }
-    var email by remember { mutableStateOf("demo@orbitlogic.io") }
-    var fullName by remember { mutableStateOf("Test Client User") }
-    var phone by remember { mutableStateOf("9876543210") }
-    var otpCode by remember { mutableStateOf("123456") }
+    var email by remember { mutableStateOf("") }
+    var fullName by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var otpCode by remember { mutableStateOf("") }
     var selectedPersona by remember { mutableStateOf("Creator") }
     var avatarMode by remember { mutableStateOf("Avatar") } // Avatar or Photo
     var isLoading by remember { mutableStateOf(false) }
@@ -276,31 +276,6 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF164E63).copy(alpha = 0.5f))
         ) {
             Text("Client Account", color = OrbitCyan, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp))
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Quick Demo Login Button (Instant 1-Tap Access)
-        Surface(
-            color = Color(0xFF1E1B4B),
-            shape = RoundedCornerShape(16.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF6366F1)),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable {
-                    coroutineScope.launch {
-                        supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, selectedPersona)
-                    }
-                    onLoginSuccess("demo_session_client_${System.currentTimeMillis()}")
-                }
-        ) {
-            Row(
-                modifier = Modifier.padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text("⚡ Quick Client Demo Login (1-Tap Access)", color = Color(0xFFA5B4FC), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-            }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -567,10 +542,11 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
             Button(
                 onClick = {
                     if (email.isBlank() && phone.isBlank()) {
-                        email = "demo@orbitlogic.io"
+                        errorMessage = "Please enter your email or phone number"
+                    } else {
+                        errorMessage = null
+                        step = 2
                     }
-                    errorMessage = null
-                    step = 2
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF09090B)),
                 shape = RoundedCornerShape(16.dp),
