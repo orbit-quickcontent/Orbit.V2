@@ -25,8 +25,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // ─── Production URL ──────────────────────────────────────────────────────────
-// Replace with your deployed domain before releasing to stores.
-const String _kProductionUrl = 'https://two-impalas-sniff.loca.lt';
+// Deployed domain for ORBIT platform.
+const String _kProductionUrl = 'https://app.orbit-quickcontent.com';
 const String _kLocalEmulatorUrl = 'http://10.0.2.2:3000';
 const String _kRoleParam = '?role=USER';
 

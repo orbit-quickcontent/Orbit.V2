@@ -14,6 +14,20 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import PostHogProvider from "@/components/PostHogProvider";
 
+// Sentry Error Monitoring for Next.js Frontend
+if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SENTRY_DSN && process.env.NODE_ENV === "production") {
+  try {
+    const Sentry = require("@sentry/nextjs");
+    Sentry.init({
+      dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+      environment: process.env.NODE_ENV,
+      tracesSampleRate: 0.1,
+    });
+  } catch (e) {
+    // Sentry fallback
+  }
+}
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

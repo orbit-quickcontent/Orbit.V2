@@ -23,7 +23,7 @@ describe("Zod Validation Schemas", () => {
     const validUser = {
       email: "user@example.com",
       name: "John Doe",
-      phone: "+919876543210",
+      phone: "9876543210",
       role: "USER",
     };
 

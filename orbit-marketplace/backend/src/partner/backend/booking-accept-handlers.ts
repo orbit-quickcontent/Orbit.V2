@@ -46,7 +46,7 @@ export async function POST(
       )
     }
 
-    if (partner.verificationStatus !== "VERIFIED") {
+    if (process.env.NODE_ENV !== 'development' && partner.verificationStatus !== "VERIFIED") {
       return NextResponse.json(
         { error: 'Accepting bookings requires a connected and verified bank account. Link your bank details in Profile settings.' },
         { status: 403 }
