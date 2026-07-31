@@ -12,6 +12,8 @@ export function initWebSocketService() {
   const io = new SocketIOServer(server, {
     cors: {
       origin: [
+        'https://orbit-quickcontent.com',
+        'https://www.orbit-quickcontent.com',
         'https://app.orbit-quickcontent.com',
         'https://api.orbit-quickcontent.com',
         'capacitor://localhost',

@@ -28,6 +28,8 @@ const PORT = process.env.PORT || 5000;
 
 // Enable production CORS
 const allowedOrigins = [
+  'https://orbit-quickcontent.com',
+  'https://www.orbit-quickcontent.com',
   'https://app.orbit-quickcontent.com',
   'https://api.orbit-quickcontent.com',
   'capacitor://localhost',
