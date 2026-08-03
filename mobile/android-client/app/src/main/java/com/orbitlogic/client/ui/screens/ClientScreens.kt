@@ -1710,6 +1710,9 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                 }
 
                 // Action Buttons
+                val unifiedHub = remember { com.orbitlogic.client.data.UnifiedOrbitHub() }
+                val coroutineScope = rememberCoroutineScope()
+
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     Button(
                         onClick = { step = 1 },
@@ -1723,7 +1726,22 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
 
                     GradientButton(
                         text = "Authorize & Pay ✓",
-                        onClick = onBookingComplete,
+                        onClick = {
+                            coroutineScope.launch {
+                                unifiedHub.createBooking(
+                                    bookingId = "bk_${System.currentTimeMillis()}",
+                                    clientId = "usr_client_001",
+                                    clientName = "Test Creator",
+                                    packageName = packageId,
+                                    amount = 1999.0,
+                                    date = shootDate,
+                                    time = "$hour:$minute $period",
+                                    location = if (locationAddress.isBlank()) "Bandra West, Mumbai" else locationAddress,
+                                    notes = specialNotes
+                                )
+                            }
+                            onBookingComplete()
+                        },
                         modifier = Modifier.weight(2f).height(54.dp)
                     )
                 }
