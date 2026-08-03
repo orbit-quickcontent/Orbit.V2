@@ -88,11 +88,32 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
           (partnerCoords[1] + destCoords[1]) / 2,
         ];
 
-        const apiKey = process.env.NEXT_PUBLIC_MAPTILER_API_KEY || "QRo4GQgDaDiFu6EYrjZm";
-        const styleUrl = process.env.NEXT_PUBLIC_MAPTILER_STYLE_URL || `https://api.maptiler.com/maps/openstreetmap-dark/style.json?key=${apiKey}`;
+        const tomTomApiKey = process.env.NEXT_PUBLIC_TOMTOM_API_KEY || "3QgWDfdOUKX7Kzs6GTrckM9HSidyvRIX";
+        const tomTomStyle: any = {
+          version: 8,
+          sources: {
+            "tomtom-tiles": {
+              type: "raster",
+              tiles: [
+                `https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?view=Unified&key=${tomTomApiKey}`
+              ],
+              tileSize: 256
+            }
+          },
+          layers: [
+            {
+              id: "tomtom-tiles-layer",
+              type: "raster",
+              source: "tomtom-tiles",
+              minzoom: 0,
+              maxzoom: 22
+            }
+          ]
+        };
+
         const map = new maplibregl.Map({
           container: mapContainerRef.current,
-          style: styleUrl,
+          style: tomTomStyle,
           center: centerCoords,
           zoom: 13,
           attributionControl: false,

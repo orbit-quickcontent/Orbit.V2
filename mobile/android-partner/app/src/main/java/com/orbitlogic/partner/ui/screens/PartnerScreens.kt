@@ -1374,7 +1374,6 @@ fun SafeMapView(
     val context = androidx.compose.ui.platform.LocalContext.current
     var hasWebViewError by remember { mutableStateOf(false) }
 
-    val mapTilerStyleUrl = "https://api.maptiler.com/maps/openstreetmap-dark/style.json?key=QRo4GQgDaDiFu6EYrjZm"
     val htmlContent = remember(location, title) {
         """
         <!DOCTYPE html>
@@ -1401,9 +1400,32 @@ fun SafeMapView(
             <div id="map"></div>
             <script>
                 try {
+                    const tomTomApiKey = '3QgWDfdOUKX7Kzs6GTrckM9HSidyvRIX';
+                    const tomTomStyle = {
+                        'version': 8,
+                        'sources': {
+                            'tomtom-tiles': {
+                                'type': 'raster',
+                                'tiles': [
+                                    'https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?view=Unified&key=' + tomTomApiKey
+                                ],
+                                'tileSize': 256
+                            }
+                        },
+                        'layers': [
+                            {
+                                'id': 'tomtom-tiles-layer',
+                                'type': 'raster',
+                                'source': 'tomtom-tiles',
+                                'minzoom': 0,
+                                'maxzoom': 22
+                            }
+                        ]
+                    };
+
                     const map = new maplibregl.Map({
                         container: 'map',
-                        style: '$mapTilerStyleUrl',
+                        style: tomTomStyle,
                         center: [${location.longitude}, ${location.latitude}],
                         zoom: 14,
                         attributionControl: false
@@ -1433,7 +1455,7 @@ fun SafeMapView(
                             hasWebViewError = true
                         }
                     }
-                    loadDataWithBaseURL("https://api.maptiler.com", htmlContent, "text/html", "UTF-8", null)
+                    loadDataWithBaseURL("https://api.tomtom.com", htmlContent, "text/html", "UTF-8", null)
                 }
             },
             update = { webView ->
