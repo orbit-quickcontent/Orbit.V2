@@ -40,4 +40,5 @@ jobs:
 
       - name: Verify Docker Compose Build Configuration
         run: |
+          touch .env.production
           docker compose -f docker-compose.prod.yml config
