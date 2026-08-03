@@ -1898,6 +1898,24 @@ fun ClientSplashScreen(onSplashFinished: () -> Unit) {
 fun TrackingScreen(bookingId: String) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var isCancelled by remember { mutableStateOf(false) }
+    var currentStatus by remember { mutableStateOf("DISPATCHED") }
+    val unifiedHub = remember { com.orbitlogic.client.data.UnifiedOrbitHub() }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(bookingId) {
+        unifiedHub.listenToBookingUpdates(bookingId) { status, _ ->
+            if (status.isNotBlank()) {
+                currentStatus = status
+                if (status == "CANCELLED") {
+                    isCancelled = true
+                }
+            }
+        }
+    }
+
+    val isShootingStarted = remember(currentStatus) {
+        currentStatus == "SHOOTING" || currentStatus == "SYNCING" || currentStatus == "EDITING" || currentStatus == "DELIVERED"
+    }
 
     // Lat/Lng for Dr Dadasaheb Bhadkamkar Marg, Mumbai 400004
     val bookingLocation = remember { LatLng(18.95823563155963, 72.81710824) }
@@ -1933,18 +1951,43 @@ fun TrackingScreen(bookingId: String) {
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 1. Top Cancel Booking Button (Matching Screenshot)
+            // 1. Top Cancel Booking Button (Conditional Cancellation Rules)
             Surface(
-                color = Color(0xFF1E0A0A),
+                color = if (isCancelled) Color(0xFF1E0A0A) else if (isShootingStarted) Color(0xFF18181B) else Color(0xFF1E0A0A),
                 shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.8f)),
+                border = BorderStroke(1.dp, if (isCancelled) Color(0xFFEF4444) else if (isShootingStarted) Color(0xFF3F3F46) else Color(0xFFEF4444).copy(alpha = 0.8f)),
                 modifier = Modifier
-                    .clickable { isCancelled = true }
+                    .clickable {
+                        if (isCancelled) return@clickable
+                        if (isShootingStarted) {
+                            android.widget.Toast.makeText(
+                                context,
+                                "Shooting in progress! Cancellation is locked once shooting starts.",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            isCancelled = true
+                            currentStatus = "CANCELLED"
+                            coroutineScope.launch {
+                                try {
+                                    val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                    firestore.collection("bookings").document(bookingId).update("status", "CANCELLED")
+                                } catch (e: Exception) {
+                                    android.util.Log.e("TrackingScreen", "Error cancelling booking", e)
+                                }
+                            }
+                            android.widget.Toast.makeText(context, "Booking successfully cancelled.", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
                     .padding(bottom = 16.dp)
             ) {
                 Text(
-                    text = if (isCancelled) "Booking Cancelled" else "Cancel booking",
-                    color = Color(0xFFEF4444),
+                    text = when {
+                        isCancelled -> "Booking Cancelled"
+                        isShootingStarted -> "Cancellation Locked (Shooting)"
+                        else -> "Cancel booking"
+                    },
+                    color = if (isShootingStarted && !isCancelled) Color(0xFFA1A1AA) else Color(0xFFEF4444),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp)
