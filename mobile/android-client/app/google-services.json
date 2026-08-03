@@ -67,6 +67,35 @@
       "client_info": {
         "mobilesdk_app_id": "1:1086714107107:android:1bb685531c0173a93761d6",
         "android_client_info": {
+          "package_name": "com.orbitlogic.partner"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1086714107107-47u6fr96q88608m2bdmdb5h9i36v8ekg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7psGsG-41KuDgALCCx0qknwrUEEIK8-I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1086714107107-47u6fr96q88608m2bdmdb5h9i36v8ekg.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1086714107107:android:1bb685531c0173a93761d6",
+        "android_client_info": {
           "package_name": "com.orbit.partner"
         }
       },
