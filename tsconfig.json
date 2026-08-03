@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "*": [
+        "node_modules/*",
+        "orbit-marketplace/dashboard-web-app/node_modules/*",
+        "orbit-marketplace/backend/node_modules/*"
+      ]
+    }
+  },
+  "include": [
+    "orbit-unified-backend.ts",
+    "orbit-marketplace/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/node_modules"
+  ]
+}
