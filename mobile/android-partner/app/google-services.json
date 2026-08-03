@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1086714107107:android:6a7481aed6165c953761d6",
+        "mobilesdk_app_id": "1:1086714107107:android:1bb685531c0173a93761d6",
         "android_client_info": {
-          "package_name": "com.orbit.client"
+          "package_name": "com.orbitlogic.partner"
         }
       },
       "oauth_client": [],

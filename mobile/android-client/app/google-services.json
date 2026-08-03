@@ -9,6 +9,25 @@
       "client_info": {
         "mobilesdk_app_id": "1:1086714107107:android:6a7481aed6165c953761d6",
         "android_client_info": {
+          "package_name": "com.orbitlogic.client"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7psGsG-41KuDgALCCx0qknwrUEEIK8-I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1086714107107:android:6a7481aed6165c953761d6",
+        "android_client_info": {
           "package_name": "com.orbit.client"
         }
       },
