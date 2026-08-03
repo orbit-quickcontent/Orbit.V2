@@ -1,0 +1,29 @@
+# Node & Dependencies
+node_modules/
+.next/
+dist/
+out/
+build/
+.cache/
+
+# Gradle & Android Build Outputs
+.gradle/
+**/build/
+*.apk
+*.aab
+*.flat
+*.ap_
+
+# Local Environment & Secrets
+.env
+.env.local
+.env.production
+.env.development
+
+# IDE & OS Junk
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+*.swp
