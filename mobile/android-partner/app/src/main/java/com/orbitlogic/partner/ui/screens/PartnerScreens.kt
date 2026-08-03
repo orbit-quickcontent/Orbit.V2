@@ -31,12 +31,14 @@ import androidx.compose.ui.res.painterResource
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.ui.viewinterop.AndroidView
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import com.orbitlogic.partner.R
 import com.orbitlogic.partner.ui.theme.*
 
 data class LatLng(val latitude: Double, val longitude: Double)
 
-class CameraPositionState(val position: Any? = null)
+class CameraPositionState(var position: Any? = null)
 
 object CameraPosition {
     fun fromLatLngZoom(location: LatLng, zoom: Float): CameraPositionState {
