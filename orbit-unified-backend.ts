@@ -46,7 +46,7 @@ export const TOMTOM_CONFIG = {
   tileUrl: "https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?view=Unified&key=3QgWDfdOUKX7Kzs6GTrckM9HSidyvRIX",
 };
 
-// Initialize Firebase App instance
+// Initialize Firebase App instance safely
 const app = getApps().length === 0 ? initializeApp(FIREBASE_CONFIG) : getApp();
 export const db = getFirestore(app);
 
@@ -121,6 +121,7 @@ export class OrbitUnifiedBackend {
   // 1. Sync User across Android & Web Apps to Firestore 'users' collection
   public async syncUser(user: UserProfile): Promise<boolean> {
     try {
+      if (!db) return false;
       const userRef = doc(db, "users", user.id);
       await setDoc(userRef, {
         ...user,
@@ -134,9 +135,25 @@ export class OrbitUnifiedBackend {
     }
   }
 
-  // 2. Create new shoot booking (Book Now / Configure Session)
+  // 2. Fetch User Profile
+  public async getUser(userId: string): Promise<UserProfile | null> {
+    try {
+      if (!db) return null;
+      const userDoc = await getDoc(doc(db, "users", userId));
+      if (userDoc.exists()) {
+        return userDoc.data() as UserProfile;
+      }
+      return null;
+    } catch (err) {
+      console.error("[OrbitUnifiedBackend] Error getting user:", err);
+      return null;
+    }
+  }
+
+  // 3. Create new shoot booking (Book Now / Configure Session)
   public async createBooking(booking: Omit<BookingSession, "id" | "createdAt" | "updatedAt" | "status">): Promise<BookingSession | null> {
     try {
+      if (!db) return null;
       const bookingId = `bk-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const now = new Date().toISOString();
       const newSession: BookingSession = {
@@ -156,9 +173,25 @@ export class OrbitUnifiedBackend {
     }
   }
 
-  // 3. Dispatch Partner & Update Booking Status
+  // 4. Fetch Booking
+  public async getBooking(bookingId: string): Promise<BookingSession | null> {
+    try {
+      if (!db) return null;
+      const bDoc = await getDoc(doc(db, "bookings", bookingId));
+      if (bDoc.exists()) {
+        return bDoc.data() as BookingSession;
+      }
+      return null;
+    } catch (err) {
+      console.error("[OrbitUnifiedBackend] Error getting booking:", err);
+      return null;
+    }
+  }
+
+  // 5. Dispatch Partner & Update Booking Status
   public async updateBookingStatus(bookingId: string, status: BookingSession["status"], partnerId?: string, partnerName?: string): Promise<boolean> {
     try {
+      if (!db) return false;
       const bookingRef = doc(db, "bookings", bookingId);
       const updateData: Record<string, any> = {
         status,
@@ -176,9 +209,10 @@ export class OrbitUnifiedBackend {
     }
   }
 
-  // 4. Realtime GPS Location Tracking for Partners (TomTom Maps Integration)
+  // 6. Realtime GPS Location Tracking for Partners (TomTom Maps Integration)
   public async updatePartnerGPS(loc: PartnerLocationUpdate): Promise<boolean> {
     try {
+      if (!db) return false;
       const locRef = doc(db, "partner_locations", loc.partnerId);
       await setDoc(locRef, {
         ...loc,
@@ -191,9 +225,10 @@ export class OrbitUnifiedBackend {
     }
   }
 
-  // 5. Editor Delivery Sync
+  // 7. Editor Delivery Sync
   public async deliverMedia(delivery: MediaDeliveryItem): Promise<boolean> {
     try {
+      if (!db) return false;
       const delRef = doc(db, "deliveries", delivery.bookingId);
       await setDoc(delRef, {
         ...delivery,
@@ -207,6 +242,34 @@ export class OrbitUnifiedBackend {
       console.error("[OrbitUnifiedBackend] Error delivering media:", err);
       return false;
     }
+  }
+
+  // 8. Realtime Booking Listener (Live Status Sync across Web & Mobile)
+  public onBookingChange(bookingId: string, callback: (booking: BookingSession | null) => void): () => void {
+    if (!db) return () => {};
+    return onSnapshot(doc(db, "bookings", bookingId), (snapshot) => {
+      if (snapshot.exists()) {
+        callback(snapshot.data() as BookingSession);
+      } else {
+        callback(null);
+      }
+    }, (error) => {
+      console.error("[OrbitUnifiedBackend] Realtime booking listener error:", error);
+    });
+  }
+
+  // 9. Realtime Partner Location Listener (Live TomTom Map Sync)
+  public onPartnerLocationChange(partnerId: string, callback: (location: PartnerLocationUpdate | null) => void): () => void {
+    if (!db) return () => {};
+    return onSnapshot(doc(db, "partner_locations", partnerId), (snapshot) => {
+      if (snapshot.exists()) {
+        callback(snapshot.data() as PartnerLocationUpdate);
+      } else {
+        callback(null);
+      }
+    }, (error) => {
+      console.error("[OrbitUnifiedBackend] Realtime GPS listener error:", error);
+    });
   }
 }
 
