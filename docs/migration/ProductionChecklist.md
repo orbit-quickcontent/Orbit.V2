@@ -8,7 +8,7 @@ Verification steps before deploying native applications to Google Play Store & A
 - [ ] Generate Production Keystore and sign release AABs.
 - [ ] Replace `http://10.0.2.2:3001` backend URLs with production HTTPS domains.
 - [ ] Add production `google-services.json` to `mobile/android-client/app/` and `mobile/android-partner/app/`.
-- [ ] Provide Google Maps API Key in `AndroidManifest.xml`.
+- [ ] Configure MapTiler API Key in environment settings (`NEXT_PUBLIC_MAPTILER_API_KEY`).
 
 ---
 

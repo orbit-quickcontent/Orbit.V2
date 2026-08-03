@@ -18,8 +18,11 @@ jobs:
       - name: Setup Node.js Environment
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
+          cache-dependency-path: |
+            orbit-marketplace/dashboard-web-app/package-lock.json
+            orbit-marketplace/backend/package-lock.json
 
       - name: Install & Verify Dashboard Web App
         run: |

@@ -54,8 +54,8 @@ android {
 }
 
 dependencies {
-    // Import the Firebase BoM (32.8.0 targets Kotlin 1.9 metadata)
-    implementation(platform("com.google.firebase:firebase-bom:32.8.0"))
+    // Import the Firebase BoM
+    implementation(platform("com.google.firebase:firebase-bom:34.17.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
@@ -87,10 +87,8 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
 
-    // Maps & Location
+    // Location
     implementation("com.google.android.gms:play-services-location:21.1.0")
-    implementation("com.google.maps.android:maps-compose:4.3.3")
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
 
     // CameraX (video capture / uploading)
     val cameraxVersion = "1.3.1"

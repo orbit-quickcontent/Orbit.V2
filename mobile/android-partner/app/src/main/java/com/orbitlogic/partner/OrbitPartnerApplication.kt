@@ -13,9 +13,11 @@ class OrbitPartnerApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         
-        // Prevent hard app crashes from uncaught background exceptions
+        // Safely log uncaught exceptions while delegating to system default handler
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             Log.e("OrbitPartnerApp", "Uncaught exception in thread ${thread.name}", throwable)
+            defaultHandler?.uncaughtException(thread, throwable)
         }
 
         initFirebase()

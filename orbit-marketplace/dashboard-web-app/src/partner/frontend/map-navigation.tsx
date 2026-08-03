@@ -46,7 +46,7 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
       toast.error("No location specified for this booking.");
       return;
     }
-    toast.success("Opening Google Maps...");
+    toast.success("Opening Map Navigation...");
     
     // If coordinates suffix exists, navigate directly to coordinates for absolute precision
     let destination = booking.location;
@@ -55,7 +55,7 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
       destination = parts[1]; // Use exact "latitude,longitude"
     }
     
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+    const url = `https://www.openstreetmap.org/search?query=${encodeURIComponent(destination)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -88,10 +88,11 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
           (partnerCoords[1] + destCoords[1]) / 2,
         ];
 
-        const apiKey = process.env.NEXT_PUBLIC_MAPTILER_API_KEY || "a731ad7ed2444d32a8a63d147ac013ed";
+        const apiKey = process.env.NEXT_PUBLIC_MAPTILER_API_KEY || "QRo4GQgDaDiFu6EYrjZm";
+        const styleUrl = process.env.NEXT_PUBLIC_MAPTILER_STYLE_URL || `https://api.maptiler.com/maps/openstreetmap-dark/style.json?key=${apiKey}`;
         const map = new maplibregl.Map({
           container: mapContainerRef.current,
-          style: `https://api.maptiler.com/maps/dark-matter/style.json?key=${apiKey}`,
+          style: styleUrl,
           center: centerCoords,
           zoom: 13,
           attributionControl: false,
@@ -212,8 +213,8 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
                                
           if (isStyleError && !hasFalledBack) {
             hasFalledBack = true;
-            console.warn("Style loading failed. Falling back to public CartoDB dark-matter style...");
-            map.setStyle("https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json");
+            console.warn("Style loading failed. Retrying MapTiler openstreetmap-dark style...");
+            map.setStyle("https://api.maptiler.com/maps/openstreetmap-dark/style.json?key=QRo4GQgDaDiFu6EYrjZm");
             return;
           }
           

@@ -6,13 +6,13 @@ import { getAnalytics, isSupported } from "firebase/analytics";
 import { getFunctions } from "firebase/functions";
 
 export const firebaseConfig = {
-  apiKey: "AIzaSyA4QOCd8Ppfs8MVrmge7XDcrEEYok-jw4E",
-  authDomain: "orbit-fs.firebaseapp.com",
-  projectId: "orbit-fs",
-  storageBucket: "orbit-fs.firebasestorage.app",
-  messagingSenderId: "882668962125",
-  appId: "1:882668962125:web:b568464e2faea92c3f3704",
-  measurementId: "G-T4X14EVQW0"
+  apiKey: "AIzaSyAnBPU5tA4vLl2zzGlFUx8-kwSNtt54xMc",
+  authDomain: "orbit-99e42.firebaseapp.com",
+  projectId: "orbit-99e42",
+  storageBucket: "orbit-99e42.firebasestorage.app",
+  messagingSenderId: "1086714107107",
+  appId: "1:1086714107107:web:a8f6c6df018ebb123761d6",
+  measurementId: "G-ZH3MP0ZYJ8"
 };
 
 // Initialize or retrieve named Editor Firebase instance

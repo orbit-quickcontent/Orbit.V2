@@ -6,13 +6,13 @@ import { getAnalytics, isSupported } from "firebase/analytics";
 import { getFunctions } from "firebase/functions";
 
 export const firebaseConfig = {
-  apiKey: "AIzaSyA4QOCd8Ppfs8MVrmge7XDcrEEYok-jw4E",
-  authDomain: "orbit-fs.firebaseapp.com",
-  projectId: "orbit-fs",
-  storageBucket: "orbit-fs.firebasestorage.app",
-  messagingSenderId: "882668962125",
-  appId: "1:882668962125:web:77b08714d1e309353f3704",
-  measurementId: "G-32W5LLBYW5"
+  apiKey: "AIzaSyAnBPU5tA4vLl2zzGlFUx8-kwSNtt54xMc",
+  authDomain: "orbit-99e42.firebaseapp.com",
+  projectId: "orbit-99e42",
+  storageBucket: "orbit-99e42.firebasestorage.app",
+  messagingSenderId: "1086714107107",
+  appId: "1:1086714107107:web:b7290d871b28f8403761d6",
+  measurementId: "G-NFMNTH1T1J"
 };
 
 // Initialize or retrieve named Partner Firebase instance

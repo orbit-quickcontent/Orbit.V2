@@ -73,15 +73,15 @@ export function PartnerBottomNav() {
                 onClick={() => setCurrentView(item.view)}
                 className="relative flex-1 flex flex-col items-center justify-center h-full rounded-2xl transition-all duration-300 group cursor-pointer active:scale-95 hover:scale-[1.03]"
               >
-                {/* Active Liquid Glass Pill Container & Top Gradient Indicator */}
+                {/* Active Liquid Glass Pill Container & Top Indicator */}
                 {isActive && (
                   <motion.div
                     layoutId="activePartnerNavBackground"
-                    className={`absolute inset-0 bg-gradient-to-b from-[#1C1D2A]/90 to-[#12131D]/95 border border-white/15 ${cornerRadiusClass} shadow-[inset_1.5px_1.5px_1px_0_rgba(255,255,255,0.25),inset_-1.5px_-1.5px_2px_1px_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.4)] overflow-hidden`}
+                    className={`absolute inset-0 bg-white/10 border border-white/20 ${cornerRadiusClass} shadow-[inset_1.5px_1.5px_1px_0_rgba(255,255,255,0.25),0_4px_16px_rgba(0,0,0,0.4)] overflow-hidden`}
                     transition={{ type: "spring", stiffness: 500, damping: 38, mass: 0.8 }}
                   >
-                    {/* Top cyan-purple gradient line indicator */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-9 h-[3px] bg-gradient-to-r from-[#00F0FF] via-[#7000FF] to-[#A056FF] rounded-full shadow-[0_0_10px_#00F0FF]" />
+                    {/* Top monochrome line indicator */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-9 h-[3px] bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.6)]" />
                   </motion.div>
                 )}
 
@@ -91,7 +91,7 @@ export function PartnerBottomNav() {
                     <div
                       className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-200 ${
                         isActive
-                          ? "bg-gradient-to-r from-[#00F0FF] to-[#A056FF] text-black shadow-[0_0_12px_rgba(0,240,255,0.6)]"
+                          ? "bg-white text-black shadow-[0_0_12px_rgba(255,255,255,0.6)]"
                           : "bg-[#1E2029] border border-white/10 text-[#8E92A0] group-hover:text-zinc-200"
                       }`}
                     >
@@ -106,7 +106,7 @@ export function PartnerBottomNav() {
                       <Icon
                         className={`w-5 h-5 transition-all duration-200 ${
                           isActive
-                            ? "text-[#00F0FF] scale-110 drop-shadow-[0_0_8px_rgba(0,240,255,0.6)]"
+                            ? "text-white scale-110 drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]"
                             : "text-[#8E92A0] group-hover:text-zinc-200"
                         }`}
                         strokeWidth={isActive ? 2.5 : 1.8}
@@ -117,7 +117,7 @@ export function PartnerBottomNav() {
                   {/* Label */}
                   <span
                     className={`text-[10px] font-semibold tracking-tight transition-colors duration-200 ${
-                      isActive ? "text-[#00F0FF]" : "text-[#8E92A0] group-hover:text-zinc-200"
+                      isActive ? "text-white" : "text-[#8E92A0] group-hover:text-zinc-200"
                     }`}
                   >
                     {item.label}
@@ -126,7 +126,7 @@ export function PartnerBottomNav() {
 
                 {/* Green Notification Dot for Earnings tab */}
                 {item.view === "partner-earnings" && (
-                  <div className="absolute top-2 right-4 w-2 h-2 rounded-full bg-[#22C55E] shadow-[0_0_6px_#22C55E] z-20" />
+                  <div className="absolute top-2 right-4 w-2 h-2 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.8)] z-20" />
                 )}
               </button>
             );

@@ -54,8 +54,8 @@ android {
 }
 
 dependencies {
-    // Firebase BoM & Services (32.8.0 targets Kotlin 1.9 metadata)
-    implementation(platform("com.google.firebase:firebase-bom:32.8.0"))
+    // Firebase BoM & Services
+    implementation(platform("com.google.firebase:firebase-bom:34.17.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
@@ -94,10 +94,8 @@ dependencies {
     // Analytics
     implementation("com.posthog:posthog-android:3.+")
 
-    // Maps & Location
+    // Location
     implementation("com.google.android.gms:play-services-location:21.1.0")
-    implementation("com.google.maps.android:maps-compose:4.3.3")
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

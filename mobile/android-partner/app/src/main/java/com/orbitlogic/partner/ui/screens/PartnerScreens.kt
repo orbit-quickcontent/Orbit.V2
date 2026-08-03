@@ -28,13 +28,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.*
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.ui.viewinterop.AndroidView
 import com.orbitlogic.partner.R
 import com.orbitlogic.partner.ui.theme.*
+
+data class LatLng(val latitude: Double, val longitude: Double)
+
+class CameraPositionState(val position: Any? = null)
+
+object CameraPosition {
+    fun fromLatLngZoom(location: LatLng, zoom: Float): CameraPositionState {
+        return CameraPositionState(location)
+    }
+}
+
+@Composable
+fun rememberCameraPositionState(init: CameraPositionState.() -> Unit = {}): CameraPositionState {
+    return remember { CameraPositionState().apply(init) }
+}
 
 // ─── Custom UI Reusable Components ───────────────────────────────────────────
 
@@ -654,7 +667,7 @@ fun PartnerDashboardScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Embedded Google Maps View for Shoot Dispatch
+                    // Embedded MapTiler openstreetmap-dark Map View for Shoot Dispatch
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
                         shape = RoundedCornerShape(14.dp),
@@ -1352,40 +1365,88 @@ fun VideoSyncScreen(onSyncFinish: () -> Unit) {
 @Composable
 fun SafeMapView(
     modifier: Modifier = Modifier,
-    cameraPositionState: CameraPositionState,
-    location: LatLng,
-    title: String
+    cameraPositionState: CameraPositionState? = null,
+    location: LatLng = LatLng(19.0760, 72.8777),
+    title: String = "Location"
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val isPlayServicesAvailable = remember(context) {
-        try {
-            val availability = com.google.android.gms.common.GoogleApiAvailability.getInstance()
-            availability.isGooglePlayServicesAvailable(context) == com.google.android.gms.common.ConnectionResult.SUCCESS
-        } catch (e: Throwable) {
-            false
-        }
+    var hasWebViewError by remember { mutableStateOf(false) }
+
+    val mapTilerStyleUrl = "https://api.maptiler.com/maps/openstreetmap-dark/style.json?key=QRo4GQgDaDiFu6EYrjZm"
+    val htmlContent = remember(location, title) {
+        """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+            <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+            <link href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet" />
+            <style>
+                body, html { margin: 0; padding: 0; height: 100%; width: 100%; background-color: #05060A; }
+                #map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100%; }
+                .marker {
+                    width: 14px;
+                    height: 14px;
+                    background-color: #00BFFF;
+                    border: 2px solid #FFFFFF;
+                    border-radius: 50%;
+                    box-shadow: 0 0 10px #00BFFF;
+                }
+            </style>
+        </head>
+        <body>
+            <div id="map"></div>
+            <script>
+                try {
+                    const map = new maplibregl.Map({
+                        container: 'map',
+                        style: '$mapTilerStyleUrl',
+                        center: [${location.longitude}, ${location.latitude}],
+                        zoom: 14,
+                        attributionControl: false
+                    });
+                    
+                    const el = document.createElement('div');
+                    el.className = 'marker';
+                    new maplibregl.Marker({ element: el })
+                        .setLngLat([${location.longitude}, ${location.latitude}])
+                        .addTo(map);
+                } catch(e) { console.error(e); }
+            </script>
+        </body>
+        </html>
+        """.trimIndent()
     }
 
-    if (isPlayServicesAvailable) {
-        GoogleMap(
+    if (!hasWebViewError) {
+        AndroidView(
             modifier = modifier,
-            cameraPositionState = cameraPositionState,
-            properties = MapProperties(isMyLocationEnabled = false),
-            uiSettings = MapUiSettings(zoomControlsEnabled = false)
-        ) {
-            Marker(
-                state = MarkerState(position = location),
-                title = title,
-                snippet = "GPS Location"
-            )
-        }
+            factory = { ctx ->
+                WebView(ctx).apply {
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    webViewClient = object : WebViewClient() {
+                        override fun onReceivedError(view: WebView?, errorCode: Int, description: String?, failingUrl: String?) {
+                            hasWebViewError = true
+                        }
+                    }
+                    loadDataWithBaseURL("https://api.maptiler.com", htmlContent, "text/html", "UTF-8", null)
+                }
+            },
+            update = { webView ->
+                webView.loadDataWithBaseURL("https://api.maptiler.com", htmlContent, "text/html", "UTF-8", null)
+            }
+        )
     } else {
         Box(
             modifier = modifier.background(Color(0xFF0D0F17)),
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(12.dp)) {
                 Text("📍 GPS VERIFIED LOCATION", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 Text("@${location.latitude}, ${location.longitude}", color = MutedText, fontSize = 10.sp)
             }
         }

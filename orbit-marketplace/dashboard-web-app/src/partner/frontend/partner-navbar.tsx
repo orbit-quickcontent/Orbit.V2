@@ -23,6 +23,10 @@ export function PartnerNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pushNotifs, setPushNotifs] = useState(true);
+  const [emailAlerts, setEmailAlerts] = useState(true);
+  const [soundFx, setSoundFx] = useState(true);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -168,42 +172,52 @@ export function PartnerNavbar() {
               </div>
             </div>
 
-            {/* Right: Search + Online Toggle + Notification + Menu */}
+            {/* Right: Search + Online Toggle + Notification + Settings */}
             <div className="flex items-center gap-2 sm:gap-3">
               <button
-                onClick={() => { setSearchOpen(true); setMenuOpen(false); }}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200"
+                onClick={() => { setSearchOpen(true); setMenuOpen(false); setSettingsOpen(false); }}
+                title="Search Work & Dispatches"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/15 border border-white/10 transition-all duration-200"
               >
-                <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <Search className="w-4 h-4" />
               </button>
 
               {/* Online/Offline Toggle */}
               <button
                 onClick={handleToggleOnline}
-                className="flex items-center gap-1.5 h-9 sm:h-10 px-2.5 rounded-full bg-white/[0.08] backdrop-blur-lg hover:bg-white/10 transition-all duration-200"
+                className="flex items-center gap-1.5 h-9 sm:h-10 px-2.5 rounded-full bg-white/[0.08] border border-white/10 backdrop-blur-lg hover:bg-white/15 transition-all duration-200"
                 title={user.isOnline ? "Go Offline" : "Go Online"}
               >
-                <div className={`w-2.5 h-2.5 rounded-full transition-colors duration-200 ${user.isOnline ? "bg-green-400" : "bg-gray-400"}`} />
-                <span className={`text-[11px] sm:text-xs font-medium transition-colors duration-200 ${user.isOnline ? "text-green-400" : "text-gray-400"}`}>
+                <div className={`w-2 h-2 rounded-full transition-colors duration-200 ${user.isOnline ? "bg-green-400 shadow-[0_0_6px_#22C55E]" : "bg-gray-400"}`} />
+                <span className={`text-[11px] sm:text-xs font-semibold transition-colors duration-200 ${user.isOnline ? "text-green-400" : "text-gray-400"}`}>
                   {user.isOnline ? "Online" : "Offline"}
                 </span>
               </button>
 
               <button
-                className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200"
-                onClick={() => setMenuOpen(!menuOpen)}
+                className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/15 border border-white/10 transition-all duration-200"
+                title="Notifications"
+                onClick={() => { setMenuOpen(!menuOpen); setSettingsOpen(false); }}
               >
-                <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <Bell className="w-4 h-4" />
                 {unreadNotifications > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow-lg animate-pulse">
+                  <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 rounded-full bg-white text-black text-[9px] font-black flex items-center justify-center shadow-lg animate-pulse">
                     {unreadNotifications}
                   </span>
                 )}
               </button>
 
               <button
+                onClick={() => { setSettingsOpen(!settingsOpen); setMenuOpen(false); }}
+                title="Partner App Settings"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/15 border border-white/10 transition-all duration-200"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+
+              <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="md:hidden w-10 h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                className="md:hidden w-9 h-9 rounded-full bg-white/[0.08] border border-white/10 backdrop-blur-lg flex items-center justify-center text-zinc-300 hover:text-white transition-colors"
               >
                 <ChevronDown
                   className={`w-4 h-4 transition-transform duration-200 ${
@@ -401,6 +415,116 @@ export function PartnerNavbar() {
                 </div>
               </button>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Partner App Settings Modal */}
+      <AnimatePresence>
+        {settingsOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
+            onClick={() => setSettingsOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md bg-[#0D0F17] border border-white/15 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-5"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-white">
+                    <Settings className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white leading-none">Partner Settings</h3>
+                    <p className="text-[11px] text-zinc-400 mt-1">Configure partner dispatch & wallet alerts</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSettingsOpen(false)}
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white flex items-center justify-center transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* User Account Info */}
+              <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
+                {renderAvatar("w-12 h-12", "text-sm")}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white truncate">{user.name}</p>
+                  <p className="text-xs text-zinc-400 truncate">{user.email}</p>
+                  <Badge className="mt-1 bg-white/10 text-white border-white/20 text-[9px] font-bold px-2 py-0.5">
+                    PARTNER ACCOUNT
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Toggles */}
+              <div className="space-y-3">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Dispatch & Payout Preferences</p>
+                
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                  <span className="text-xs font-semibold text-zinc-200">Shoot Dispatch Notifications</span>
+                  <button
+                    onClick={() => setPushNotifs(!pushNotifs)}
+                    className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${pushNotifs ? "bg-white" : "bg-zinc-800"}`}
+                  >
+                    <div className={`w-5 h-5 rounded-full transition-transform ${pushNotifs ? "translate-x-5 bg-black" : "translate-x-0 bg-zinc-400"}`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                  <span className="text-xs font-semibold text-zinc-200">Payout Transfer Alerts</span>
+                  <button
+                    onClick={() => setEmailAlerts(!emailAlerts)}
+                    className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${emailAlerts ? "bg-white" : "bg-zinc-800"}`}
+                  >
+                    <div className={`w-5 h-5 rounded-full transition-transform ${emailAlerts ? "translate-x-5 bg-black" : "translate-x-0 bg-zinc-400"}`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                  <span className="text-xs font-semibold text-zinc-200">Dispatch Chime & Haptics</span>
+                  <button
+                    onClick={() => setSoundFx(!soundFx)}
+                    className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${soundFx ? "bg-white" : "bg-zinc-800"}`}
+                  >
+                    <div className={`w-5 h-5 rounded-full transition-transform ${soundFx ? "translate-x-5 bg-black" : "translate-x-0 bg-zinc-400"}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="pt-2 border-t border-white/10 flex gap-3">
+                <button
+                  onClick={() => {
+                    setCurrentView("profile");
+                    setSettingsOpen(false);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors"
+                >
+                  Edit Profile
+                </button>
+                <button
+                  onClick={() => {
+                    setSettingsOpen(false);
+                    logout();
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs border border-red-500/20 transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

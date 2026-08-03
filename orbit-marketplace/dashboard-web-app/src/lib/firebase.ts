@@ -4,37 +4,37 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
-// Config templates for the Orbit app contexts ('orbit-fs' / 'orbit-q')
+// Config templates for Orbit project 'orbit-99e42'
 const baseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyA4QOCd8Ppfs8MVrmge7XDcrEEYok-jw4E",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "orbit-fs.firebaseapp.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "orbit-fs",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "orbit-fs.firebasestorage.app",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "882668962125",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAnBPU5tA4vLl2zzGlFUx8-kwSNtt54xMc",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "orbit-99e42.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "orbit-99e42",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "orbit-99e42.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "1086714107107",
 };
 
 const adminConfig = {
   ...baseConfig,
-  appId: "1:882668962125:web:c31d0312af94549b3f3704",
-  measurementId: "G-WZQTPZZRHW"
+  appId: "1:1086714107107:web:b7290d871b28f8403761d6",
+  measurementId: "G-NFMNTH1T1J"
 };
 
 const clientConfig = {
   ...baseConfig,
-  appId: "1:882668962125:web:01195c29c9fa39013f3704",
-  measurementId: "G-E0CJ1KVC7F"
+  appId: "1:1086714107107:web:b7290d871b28f8403761d6",
+  measurementId: "G-NFMNTH1T1J"
 };
 
 const editorConfig = {
   ...baseConfig,
-  appId: "1:882668962125:web:b568464e2faea92c3f3704",
-  measurementId: "G-T4X14EVQW0"
+  appId: "1:1086714107107:web:a8f6c6df018ebb123761d6",
+  measurementId: "G-ZH3MP0ZYJ8"
 };
 
 const partnerConfig = {
   ...baseConfig,
-  appId: "1:882668962125:web:77b08714d1e309353f3704",
-  measurementId: "G-32W5LLBYW5"
+  appId: "1:1086714107107:web:b7290d871b28f8403761d6",
+  measurementId: "G-NFMNTH1T1J"
 };
 
 // Dynamically select the configuration based on the browser url / user role context
