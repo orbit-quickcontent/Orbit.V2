@@ -9,6 +9,8 @@
  */
 
 import { create } from "zustand";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "./firebase";
 import { type AppView, type AppPhase, type BookingStatus, type PaymentStatus, type UserRole, type PackageInfo, type BookingInfo, type UserProfile, type ReviewInfo, type BankAccount, type PartnerWallet, type PartnerSettings } from "./types";
 
 // Generate a stable ID for this device/session
@@ -239,11 +241,31 @@ export const useAppStore = create<AppState>((set, get) => ({
     const phone = customUserData?.phone || get().user.phone || "";
 
     // Sync user state in Zustand store
-    get().setUser({ email, name, phone });
+    get().setUser({ email, name, phone, isOnline: true });
 
     if (email) {
+      // 1. Sync directly to Firebase Firestore 'users' collection
       try {
-        // Sync user profile directly to backend API / Supabase Postgres
+        if (db) {
+          const userId = get().user.id || `usr-${Date.now()}`;
+          await setDoc(doc(db, "users", userId), {
+            id: userId,
+            uid: userId,
+            email,
+            name: name || (role === "USER" ? "Client User" : "Partner User"),
+            phone: phone || "",
+            role,
+            isOnline: true,
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+          console.log(`[Store] Synced user to Firebase Firestore 'users' collection: ${email}`);
+        }
+      } catch (fErr) {
+        console.error("[Store] Error syncing user to Firebase Firestore:", fErr);
+      }
+
+      try {
+        // 2. Sync user profile directly to backend API / Supabase Postgres
         const userRes = await fetch("/api/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

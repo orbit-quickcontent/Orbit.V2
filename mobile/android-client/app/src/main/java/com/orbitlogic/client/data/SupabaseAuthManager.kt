@@ -91,6 +91,27 @@ class SupabaseAuthManager(
         roleVal: String = "client"
     ): Boolean = withContext(Dispatchers.IO) {
         try {
+            // 1. Sync to Firebase Firestore 'users' collection
+            try {
+                val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                val userMap = hashMapOf(
+                    "id" to userId,
+                    "uid" to userId,
+                    "email" to emailVal,
+                    "name" to nameVal,
+                    "full_name" to nameVal,
+                    "phone" to phoneVal,
+                    "persona" to personaVal,
+                    "role" to roleVal,
+                    "isOnline" to true,
+                    "updatedAt" to com.google.firebase.Timestamp.now()
+                )
+                firestore.collection("users").document(userId).set(userMap, com.google.firebase.firestore.SetOptions.merge())
+            } catch (fe: Exception) {
+                android.util.Log.e("FirebaseSync", "Error writing user to Firestore", fe)
+            }
+
+            // 2. Sync to Supabase profile table
             val json = JSONObject().apply {
                 put("id", userId)
                 put("email", emailVal)

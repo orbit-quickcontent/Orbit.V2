@@ -697,14 +697,14 @@ fun DashboardHomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Card 1: Book Now
+                    // Card 1: Book New Shoot (Matching Image 2)
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0F12)),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0D0F17)),
                         shape = RoundedCornerShape(22.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(118.dp)
-                            .border(1.dp, Color(0xFF1F1F26), RoundedCornerShape(22.dp))
+                            .height(130.dp)
+                            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(22.dp))
                             .clickable { onNavigateToBooking() }
                     ) {
                         Column(
@@ -716,36 +716,38 @@ fun DashboardHomeScreen(
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF0F2B3C)),
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF00F0FF)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("📅", fontSize = 16.sp)
+                                Text("+", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.Black)
                             }
                             Column {
                                 Text(
-                                    text = "Book Now",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    text = "BOOK\nNEW SHOOT",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White,
+                                    lineHeight = 16.sp
                                 )
                                 Text(
-                                    text = "Schedule a session",
-                                    fontSize = 12.sp,
-                                    color = Color(0xFF71717A)
+                                    text = "INSTANT MATCHING",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF00F0FF)
                                 )
                             }
                         }
                     }
 
-                    // Card 2: Track Order
+                    // Card 2: Track Order (Matching Image 2)
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0F12)),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0D0F17)),
                         shape = RoundedCornerShape(22.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(118.dp)
-                            .border(1.dp, Color(0xFF1F1F26), RoundedCornerShape(22.dp))
+                            .height(130.dp)
+                            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(22.dp))
                             .clickable { onNavigateToTracking("bk_active_901") }
                     ) {
                         Column(
@@ -757,23 +759,25 @@ fun DashboardHomeScreen(
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF281238)),
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFFA855F7)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("🎯", fontSize = 16.sp)
+                                Text("DNA", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.White)
                             }
                             Column {
                                 Text(
-                                    text = "Track Order",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    text = "TRACK\nORDER",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White,
+                                    lineHeight = 16.sp
                                 )
                                 Text(
-                                    text = "No active",
-                                    fontSize = 12.sp,
-                                    color = Color(0xFF71717A)
+                                    text = "1 ACTIVE",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFA855F7)
                                 )
                             }
                         }
@@ -785,14 +789,14 @@ fun DashboardHomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Card 3: Packages
+                    // Card 3: Recent Projects (Matching Image 2)
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0F12)),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0D0F17)),
                         shape = RoundedCornerShape(22.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(118.dp)
-                            .border(1.dp, Color(0xFF1F1F26), RoundedCornerShape(22.dp))
+                            .height(130.dp)
+                            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(22.dp))
                             .clickable { onNavigateToPackages() }
                     ) {
                         Column(
@@ -804,36 +808,38 @@ fun DashboardHomeScreen(
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF0F3024)),
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(alpha = 0.12f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("🎁", fontSize = 16.sp)
+                                Text("≡", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                             Column {
                                 Text(
-                                    text = "Packages",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    text = "RECENT\nPROJECTS",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White,
+                                    lineHeight = 16.sp
                                 )
                                 Text(
-                                    text = "View pricing",
-                                    fontSize = 12.sp,
-                                    color = Color(0xFF71717A)
+                                    text = "12 DELIVERED",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF94A3B8)
                                 )
                             }
                         }
                     }
 
-                    // Card 4: Brand DNA
+                    // Card 4: Brand Identity (Matching Image 2)
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0F12)),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0D0F17)),
                         shape = RoundedCornerShape(22.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(118.dp)
-                            .border(1.dp, Color(0xFF1F1F26), RoundedCornerShape(22.dp))
+                            .height(130.dp)
+                            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(22.dp))
                             .clickable { onNavigateToProfile() }
                     ) {
                         Column(
@@ -845,23 +851,25 @@ fun DashboardHomeScreen(
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF33250F)),
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(alpha = 0.12f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("⚡", fontSize = 16.sp)
+                                Text("★", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                             Column {
                                 Text(
-                                    text = "Brand DNA",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    text = "BRAND\nIDENTITY",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White,
+                                    lineHeight = 16.sp
                                 )
                                 Text(
-                                    text = "Customize style",
-                                    fontSize = 12.sp,
-                                    color = Color(0xFF71717A)
+                                    text = "ASSETS & DNA",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF94A3B8)
                                 )
                             }
                         }
@@ -1334,10 +1342,29 @@ fun PackagesScreen(onSelectPackage: (String) -> Unit) {
 
 @Composable
 fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
-    var shootDate by remember { mutableStateOf("2026-08-01") }
-    var hour by remember { mutableIntStateOf(3) }
-    var minute by remember { mutableIntStateOf(35) }
-    var period by remember { mutableStateOf("AM") }
+    val cal = remember { java.util.Calendar.getInstance() }
+    val rawHour = cal.get(java.util.Calendar.HOUR)
+    val initHour = if (rawHour == 0) 12 else rawHour
+    val initMinute = cal.get(java.util.Calendar.MINUTE)
+    val initPeriod = if (cal.get(java.util.Calendar.AM_PM) == java.util.Calendar.AM) "AM" else "PM"
+
+    val sdf = remember { java.text.SimpleDateFormat("EEE, d MMM", java.util.Locale.getDefault()) }
+    val todayStr = remember { sdf.format(cal.time) }
+    val tomorrowStr = remember {
+        val c = java.util.Calendar.getInstance()
+        c.add(java.util.Calendar.DAY_OF_YEAR, 1)
+        sdf.format(c.time)
+    }
+    val dayAfterStr = remember {
+        val c = java.util.Calendar.getInstance()
+        c.add(java.util.Calendar.DAY_OF_YEAR, 2)
+        sdf.format(c.time)
+    }
+
+    var shootDate by remember { mutableStateOf("Today ($todayStr)") }
+    var hour by remember { mutableIntStateOf(initHour) }
+    var minute by remember { mutableIntStateOf(initMinute) }
+    var period by remember { mutableStateOf(initPeriod) }
     var locationAddress by remember { mutableStateOf("") }
     var specialNotes by remember { mutableStateOf("") }
     var step by remember { mutableIntStateOf(1) }
@@ -1384,6 +1411,55 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                         Column {
                             Text("Booked for right now!", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             Text("A partner will be dispatched immediately.", color = MutedText, fontSize = 12.sp)
+                        }
+                    }
+                }
+
+                // Date Picker Card Box (New Requested Feature)
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0C10)),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("📅", fontSize = 14.sp)
+                            Text("Select Date *", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(
+                                "Today ($todayStr)",
+                                "Tomorrow ($tomorrowStr)",
+                                "Next Day ($dayAfterStr)"
+                            ).forEach { dateOption ->
+                                val isSelected = shootDate == dateOption
+                                Surface(
+                                    color = if (isSelected) OrbitCyan.copy(alpha = 0.15f) else Color(0xFF12131C),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, if (isSelected) OrbitCyan else Color.White.copy(alpha = 0.08f)),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { shootDate = dateOption }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = dateOption,
+                                            color = if (isSelected) OrbitCyan else Color.White,
+                                            fontSize = 13.sp,
+                                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
+                                        )
+                                        if (isSelected) {
+                                            Text("✓", color = OrbitCyan, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -2078,89 +2154,108 @@ fun TrackingScreen(bookingId: String) {
                 }
             }
 
-            // 3. Four Bento Grid Cards (Matching Screenshot)
-            Row(
+            // 3. Bento Grid Cards (Clean 2x2 Layout to prevent text clipping - Image 3 Fix)
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Card 1: Sync
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, Color(0xFF1E2132)),
-                    modifier = Modifier.weight(1f)
+                // Row 1: Sync & ETA
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("📤", fontSize = 12.sp)
-                            Text("Sync", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    // Card 1: Sync
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, Color(0xFF1E2132)),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("📤", fontSize = 12.sp)
+                                Text("Sync", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text("—", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("—", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+
+                    // Card 2: ETA
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, Color(0xFF1E2132)),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("⏱", fontSize = 12.sp)
+                                Text("ETA", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text("—", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
                     }
                 }
 
-                // Card 2: ETA
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, Color(0xFF1E2132)),
-                    modifier = Modifier.weight(1f)
+                // Row 2: Package & Status
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("⏱", fontSize = 12.sp)
-                            Text("ETA", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    // Card 3: Package
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, Color(0xFF1E2132)),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("🎬", fontSize = 12.sp)
+                                Text("Package", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Personalized",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White,
+                                maxLines = 1,
+                                softWrap = false
+                            )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("—", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
-                }
 
-                // Card 3: Package
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, Color(0xFF1E2132)),
-                    modifier = Modifier.weight(1.3f)
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("🎬", fontSize = 12.sp)
-                            Text("Package", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text("Personalized", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color.White)
-                    }
-                }
-
-                // Card 4: Status
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, Color(0xFF1E2132)),
-                    modifier = Modifier.weight(1.2f)
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("🎯", fontSize = 12.sp)
-                            Text("Status", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Surface(
-                            color = Color(0xFF052C38),
-                            shape = RoundedCornerShape(14.dp),
-                            border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.5f))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    // Card 4: Status
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, Color(0xFF1E2132)),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("🎯", fontSize = 12.sp)
+                                Text("Status", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Surface(
+                                color = Color(0xFF052C38),
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.5f))
                             ) {
-                                Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(OrbitCyan))
-                                Text("In Progress", color = OrbitCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(OrbitCyan))
+                                    Text("In Progress", color = OrbitCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
@@ -2535,7 +2630,7 @@ fun SafeMapView(
                 }
             },
             update = { webView ->
-                webView.loadDataWithBaseURL("https://api.maptiler.com", htmlContent, "text/html", "UTF-8", null)
+                // Smooth WebView performance: avoid reloading HTML string on every Compose animation frame
             }
         )
     } else {

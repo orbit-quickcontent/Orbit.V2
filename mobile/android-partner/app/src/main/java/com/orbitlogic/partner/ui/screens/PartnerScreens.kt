@@ -1437,7 +1437,7 @@ fun SafeMapView(
                 }
             },
             update = { webView ->
-                webView.loadDataWithBaseURL("https://api.maptiler.com", htmlContent, "text/html", "UTF-8", null)
+                // Smooth WebView performance: avoid reloading HTML string on every Compose animation frame
             }
         )
     } else {
