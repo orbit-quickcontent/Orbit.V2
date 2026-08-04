@@ -58,13 +58,47 @@ fun MainPartnerNavigationHost() {
     var currentTab by remember { mutableStateOf("home") }
     val coroutineScope = rememberCoroutineScope()
 
-    if (isAppLoading) {
-        PartnerSplashScreen(onSplashFinished = { isAppLoading = false })
-    } else if (!isAuthenticated) {
-        PartnerLoginScreen(onLoginSuccess = { token ->
-            prefsManager.saveAuthSession(token, "prt-arjun")
-            isAuthenticated = true
-            currentTab = "home"
+    val requiredPermissions = remember {
+        mutableStateListOf(
+            android.Manifest.permission.ACCESS_FINE_LOCATION,
+            android.Manifest.permission.ACCESS_COARSE_LOCATION,
+            android.Manifest.permission.CAMERA,
+            android.Manifest.permission.RECORD_AUDIO
+        ).apply {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                add(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+    var showPermissionModal by remember {
+        mutableStateOf(
+            requiredPermissions.any { perm ->
+                androidx.core.content.ContextCompat.checkSelfPermission(context, perm) != android.content.pm.PackageManager.PERMISSION_GRANTED
+            }
+        )
+    }
+
+    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        showPermissionModal = false
+    }
+
+    LaunchedEffect(isAppLoading) {
+        if (!isAppLoading && showPermissionModal) {
+            permissionLauncher.launch(requiredPermissions.toTypedArray())
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (isAppLoading) {
+            PartnerSplashScreen(onSplashFinished = { isAppLoading = false })
+        } else if (!isAuthenticated) {
+            PartnerLoginScreen(onLoginSuccess = { token ->
+                prefsManager.saveAuthSession(token, "prt-arjun")
+                isAuthenticated = true
+                currentTab = "home"
             // Fetch partner profile after login to get partnerId
             coroutineScope.launch {
                 try {
@@ -136,6 +170,112 @@ fun MainPartnerNavigationHost() {
                     }
                 }
             }
+        }
+
+        if (!isAppLoading && showPermissionModal) {
+            PermissionPromptModal(
+                onGrantPermissions = {
+                    permissionLauncher.launch(requiredPermissions.toTypedArray())
+                },
+                onDismiss = {
+                    showPermissionModal = false
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun PermissionPromptModal(
+    onGrantPermissions: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.85f))
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F121C)),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, Color(0xFF00BFFF).copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF00BFFF).copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("⚡", fontSize = 28.sp)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    "App Permissions Required",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color.White
+                )
+
+                Text(
+                    "Orbit requires device permissions to deliver high-precision shoot dispatches, real-time live navigation, and creator camera recording.",
+                    fontSize = 13.sp,
+                    color = Color(0xFF94A3B8),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    PermissionRowItem("📍 Location Access", "Required for shoot dispatch matching & live GPS map navigation")
+                    PermissionRowItem("📷 Camera & Microphone", "Required for shoot content capture & verification")
+                    PermissionRowItem("🔔 Push Notifications", "Required for instant shoot dispatch alerts")
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Button(
+                    onClick = onGrantPermissions,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00BFFF)),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                ) {
+                    Text("Grant All Permissions ⚡", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Text("Skip for Now", color = Color(0xFF64748B), fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionRowItem(title: String, desc: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column {
+            Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text(desc, color = Color(0xFF64748B), fontSize = 11.sp)
         }
     }
 }
