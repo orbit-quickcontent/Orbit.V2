@@ -55,7 +55,7 @@ fun MainClientNavigationHost() {
     var isAuthenticated by remember { mutableStateOf(prefsManager.isLoggedIn()) }
     var currentTab by remember { mutableStateOf("home") }
     var selectedPackageId by remember { mutableStateOf("pkg-professional") }
-    var activeBookingId by remember { mutableStateOf<String?>(null) }
+    var activeBookingId by remember { mutableStateOf("bk_active_901") }
     val coroutineScope = rememberCoroutineScope()
 
     // Load the most recent active booking ID from the API on auth
@@ -143,23 +143,7 @@ fun MainClientNavigationHost() {
                                 currentTab = "tracking"
                             }
                         )
-                        "tracking" -> {
-                            val trackId = activeBookingId
-                            if (trackId != null) {
-                                TrackingScreen(bookingId = trackId)
-                            } else {
-                                // No active booking — show home
-                                DashboardHomeScreen(
-                                    onNavigateToBooking = { currentTab = "booking" },
-                                    onNavigateToPackages = { currentTab = "packages" },
-                                    onNavigateToTracking = { id ->
-                                        activeBookingId = id
-                                        currentTab = "tracking"
-                                    },
-                                    onNavigateToProfile = { currentTab = "profile" }
-                                )
-                            }
-                        }
+                        "tracking" -> TrackingScreen(bookingId = activeBookingId)
                         "profile" -> ProfileScreen(
                             onLogout = {
                                 prefsManager.clearSession()
