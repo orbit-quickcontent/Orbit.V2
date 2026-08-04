@@ -635,21 +635,33 @@ fun PartnerDashboardScreen(
     var isOnline by remember { mutableStateOf(true) }
     var activeDispatch by remember { mutableStateOf<BookingDto?>(null) }
     var isAccepting by remember { mutableStateOf(false) }
+    var isRefreshing by remember { mutableStateOf(false) }
+
+    fun refreshRequests() {
+        if (isRefreshing) return
+        isRefreshing = true
+        coroutineScope.launch {
+            try {
+                if (isOnline) {
+                    val token = "Bearer ${prefsManager.getAuthToken()}"
+                    val available = ApiClient.apiService.getAvailableBookings(token)
+                    activeDispatch = available.firstOrNull()
+                } else {
+                    activeDispatch = null
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("PartnerDash", "Failed to refresh available bookings", e)
+                activeDispatch = null
+            } finally {
+                delay(300)
+                isRefreshing = false
+            }
+        }
+    }
 
     // Fetch real available dispatches from API when online
     LaunchedEffect(isOnline) {
-        if (isOnline) {
-            try {
-                val token = "Bearer ${prefsManager.getAuthToken()}"
-                val available = ApiClient.apiService.getAvailableBookings(token)
-                activeDispatch = available.firstOrNull()
-            } catch (e: Exception) {
-                android.util.Log.e("PartnerDash", "Failed to fetch available bookings", e)
-                activeDispatch = null
-            }
-        } else {
-            activeDispatch = null
-        }
+        refreshRequests()
     }
 
     val shootLocation = remember { LatLng(18.95823563155963, 72.81710824) }
@@ -663,6 +675,37 @@ fun PartnerDashboardScreen(
             .background(SpaceNavy)
     ) {
         PartnerHeader(isOnline = isOnline, onToggleOnline = { isOnline = it })
+
+        // Pull to refresh animated top bar
+        AnimatedVisibility(
+            visible = isRefreshing,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Surface(
+                color = OrbitPurple.copy(alpha = 0.15f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        color = OrbitPurple,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Checking backend for real shoot requests...",
+                        color = OrbitPurple,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
 
         Column(
             modifier = Modifier
@@ -761,25 +804,58 @@ fun PartnerDashboardScreen(
                 }
             }
 
-            // Available Work Section Header
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 16.dp)) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(OrbitCyan.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("💼", fontSize = 16.sp)
+            // Available Work Section Header with Refresh Button
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(OrbitCyan.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("💼", fontSize = 16.sp)
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text("Available Work", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = White)
+                        Text("New bookings waiting for you", fontSize = 12.sp, color = MutedText)
+                    }
                 }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text("Available Work", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = White)
-                    Text("New bookings waiting for you", fontSize = 12.sp, color = MutedText)
+
+                Surface(
+                    color = OrbitCyan.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.3f)),
+                    modifier = Modifier.clickable { refreshRequests() }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (isRefreshing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(12.dp),
+                                color = OrbitCyan,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
+                        Text(
+                            if (isRefreshing) "Refreshing..." else "🔄 Refresh",
+                            color = OrbitCyan,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
-            // Empty State Card
+            // Empty State Card with Refresh Action
             GlassCard {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
@@ -801,8 +877,19 @@ fun PartnerDashboardScreen(
                         fontSize = 13.sp,
                         color = OrbitCyan.copy(alpha = 0.8f),
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
                     )
+
+                    OutlinedButton(
+                        onClick = { refreshRequests() },
+                        border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.4f)),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = OrbitCyanBg.copy(alpha = 0.3f)),
+                        shape = RoundedCornerShape(24.dp)
+                    ) {
+                        Text("🔄 Tap to Refresh Requests", color = OrbitCyan, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text("Keep the app open to receive real-time notifications.", fontSize = 11.sp, color = MutedText, textAlign = TextAlign.Center)
                 }
             }
