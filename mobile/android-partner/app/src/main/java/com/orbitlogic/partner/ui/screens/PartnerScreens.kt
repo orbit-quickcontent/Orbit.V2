@@ -109,7 +109,8 @@ fun GlassCard(
 fun PartnerHeader(
     userName: String = "utkarsh",
     isOnline: Boolean = true,
-    onToggleOnline: (Boolean) -> Unit = {}
+    onToggleOnline: (Boolean) -> Unit = {},
+    onRefreshClick: (() -> Unit)? = null
 ) {
     Column(modifier = Modifier.fillMaxWidth().background(SpaceNavy)) {
         // Top App Bar Row
@@ -173,7 +174,7 @@ fun PartnerHeader(
                 }
             }
 
-            // Right: Online Toggle & Search/Notif Icons
+            // Right: Online Toggle & Refresh / Notif Icons
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Surface(
                     color = SpaceNavyLighter,
@@ -198,6 +199,21 @@ fun PartnerHeader(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
                         )
+                    }
+                }
+
+                if (onRefreshClick != null) {
+                    Surface(
+                        color = SpaceNavyLighter,
+                        shape = CircleShape,
+                        border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.3f)),
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clickable { onRefreshClick() }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text("🔄", fontSize = 14.sp)
+                        }
                     }
                 }
 
@@ -674,7 +690,11 @@ fun PartnerDashboardScreen(
             .fillMaxSize()
             .background(SpaceNavy)
     ) {
-        PartnerHeader(isOnline = isOnline, onToggleOnline = { isOnline = it })
+        PartnerHeader(
+            isOnline = isOnline,
+            onToggleOnline = { isOnline = it },
+            onRefreshClick = { refreshRequests() }
+        )
 
         // Pull to refresh animated top bar
         AnimatedVisibility(
