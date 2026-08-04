@@ -43,8 +43,11 @@ const router = Router();
 const jsonParser = express.json({ limit: '50mb' });
 const rawParser = express.raw({ type: '*/*', limit: '100mb' });
 
-// Root check
+// Root check & Health
 router.get('/', jsonParser, nextToExpress(rootRoute.GET));
+router.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'healthy', service: 'Orbit API', timestamp: new Date().toISOString() });
+});
 
 // Auth routes
 router.post('/auth/send-otp', jsonParser, nextToExpress(sendOtpHandler.POST));
