@@ -84,53 +84,12 @@ export async function POST(
     let activePartners = onlinePartners.filter(p => !declinedBy.includes(p.id))
 
     if (activePartners.length === 0) {
-      console.log("[Dispatch] No active partners found in Firestore. Auto-provisioning default partner 'prt-arjun'...");
-      try {
-        // Auto-create Arjun Kapoor's user
-        await firestoreDb.partnerUsers.create({
-          data: {
-            id: "usr-arjun",
-            email: "arjun@orbitlogic.io",
-            name: "Arjun Kapoor",
-            phone: "+91 99999 88888",
-            role: "PARTNER"
-          }
-        });
-      } catch (err) {
-        // Ignore if user already exists
-      }
-
-      try {
-        // Auto-create Arjun Kapoor's partner profile
-        const createdPartner = await firestoreDb.partners.create({
-          data: {
-            id: "prt-arjun",
-            userId: "usr-arjun",
-            location: "Bandra West, Mumbai",
-            latitude: 19.0596,
-            longitude: 72.8295,
-            availability: true,
-            isVerified: true,
-            rating: 4.9,
-            completedProjects: 48,
-            deviceInfo: "iPhone 15 Pro Max",
-            walletBalance: 24500.0,
-            pendingClearance: 4200.0,
-            totalWithdrawn: 12000.0
-          }
-        });
-        activePartners = [createdPartner];
-      } catch (err) {
-        // If profile already exists, fetch it and set availability true
-        const p = await firestoreDb.partners.findUnique({ where: { id: "prt-arjun" } });
-        if (p) {
-          const updatedPartner = await firestoreDb.partners.update({
-            where: { id: "prt-arjun" },
-            data: { availability: true }
-          });
-          activePartners = [updatedPartner];
-        }
-      }
+      console.log(`[Dispatch] No online active partners found in Firestore for booking ${bookingId}. Dispatch queued for available partners.`);
+      return NextResponse.json({
+        success: true,
+        message: "Booking dispatch queued for available partners",
+        dispatchedCount: 0
+      }, { status: 200 });
     }
 
     // Sort by proximity if booking has location data

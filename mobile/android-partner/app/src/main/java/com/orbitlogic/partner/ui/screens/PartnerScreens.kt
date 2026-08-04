@@ -35,6 +35,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import com.orbitlogic.partner.R
 import com.orbitlogic.partner.ui.theme.*
+import com.orbitlogic.partner.network.*
+import com.orbitlogic.partner.storage.PrefsManager
 
 data class LatLng(val latitude: Double, val longitude: Double)
 
@@ -626,8 +628,29 @@ fun PartnerDashboardScreen(
     onAcceptDispatch: (String) -> Unit,
     onNavigateToWork: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefsManager = remember { PrefsManager(context) }
+    val coroutineScope = rememberCoroutineScope()
+
     var isOnline by remember { mutableStateOf(true) }
-    var activeDispatchId by remember { mutableStateOf<String?>("booking-dispatch-101") }
+    var activeDispatch by remember { mutableStateOf<BookingDto?>(null) }
+    var isAccepting by remember { mutableStateOf(false) }
+
+    // Fetch real available dispatches from API when online
+    LaunchedEffect(isOnline) {
+        if (isOnline) {
+            try {
+                val token = "Bearer ${prefsManager.getAuthToken()}"
+                val available = ApiClient.apiService.getAvailableBookings(token)
+                activeDispatch = available.firstOrNull()
+            } catch (e: Exception) {
+                android.util.Log.e("PartnerDash", "Failed to fetch available bookings", e)
+                activeDispatch = null
+            }
+        } else {
+            activeDispatch = null
+        }
+    }
 
     val shootLocation = remember { LatLng(18.95823563155963, 72.81710824) }
     val cameraPositionState = rememberCameraPositionState {
@@ -647,8 +670,9 @@ fun PartnerDashboardScreen(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Incoming Dispatch Request Alert Card
-            if (isOnline && activeDispatchId != null) {
+            // Incoming Real Dispatch Request Alert Card
+            if (isOnline && activeDispatch != null) {
+                val currentBooking = activeDispatch!!
                 GlassCard(borderColor = OrbitPurple, modifier = Modifier.padding(bottom = 20.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -657,19 +681,18 @@ fun PartnerDashboardScreen(
                     ) {
                         Text("⚡ NEW SHOOT DISPATCH ALERT", color = OrbitPurple, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.sp)
                         Surface(color = Destructive.copy(alpha = 0.2f), shape = RoundedCornerShape(12.dp)) {
-                            Text("30s", color = Destructive, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                            Text("LIVE", color = Destructive, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
                         }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Text("UGC Brand Reel Shoot - Bandra West", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = White)
-                    Text("Payout Fee: ₹700.00 • Distance: 2.4 KM away", color = OrbitGreen, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
-                    Text("Client: Creative Brand Studio • Slot: 10:00 AM Today", color = MutedText, fontSize = 12.sp)
+                    Text(currentBooking.location ?: "Shooting Location", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = White)
+                    Text("Payout Fee: ₹700.00 • Guaranteed Earnings", color = OrbitGreen, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
+                    Text("Slot: ${currentBooking.timeSlot} • Date: ${currentBooking.bookingDate}", color = MutedText, fontSize = 12.sp)
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Embedded MapTiler openstreetmap-dark Map View for Shoot Dispatch
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
                         shape = RoundedCornerShape(14.dp),
@@ -691,7 +714,16 @@ fun PartnerDashboardScreen(
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Button(
-                            onClick = { activeDispatchId = null },
+                            onClick = {
+                                coroutineScope.launch {
+                                    try {
+                                        val token = "Bearer ${prefsManager.getAuthToken()}"
+                                        val pid = prefsManager.getPartnerId() ?: ""
+                                        ApiClient.apiService.declineBooking(token, currentBooking.id, DeclineBookingRequest(pid))
+                                    } catch (_: Exception) {}
+                                    activeDispatch = null
+                                }
+                            },
                             colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
                             modifier = Modifier.weight(1f).height(44.dp),
                             shape = RoundedCornerShape(12.dp)
@@ -701,14 +733,29 @@ fun PartnerDashboardScreen(
 
                         Button(
                             onClick = {
-                                onAcceptDispatch(activeDispatchId!!)
-                                onNavigateToWork()
+                                if (!isAccepting) {
+                                    isAccepting = true
+                                    coroutineScope.launch {
+                                        try {
+                                            val token = "Bearer ${prefsManager.getAuthToken()}"
+                                            val pid = prefsManager.getPartnerId() ?: ""
+                                            ApiClient.apiService.acceptBooking(token, currentBooking.id, AcceptBookingRequest(pid))
+                                            onAcceptDispatch(currentBooking.id)
+                                            onNavigateToWork()
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("PartnerDash", "Failed to accept booking", e)
+                                        } finally {
+                                            isAccepting = false
+                                        }
+                                    }
+                                }
                             },
+                            enabled = !isAccepting,
                             colors = ButtonDefaults.buttonColors(containerColor = OrbitGreen),
                             modifier = Modifier.weight(1.2f).height(44.dp),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Accept Shoot ✓", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(if (isAccepting) "Accepting..." else "Accept Shoot ✓", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }
