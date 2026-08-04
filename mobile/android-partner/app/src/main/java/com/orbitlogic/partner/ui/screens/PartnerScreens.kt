@@ -1548,10 +1548,26 @@ fun SafeMapView(
                     border-radius: 50%;
                     box-shadow: 0 0 10px #00BFFF;
                 }
+                .locate-btn {
+                    position: absolute;
+                    bottom: 12px;
+                    right: 12px;
+                    z-index: 10;
+                    background: rgba(13, 15, 23, 0.9);
+                    color: #00BFFF;
+                    border: 1px solid rgba(0, 191, 255, 0.4);
+                    border-radius: 20px;
+                    padding: 6px 14px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+                }
             </style>
         </head>
         <body>
             <div id="map"></div>
+            <button id="locateBtn" class="locate-btn">📍 Locate Me</button>
             <script>
                 try {
                     const map = new maplibregl.Map({
@@ -1562,11 +1578,22 @@ fun SafeMapView(
                         attributionControl: false
                     });
                     
+                    const geolocate = new maplibregl.GeolocateControl({
+                        positionOptions: { enableHighAccuracy: true },
+                        trackUserLocation: true,
+                        showUserLocation: true
+                    });
+                    map.addControl(geolocate, 'top-right');
+
                     const el = document.createElement('div');
                     el.className = 'marker';
                     new maplibregl.Marker({ element: el })
                         .setLngLat([${location.longitude}, ${location.latitude}])
                         .addTo(map);
+
+                    document.getElementById('locateBtn').addEventListener('click', function() {
+                        geolocate.trigger();
+                    });
                 } catch(e) { console.error(e); }
             </script>
         </body>
@@ -1581,6 +1608,12 @@ fun SafeMapView(
                 WebView(ctx).apply {
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
+                    settings.setGeolocationEnabled(true)
+                    webChromeClient = object : android.webkit.WebChromeClient() {
+                        override fun onGeolocationPermissionsShowPrompt(origin: String?, callback: android.webkit.GeolocationPermissions.Callback?) {
+                            callback?.invoke(origin, true, false)
+                        }
+                    }
                     webViewClient = object : WebViewClient() {
                         override fun onReceivedError(view: WebView?, errorCode: Int, description: String?, failingUrl: String?) {
                             hasWebViewError = true

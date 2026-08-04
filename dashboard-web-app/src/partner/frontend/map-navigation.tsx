@@ -121,8 +121,16 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
 
         mapInstance = map;
 
-        // Add zoom controls
+        // Add zoom and locate me controls
         map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+        map.addControl(
+          new maplibregl.GeolocateControl({
+            positionOptions: { enableHighAccuracy: true },
+            trackUserLocation: true,
+            showUserLocation: true,
+          }),
+          "top-right"
+        );
 
         map.on("load", () => {
           if (!active) return;
