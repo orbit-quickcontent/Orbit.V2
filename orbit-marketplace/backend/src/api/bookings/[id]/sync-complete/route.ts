@@ -45,6 +45,14 @@ export async function POST(
       );
     }
 
+    const validPreSyncStatuses = ["ACCEPTED", "EN_ROUTE", "SHOOTING", "SYNCING"];
+    if (!validPreSyncStatuses.includes(booking.status)) {
+      return NextResponse.json(
+        { error: `Booking must be ACCEPTED before completing sync. Current status: ${booking.status}` },
+        { status: 400 }
+      );
+    }
+
     const pkg = await firestoreDb.packages.findUnique({
       where: { id: booking.packageId }
     });
@@ -118,12 +126,12 @@ export async function POST(
           },
         });
 
-        // Record the Earning Transaction in Firestore
+        // Record the Payout Transaction in Firestore
         await firestoreDb.transactions.create({
           data: {
             partnerId: booking.partnerId,
             bookingId: bookingId,
-            type: "EARNING",
+            type: "PAYOUT",
             amount: partnerPayout,
             status: "COMPLETED",
             description: `Salary payout for shoot ${bookingId.substring(0, 8)}... (${pkg.name ?? "Package"})`,

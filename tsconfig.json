@@ -17,7 +17,6 @@
     }
   },
   "include": [
-    "orbit-unified-backend.ts",
     "orbit-marketplace/**/*"
   ],
   "exclude": [

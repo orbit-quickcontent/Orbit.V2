@@ -26,7 +26,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.orbitlogic.client.ui.screens.*
 import com.orbitlogic.client.ui.theme.*
+import com.orbitlogic.client.network.*
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -51,9 +53,26 @@ fun MainClientNavigationHost() {
     val prefsManager = remember { com.orbitlogic.client.storage.PrefsManager(context) }
     var isAppLoading by remember { mutableStateOf(true) }
     var isAuthenticated by remember { mutableStateOf(prefsManager.isLoggedIn()) }
-    var currentTab by remember { mutableStateOf("home") } // home, packages, booking, tracking, profile
+    var currentTab by remember { mutableStateOf("home") }
     var selectedPackageId by remember { mutableStateOf("pkg-professional") }
-    var activeBookingId by remember { mutableStateOf("bk_active_901") }
+    var activeBookingId by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Load the most recent active booking ID from the API on auth
+    LaunchedEffect(isAuthenticated) {
+        if (isAuthenticated) {
+            try {
+                val token = "Bearer ${prefsManager.getAuthToken()}"
+                val bookings = ApiClient.apiService.getBookings(token)
+                val active = bookings.firstOrNull { it.status != "DELIVERED" && it.status != "CANCELLED" }
+                if (active != null) {
+                    activeBookingId = active.id
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MainNav", "Failed to load bookings", e)
+            }
+        }
+    }
 
     if (isAppLoading) {
         ClientSplashScreen(onSplashFinished = { isAppLoading = false })
@@ -62,6 +81,17 @@ fun MainClientNavigationHost() {
             prefsManager.saveAuthSession(token, "CLIENT")
             isAuthenticated = true
             currentTab = "home"
+            // Fetch bookings after login
+            coroutineScope.launch {
+                try {
+                    val authToken = "Bearer $token"
+                    val bookings = ApiClient.apiService.getBookings(authToken)
+                    val active = bookings.firstOrNull { it.status != "DELIVERED" && it.status != "CANCELLED" }
+                    if (active != null) {
+                        activeBookingId = active.id
+                    }
+                } catch (_: Exception) {}
+            }
         })
     } else {
         Scaffold(
@@ -113,7 +143,23 @@ fun MainClientNavigationHost() {
                                 currentTab = "tracking"
                             }
                         )
-                        "tracking" -> TrackingScreen(bookingId = activeBookingId)
+                        "tracking" -> {
+                            val trackId = activeBookingId
+                            if (trackId != null) {
+                                TrackingScreen(bookingId = trackId)
+                            } else {
+                                // No active booking — show home
+                                DashboardHomeScreen(
+                                    onNavigateToBooking = { currentTab = "booking" },
+                                    onNavigateToPackages = { currentTab = "packages" },
+                                    onNavigateToTracking = { id ->
+                                        activeBookingId = id
+                                        currentTab = "tracking"
+                                    },
+                                    onNavigateToProfile = { currentTab = "profile" }
+                                )
+                            }
+                        }
                         "profile" -> ProfileScreen(
                             onLogout = {
                                 prefsManager.clearSession()

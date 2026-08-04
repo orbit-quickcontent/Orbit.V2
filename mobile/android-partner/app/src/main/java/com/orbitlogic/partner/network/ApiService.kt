@@ -86,6 +86,58 @@ data class PresignedUrlResponse(
     val key: String
 )
 
+data class AcceptBookingRequest(val partnerId: String)
+data class DeclineBookingRequest(val partnerId: String)
+data class SyncCompleteRequest(
+    val footageUrls: List<String>,
+    val proxyFootageUrl: String? = null,
+    val fileName: String? = null,
+    val fileSize: Long? = null
+)
+
+data class AcceptBookingResponse(val booking: BookingDto)
+data class DeclineBookingResponse(val booking: BookingDto, val reDispatched: Boolean)
+data class SyncCompleteResponse(val success: Boolean, val booking: BookingDto?)
+
+data class WalletTransactionDto(
+    val id: String,
+    val partnerId: String,
+    val bookingId: String?,
+    val type: String,
+    val amount: Double,
+    val status: String,
+    val description: String?,
+    val createdAt: String
+)
+
+data class WalletResponse(
+    val balance: Double,
+    val pendingClearance: Double,
+    val totalWithdrawn: Double,
+    val bankVerified: Boolean?,
+    val bankName: String?,
+    val accountNumberMasked: String?,
+    val transactions: List<WalletTransactionDto>
+)
+
+data class LoginRequest(val email: String, val password: String? = null, val role: String? = "PARTNER")
+data class LoginResponse(
+    val success: Boolean,
+    val token: String?,
+    val accessToken: String?,
+    val refreshToken: String?,
+    val user: UserDto?
+)
+
+data class RegisterRequest(
+    val email: String,
+    val password: String? = null,
+    val name: String? = null,
+    val phone: String? = null,
+    val role: String? = "PARTNER",
+    val deviceType: String? = "ANDROID"
+)
+
 // ─── API Interface ───────────────────────────────────────────────────────────
 
 interface ApiService {
@@ -98,23 +150,38 @@ interface ApiService {
     @GET("bookings/available")
     suspend fun getAvailableBookings(@Header("Authorization") token: String): List<BookingDto>
 
+    @POST("auth/login")
+    suspend fun login(@Body request: LoginRequest): LoginResponse
+
+    @POST("auth/register")
+    suspend fun register(@Body request: RegisterRequest): LoginResponse
+
     @POST("bookings/{id}/accept")
     suspend fun acceptBooking(
         @Header("Authorization") token: String,
-        @Path("id") bookingId: String
-    ): BookingDto
+        @Path("id") bookingId: String,
+        @Body request: AcceptBookingRequest
+    ): AcceptBookingResponse
 
     @POST("bookings/{id}/decline")
     suspend fun declineBooking(
         @Header("Authorization") token: String,
-        @Path("id") bookingId: String
-    ): BookingDto
+        @Path("id") bookingId: String,
+        @Body request: DeclineBookingRequest
+    ): DeclineBookingResponse
 
     @POST("bookings/{id}/sync-complete")
     suspend fun completeSync(
         @Header("Authorization") token: String,
-        @Path("id") bookingId: String
-    ): BookingDto
+        @Path("id") bookingId: String,
+        @Body request: SyncCompleteRequest
+    ): SyncCompleteResponse
+
+    @GET("partners/{id}/wallet")
+    suspend fun getPartnerWallet(
+        @Header("Authorization") token: String,
+        @Path("id") partnerId: String
+    ): WalletResponse
 
     @GET("partners/{id}")
     suspend fun getPartnerProfile(

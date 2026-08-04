@@ -45,12 +45,28 @@ export async function GET(
       return dateB - dateA;
     });
 
+    const totalEarnedFromTx = transactions
+      .filter((t) => (t.type === "PAYOUT" || t.type === "EARNING") && (t.status === "COMPLETED" || !t.status))
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+    const totalWithdrawnFromTx = transactions
+      .filter((t) => t.type === "WITHDRAWAL" && (t.status === "COMPLETED" || !t.status))
+      .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+
+    const balance = partner.walletBalance != null && partner.walletBalance > 0
+      ? partner.walletBalance
+      : Math.max(0, totalEarnedFromTx - totalWithdrawnFromTx);
+
+    const totalWithdrawn = partner.totalWithdrawn != null && partner.totalWithdrawn > 0
+      ? partner.totalWithdrawn
+      : totalWithdrawnFromTx;
+
     const recentTransactions = transactions.slice(0, 20);
 
     return NextResponse.json({
-      balance: partner.walletBalance,
-      pendingClearance: partner.pendingClearance,
-      totalWithdrawn: partner.totalWithdrawn,
+      balance,
+      pendingClearance: partner.pendingClearance || 0,
+      totalWithdrawn,
+      totalEarned: totalEarnedFromTx,
       bankVerified: partner.bankVerified,
       bankName: partner.bankName,
       accountNumberMasked: partner.accountNumber

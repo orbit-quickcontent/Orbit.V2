@@ -23,11 +23,11 @@ interface PaymentReceivedProps {
 }
 
 export function PaymentReceived({ booking, onCompleteAndReturn }: PaymentReceivedProps) {
-  const { bookings } = useAppStore();
+  const { bookings, user } = useAppStore();
 
-  // Calculate real earnings from delivered bookings
-  const deliveredBookings = bookings.filter((b) => b.status === "DELIVERED");
-  const totalEarned = deliveredBookings.length * 700;
+  // Calculate real earnings from partner wallet in store
+  const deliveredBookings = bookings.filter((b) => b.status === "DELIVERED" || b.status === "READY_TO_EDIT" || b.status === "EDITING");
+  const totalEarned = (user.wallet?.balance || 0) + (user.wallet?.totalWithdrawn || 0);
 
   // Calculate monthly earnings from delivered bookings this month
   const now = new Date();

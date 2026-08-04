@@ -397,11 +397,12 @@ export function PartnerDashboard() {
         throw new Error("Failed to mark sync complete on server");
       }
 
-      // Update local Zustand store & fetch profile to credit wallet
+      // Update local Zustand store & fetch profile to refresh wallet balance from server
       updateBookingStatus(bookingId, "EDITING");
       await fetchPartnerProfile();
 
-      toast.success("Wallet credited with ₹700 payout! Ready to start background sync.");
+      const newBalance = useAppStore.getState().user.wallet?.balance;
+      toast.success(`Wallet credited with ₹700 payout! Updated balance: ₹${newBalance != null ? newBalance : 700}`);
       setTimeout(() => setPartnerPhase("privacy"), 500);
 
       // 3. Spawn background upload of original high-fidelity 4K files quietly

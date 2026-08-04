@@ -23,7 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.orbitlogic.partner.ui.screens.*
 import com.orbitlogic.partner.ui.theme.*
+import com.orbitlogic.partner.network.*
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.StrokeCap
@@ -53,7 +55,8 @@ fun MainPartnerNavigationHost() {
     val prefsManager = remember { com.orbitlogic.partner.storage.PrefsManager(context) }
     var isAppLoading by remember { mutableStateOf(true) }
     var isAuthenticated by remember { mutableStateOf(prefsManager.isLoggedIn()) }
-    var currentTab by remember { mutableStateOf("home") } // home, work, earnings, profile, nav, camera, sync
+    var currentTab by remember { mutableStateOf("home") }
+    val coroutineScope = rememberCoroutineScope()
 
     if (isAppLoading) {
         PartnerSplashScreen(onSplashFinished = { isAppLoading = false })
@@ -62,6 +65,16 @@ fun MainPartnerNavigationHost() {
             prefsManager.saveAuthSession(token, "prt-arjun")
             isAuthenticated = true
             currentTab = "home"
+            // Fetch partner profile after login to get partnerId
+            coroutineScope.launch {
+                try {
+                    val partnerId = prefsManager.getPartnerId() ?: "prt-arjun"
+                    val profile = ApiClient.apiService.getPartnerProfile("Bearer $token", partnerId)
+                    android.util.Log.d("MainNav", "Partner profile loaded: ${profile.id}")
+                } catch (e: Exception) {
+                    android.util.Log.e("MainNav", "Failed to load partner profile", e)
+                }
+            }
         })
     } else {
         Scaffold(

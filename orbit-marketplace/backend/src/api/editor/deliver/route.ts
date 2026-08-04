@@ -14,6 +14,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const existingBooking = await firestoreDb.bookings.findUnique({
+      where: { id: bookingId }
+    });
+
+    if (!existingBooking) {
+      return NextResponse.json(
+        { error: "Booking not found" },
+        { status: 404 }
+      );
+    }
+
+    if (existingBooking.status !== "EDITING") {
+      return NextResponse.json(
+        { error: `Booking cannot be delivered unless it is in EDITING status. Current status: ${existingBooking.status}` },
+        { status: 400 }
+      );
+    }
+
     const now = new Date().toISOString();
 
     const booking = await firestoreDb.bookings.update({

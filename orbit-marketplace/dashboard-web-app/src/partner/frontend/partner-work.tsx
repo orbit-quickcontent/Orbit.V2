@@ -24,13 +24,13 @@ import { formatCurrency } from "@/lib/constants";
 import { staggerContainer, staggerItem } from "@/lib/animations";
 
 export function PartnerWork() {
-  const { bookings } = useAppStore();
+  const { bookings, user } = useAppStore();
   const [historyExpanded, setHistoryExpanded] = useState(false);
 
-  const completedBookings = bookings.filter((b) => b.status === "DELIVERED");
+  const completedBookings = bookings.filter((b) => b.status === "DELIVERED" || b.status === "READY_TO_EDIT" || b.status === "EDITING");
 
-  // Calculate total earned from completed bookings only
-  const totalEarned = completedBookings.length * 700;
+  // Calculate total earned from real partner wallet balance + withdrawn
+  const totalEarned = (user.wallet?.balance || 0) + (user.wallet?.totalWithdrawn || 0);
 
   // Calculate monthly earnings from completed bookings this month
   const now = new Date();

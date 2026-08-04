@@ -31,7 +31,7 @@ export async function POST(
       )
     }
 
-    if (booking.status !== 'PAID' && booking.status !== 'PARTNER_DISPATCHED') {
+    if (booking.status !== 'PENDING' && booking.status !== 'PAID' && booking.status !== 'DISPATCHED' && booking.status !== 'PARTNER_DISPATCHED') {
       return NextResponse.json(
         { error: `Booking cannot be dispatched. Current status: ${booking.status}` },
         { status: 400 }

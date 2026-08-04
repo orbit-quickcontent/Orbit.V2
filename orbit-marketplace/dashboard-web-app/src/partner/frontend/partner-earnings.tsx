@@ -47,8 +47,8 @@ export function PartnerEarnings() {
 
   const { wallet, bankAccount } = user;
 
-  const completedBookings = bookings.filter((b) => b.status === "DELIVERED");
-  const totalEarned = completedBookings.length * 700;
+  const completedBookings = bookings.filter((b) => b.status === "DELIVERED" || b.status === "READY_TO_EDIT" || b.status === "EDITING");
+  const totalEarned = (wallet?.balance || 0) + (wallet?.totalWithdrawn || 0);
 
   const now = new Date();
   const currentMonth = now.getMonth();

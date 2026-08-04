@@ -65,7 +65,7 @@ export async function POST(
       )
     }
 
-    if (booking.status !== 'PARTNER_DISPATCHED') {
+    if (booking.status !== 'DISPATCHED' && booking.status !== 'PARTNER_DISPATCHED') {
       return NextResponse.json(
         { error: `Booking is not dispatched. Current status: ${booking.status}` },
         { status: 400 }
@@ -104,12 +104,12 @@ export async function POST(
       },
     })
 
-    // 4. Update booking: partnerId, status = EN_ROUTE
+    // 4. Update booking: partnerId, status = ACCEPTED
     const updatedRaw = await firestoreDb.bookings.update({
       where: { id: bookingId },
       data: {
         partnerId,
-        status: 'EN_ROUTE',
+        status: 'ACCEPTED',
       },
     })
 
@@ -198,8 +198,8 @@ export async function POST(
           event: 'booking:status-update',
           payload: {
             bookingId,
-            status: 'EN_ROUTE',
-            previousStatus: 'PARTNER_DISPATCHED',
+            status: 'ACCEPTED',
+            previousStatus: booking.status,
           },
         }),
       })
