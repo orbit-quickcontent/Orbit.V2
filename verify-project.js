@@ -18,8 +18,8 @@ function runCheck(name, command, cwd) {
 }
 
 const rootDir = __dirname;
-const frontendDir = path.join(rootDir, 'orbit-marketplace', 'dashboard-web-app');
-const backendDir = path.join(rootDir, 'orbit-marketplace', 'backend');
+const frontendDir = path.join(rootDir, 'dashboard-web-app');
+const backendDir = path.join(rootDir, 'backend');
 
 // 1. Lint Frontend
 runCheck('Frontend Linter', 'npm run lint', frontendDir);

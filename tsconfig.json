@@ -11,13 +11,15 @@
     "paths": {
       "*": [
         "node_modules/*",
-        "orbit-marketplace/dashboard-web-app/node_modules/*",
-        "orbit-marketplace/backend/node_modules/*"
+        "dashboard-web-app/node_modules/*",
+        "backend/node_modules/*"
       ]
     }
   },
   "include": [
-    "orbit-marketplace/**/*"
+    "backend/**/*",
+    "dashboard-web-app/**/*",
+    "editor-web-app/**/*"
   ],
   "exclude": [
     "node_modules",

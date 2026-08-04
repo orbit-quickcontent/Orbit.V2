@@ -1,6 +1,6 @@
 # API Inventory
 
-Complete mapping of Express REST API endpoints in `orbit-marketplace/backend`.
+Complete mapping of Express REST API endpoints in `backend`.
 
 ---
 

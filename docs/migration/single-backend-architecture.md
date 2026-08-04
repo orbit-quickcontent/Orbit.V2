@@ -5,9 +5,9 @@
 This repo used to run TWO separate implementations of the same business
 logic (bookings, partners, editor workflow, packages, users, admin, uploads):
 
-1. `orbit-marketplace/backend` — a standalone Express server (port 5000).
+1. `backend` — a standalone Express server (port 5000).
    This is what the **mobile apps** and **editor-web-app** actually talk to.
-2. `orbit-marketplace/dashboard-web-app` — a Next.js app (port 3000) that
+2. `dashboard-web-app` — a Next.js app (port 3000) that
    ALSO had its own copy of every one of those handlers under
    `src/app/api/**`, `src/client/backend/*`, and `src/partner/backend/*`.
 
@@ -21,7 +21,7 @@ waiting for an explicit accept.
 
 ## The fix
 
-`orbit-marketplace/backend` is now the single source of truth for all of
+`backend` is now the single source of truth for all of
 that logic. `dashboard-web-app`'s API routes under `src/app/api/**`
 (bookings, partners, editor, packages, users, admin, upload) are now thin
 proxies — see `src/lib/backend-proxy.ts` — that forward the request to

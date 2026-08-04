@@ -1,7 +1,7 @@
 services:
   frontend:
     build:
-      context: ./orbit-marketplace/dashboard-web-app
+      context: ./dashboard-web-app
       dockerfile: Dockerfile
     container_name: orbit-frontend
     restart: always
@@ -14,7 +14,7 @@ services:
 
   backend:
     build:
-      context: ./orbit-marketplace/backend
+      context: ./backend
       dockerfile: Dockerfile
     container_name: orbit-backend
     restart: always
