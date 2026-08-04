@@ -1554,32 +1554,9 @@ fun SafeMapView(
             <div id="map"></div>
             <script>
                 try {
-                    const tomTomApiKey = '3QgWDfdOUKX7Kzs6GTrckM9HSidyvRIX';
-                    const tomTomStyle = {
-                        'version': 8,
-                        'sources': {
-                            'tomtom-tiles': {
-                                'type': 'raster',
-                                'tiles': [
-                                    'https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?view=Unified&key=' + tomTomApiKey
-                                ],
-                                'tileSize': 256
-                            }
-                        },
-                        'layers': [
-                            {
-                                'id': 'tomtom-tiles-layer',
-                                'type': 'raster',
-                                'source': 'tomtom-tiles',
-                                'minzoom': 0,
-                                'maxzoom': 22
-                            }
-                        ]
-                    };
-
                     const map = new maplibregl.Map({
                         container: 'map',
-                        style: tomTomStyle,
+                        style: 'https://tiles.openfreemap.org/styles/liberty',
                         center: [${location.longitude}, ${location.latitude}],
                         zoom: 14,
                         attributionControl: false

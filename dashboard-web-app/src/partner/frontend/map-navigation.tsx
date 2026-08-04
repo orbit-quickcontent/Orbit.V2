@@ -113,7 +113,7 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
 
         const map = new maplibregl.Map({
           container: mapContainerRef.current,
-          style: tomTomStyle,
+          style: "https://tiles.openfreemap.org/styles/liberty",
           center: centerCoords,
           zoom: 13,
           attributionControl: false,
