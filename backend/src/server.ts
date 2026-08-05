@@ -98,7 +98,7 @@ app.use('/api', apiRouter);
 // Start WebSocket server on port 3003
 const wsService = initWebSocketService();
 
-// Start HTTP REST server on port 5000
-app.listen(PORT, () => {
-  console.log(`[API] Standalone REST API server running on port ${PORT}`);
+// Start HTTP REST server on port 5000 (0.0.0.0 for emulator/LAN access)
+app.listen(Number(PORT), '0.0.0.0', () => {
+  console.log(`[API] Standalone REST API server running on http://0.0.0.0:${PORT}`);
 });
