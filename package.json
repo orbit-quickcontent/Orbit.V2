@@ -1,0 +1,16 @@
+{
+  "name": "orbit-v2-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix dashboard-web-app run dev",
+    "build": "npm --prefix dashboard-web-app run build",
+    "start": "npm --prefix dashboard-web-app run start",
+    "lint": "npm --prefix dashboard-web-app run lint"
+  },
+  "dependencies": {
+    "next": "^14.2.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
