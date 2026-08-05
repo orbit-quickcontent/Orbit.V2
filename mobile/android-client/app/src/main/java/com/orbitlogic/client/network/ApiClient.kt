@@ -7,8 +7,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    // 10.0.2.2 maps to the host machine's localhost when running inside Android Emulator
-    private const val BASE_URL = "http://10.0.2.2:5000/api/"
+    // Host machine's Wi-Fi IP address so physical phone & emulator can both reach the local backend
+    private const val BASE_URL = "http://10.106.117.54:5000/api/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
