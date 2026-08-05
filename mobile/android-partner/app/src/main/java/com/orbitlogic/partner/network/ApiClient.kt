@@ -7,8 +7,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    // Host machine's Wi-Fi IP address so physical phone & emulator can both reach the local backend
-    private const val BASE_URL = "http://10.106.117.54:5000/api/"
+    // Live Vercel Production API Backend
+    private const val BASE_URL = "https://orbit-v2-mnmc-one.vercel.app/api/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
