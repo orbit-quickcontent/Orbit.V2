@@ -1846,6 +1846,18 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                             coroutineScope.launch {
                                 try {
                                     val token = "Bearer ${prefsManager.getAuthToken()}"
+                                    // Convert the human-readable shootDate (e.g. "Today (Wed, 5 Aug)")
+                                    // into a proper ISO 8601 date so backend validation passes.
+                                    val isoDate = run {
+                                        val cal = java.util.Calendar.getInstance()
+                                        when {
+                                            shootDate.startsWith("Tomorrow") -> cal.add(java.util.Calendar.DAY_OF_YEAR, 1)
+                                            shootDate.startsWith("Next Day") -> cal.add(java.util.Calendar.DAY_OF_YEAR, 2)
+                                        }
+                                        java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.getDefault()).apply {
+                                            timeZone = java.util.TimeZone.getTimeZone("UTC")
+                                        }.format(cal.time)
+                                    }
                                     // Real booking creation — hits the backend, which runs the
                                     // actual dispatch pipeline so partners can see the request.
                                     // The previous UnifiedOrbitHub Firestore write bypassed the
@@ -1854,8 +1866,8 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                                         token,
                                         com.orbitlogic.client.network.CreateBookingRequest(
                                             packageId = packageId,
-                                            bookingDate = shootDate,
-                                            timeSlot = "$hour:$minute $period",
+                                            bookingDate = isoDate,
+                                            timeSlot = "${hour}:${minute.toString().padStart(2, '0')} $period",
                                             location = if (locationAddress.isBlank()) "Bandra West, Mumbai" else locationAddress,
                                             notes = specialNotes
                                         )
@@ -1868,6 +1880,7 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                                     isSubmitting = false
                                 }
                             }
+
                         },
                         modifier = Modifier.weight(2f).height(54.dp)
                     )

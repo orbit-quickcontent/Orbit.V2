@@ -20,9 +20,35 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const partner = await firestoreDb.partners.findUnique({
-      where: { id },
-    });
+    // Try looking up the partner by their partner-profile id first, then by userId.
+    // The mobile app receives a userId from the auth flow, not a partner profile id,
+    // so the first request after login uses userId as the path param.
+    let partner = await firestoreDb.partners.findUnique({ where: { id } });
+
+    if (!partner) {
+      partner = await firestoreDb.partners.findFirst({ where: { userId: id } });
+    }
+
+    if (!partner) {
+      // Check if a partner user exists and auto-create the profile row if so
+      const partnerUser = await firestoreDb.partnerUsers.findUnique({ where: { id } });
+      if (partnerUser) {
+        const nowIso = new Date().toISOString();
+        partner = await firestoreDb.partners.create({
+          data: {
+            userId: partnerUser.id,
+            location: "Location Pending",
+            availability: true,
+            isVerified: false,
+            rating: 5.0,
+            completedProjects: 0,
+            walletBalance: 0.0,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+          },
+        });
+      }
+    }
 
     if (!partner) {
       return NextResponse.json(
@@ -36,7 +62,7 @@ export async function GET(
     });
 
     const rawBookings = await firestoreDb.bookings.findMany({
-      where: { partnerId: id },
+      where: { partnerId: partner.id },
     });
 
     // Resolve booking packages and users in-memory
@@ -82,51 +108,66 @@ export async function GET(
       (b) => b.status === "DELIVERED" || b.status === "EDITING" // EDITING means sync completed, partner finished shoot
     );
 
+    // Return a flat PartnerProfileDto shape that matches the Android ApiService DTO
     return NextResponse.json({
+      id: partner.id,
+      userId: partner.userId,
+      location: partner.location,
+      latitude: partner.latitude,
+      longitude: partner.longitude,
+      availability: partner.availability,
+      isVerified: partner.isVerified,
+      rating: partner.rating,
+      completedProjects: partner.completedProjects,
+      deviceInfo: partner.deviceInfo,
+      walletBalance: partner.walletBalance || 0.0,
+      pendingClearance: partner.pendingClearance || 0.0,
+      totalWithdrawn: partner.totalWithdrawn || 0.0,
+      payoutEnabled: partner.bankVerified || false,
+      verificationStatus: partner.isVerified ? "VERIFIED" : "UNVERIFIED",
+      bankName: partner.bankName || null,
+      accountNumberMasked: partner.accountNumber
+        ? `****${String(partner.accountNumber).slice(-4)}`
+        : null,
+      bankVerified: partner.bankVerified || false,
+      createdAt: partner.createdAt,
+      updatedAt: partner.updatedAt,
+      user: user ? {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        location: user.location,
+        avatar: user.avatar,
+        brandLogo: user.brandLogo,
+        brandFont: user.brandFont,
+        brandColor: user.brandColor,
+        editorRequirements: user.editorRequirements,
+      } : null,
+      bookings, // Expose full bookings list
+      activeBookings,
+      completedBookings,
+      stats: {
+        totalBookings: bookings.length,
+        activeCount: activeBookings.length,
+        completedCount: completedBookings.length,
+        totalEarnings: completedBookings.reduce(
+          (sum, b) => sum + (b.package?.price ?? 0),
+          0
+        ),
+      },
+      // Legacy nested wrapper shape still available for dashboard/web consumers
       partner: {
         id: partner.id,
         userId: partner.userId,
         location: partner.location,
-        latitude: partner.latitude,
-        longitude: partner.longitude,
         availability: partner.availability,
         rating: partner.rating,
         completedProjects: partner.completedProjects,
-        deviceInfo: partner.deviceInfo,
-        bankName: partner.bankName || null,
-        accountNumber: partner.accountNumber || null,
-        ifscCode: partner.ifscCode || null,
-        accountHolderName: partner.accountHolderName || null,
-        bankVerified: partner.bankVerified || false,
         walletBalance: partner.walletBalance || 0.0,
-        pendingClearance: partner.pendingClearance || 0.0,
-        totalWithdrawn: partner.totalWithdrawn || 0.0,
-        createdAt: partner.createdAt,
-        updatedAt: partner.updatedAt,
-        user: user ? {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          location: user.location,
-          avatar: user.avatar,
-          brandLogo: user.brandLogo,
-          brandFont: user.brandFont,
-          brandColor: user.brandColor,
-          editorRequirements: user.editorRequirements,
-        } : null,
-        bookings, // Expose full bookings list
+        bookings,
         activeBookings,
         completedBookings,
-        stats: {
-          totalBookings: bookings.length,
-          activeCount: activeBookings.length,
-          completedCount: completedBookings.length,
-          totalEarnings: completedBookings.reduce(
-            (sum, b) => sum + (b.package?.price ?? 0),
-            0
-          ),
-        },
       },
     });
   } catch (error) {
@@ -137,6 +178,7 @@ export async function GET(
     );
   }
 }
+
 
 // PATCH /api/partners/[id] — Update partner (availability, location, etc.)
 export async function PATCH(

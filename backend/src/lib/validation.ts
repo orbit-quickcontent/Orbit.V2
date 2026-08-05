@@ -15,8 +15,10 @@ export const userSchema = z.object({
 });
 
 export const bookingSchema = z.object({
-  userId: z.string().min(1, "Invalid User ID format"),
+  userId: z.string().min(1, "Invalid User ID format").optional(),
   packageId: z.string().min(1, "Invalid Package ID format"),
+  // bookingDate is pre-sanitized by parseSafeBookingDate in the handler so
+  // any non-empty string is acceptable here; we just verify it became parseable.
   bookingDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: "Invalid booking date format",
   }),

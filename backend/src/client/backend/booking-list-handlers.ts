@@ -13,9 +13,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateBody, bookingSchema } from '@/lib/validation'
 import { logAudit } from '@/lib/auth-server'
 import { generatePresignedUrl } from '@/lib/security'
+import { verifyToken } from '@/lib/security-auth'
 
 interface CreateBookingBody {
-  userId: string
+  userId?: string
   packageId: string
   bookingDate: string
   timeSlot: string
@@ -23,11 +24,50 @@ interface CreateBookingBody {
   notes?: string
 }
 
+/**
+ * Parse a flexible bookingDate string into an ISO 8601 date string.
+ * Accepts standard ISO dates as well as human-readable strings produced by
+ * the mobile app (e.g. "Today (Wed, 5 Aug)", "Tomorrow (Thu, 6 Aug)").
+ */
+function parseSafeBookingDate(raw: string): string {
+  if (!raw) return new Date().toISOString();
+  // Already a valid ISO/parseable date — use as-is
+  if (!isNaN(Date.parse(raw))) return new Date(raw).toISOString();
+  // Mobile apps send strings like "Today (Wed, 5 Aug)" or "Tomorrow (Thu, 6 Aug)"
+  const lower = raw.toLowerCase();
+  const now = new Date();
+  if (lower.startsWith('today')) return now.toISOString();
+  if (lower.startsWith('tomorrow')) {
+    const d = new Date(now); d.setDate(d.getDate() + 1); return d.toISOString();
+  }
+  if (lower.startsWith('next day')) {
+    const d = new Date(now); d.setDate(d.getDate() + 2); return d.toISOString();
+  }
+  // Try extracting a recognizable date from within parentheses e.g. "(Wed, 5 Aug)"
+  const parenthesisMatch = raw.match(/\(([^)]+)\)/);
+  if (parenthesisMatch) {
+    const attempt = Date.parse(`${parenthesisMatch[1]} ${now.getFullYear()}`);
+    if (!isNaN(attempt)) return new Date(attempt).toISOString();
+  }
+  // Fallback: use today
+  return now.toISOString();
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')
     let userId = searchParams.get('userId')
+
+    // Extract userId from Bearer JWT when not supplied as a query param
+    if (!userId) {
+      const authHeader = request.headers.get('authorization') || '';
+      const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+      if (token) {
+        const payload = verifyToken(token);
+        if (payload?.id) userId = payload.id;
+      }
+    }
 
     if (email && !userId) {
       const client = await firestoreDb.clientUsers.findFirst({
@@ -112,7 +152,23 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    const rawBody = await request.json() as any
+
+    // Extract userId from Bearer JWT if not provided in the request body
+    let resolvedUserId: string | undefined = rawBody.userId;
+    if (!resolvedUserId) {
+      const authHeader = request.headers.get('authorization') || '';
+      const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+      if (token) {
+        const payload = verifyToken(token);
+        if (payload?.id) resolvedUserId = payload.id;
+      }
+    }
+
+    // Sanitize the bookingDate — the mobile app sends human-readable strings
+    // like "Today (Wed, 5 Aug)" which are not valid ISO dates.
+    const sanitizedDate = parseSafeBookingDate(rawBody.bookingDate || '');
+    const body = { ...rawBody, userId: resolvedUserId, bookingDate: sanitizedDate };
 
     const validation = validateBody(bookingSchema, body)
     if (!validation.success) {

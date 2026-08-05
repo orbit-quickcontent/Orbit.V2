@@ -296,8 +296,9 @@ fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
                     if (backendAuth != null) {
                         onLoginSuccess(backendAuth.first, backendAuth.second)
                     } else if (supabaseId != null) {
-                        errorMessage = "Connected to Supabase but the app server is unreachable — some features may not sync."
-                        onLoginSuccess("google_partner_token_${System.currentTimeMillis()}", supabaseId)
+                        // Backend unreachable — do NOT create a fake token. Show a message so
+                        // the user retries when the server is available.
+                        errorMessage = "Connected to Supabase but the app server is unreachable — please try again in a moment."
                     } else {
                         errorMessage = "Sign-in failed. Please try again."
                     }
@@ -362,10 +363,9 @@ fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
                         try {
                             googleLauncher.launch(oauthManager.getGoogleSignInIntent())
                         } catch (e: Exception) {
-                            val fallbackId = java.util.UUID.nameUUIDFromBytes(
-                                (email.ifBlank { "guest-partner" }).toByteArray()
-                            ).toString()
-                            onLoginSuccess("google_partner_token_${System.currentTimeMillis()}", fallbackId)
+                            // If the Google Sign-In intent itself fails to launch, show an
+                            // error instead of creating a fake token the backend will reject.
+                            errorMessage = "Google Sign-In is unavailable on this device. Please use the email form below."
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White),
@@ -388,8 +388,12 @@ fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
                                         val backendAuth = authenticateWithBackend(email, name)
                                         when {
                                             backendAuth != null -> onLoginSuccess(backendAuth.first, backendAuth.second)
-                                            supabaseId != null -> onLoginSuccess("apple_partner_token_${System.currentTimeMillis()}", supabaseId)
-                                            else -> errorMessage = "Sign-in failed. Please try again."
+                                            // Supabase-only fallback: backend unreachable, but still require a real supabase id
+                                            supabaseId != null -> {
+                                                errorMessage = "Connected to Supabase but the app server is unreachable — some features may not work."
+                                                // Do not call onLoginSuccess with a fake token; require backend to be reachable
+                                            }
+                                            else -> errorMessage = "Apple Sign-in failed. Please try again."
                                         }
                                     }
                                 },
@@ -398,10 +402,8 @@ fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
                                 }
                             )
                         } else {
-                            val fallbackId = java.util.UUID.nameUUIDFromBytes(
-                                (email.ifBlank { "guest-partner" }).toByteArray()
-                            ).toString()
-                            onLoginSuccess("apple_partner_token_${System.currentTimeMillis()}", fallbackId)
+                            // Apple Sign-in requires a valid Activity context — show error instead of faking a session
+                            errorMessage = "Apple Sign-In is unavailable. Please use Google or email sign-in."
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
@@ -545,7 +547,10 @@ fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
                                 val backendAuth = authenticateWithBackend(email, name)
                                 when {
                                     backendAuth != null -> onLoginSuccess(backendAuth.first, backendAuth.second)
-                                    supabaseId != null -> onLoginSuccess("partner_token_${System.currentTimeMillis()}", supabaseId)
+                                    supabaseId != null -> {
+                                        errorMessage = "Connected to Supabase but the app server is unreachable — some features may not work."
+                                        // Require backend auth to be available before completing login
+                                    }
                                     else -> errorMessage = "Sign-in failed. Please try again."
                                 }
                             } finally {
