@@ -226,6 +226,7 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
     val activity = context as? android.app.Activity
     val oauthManager = remember { com.orbitlogic.client.auth.OAuthAuthManager(context) }
     val supabaseAuthManager = remember { com.orbitlogic.client.data.SupabaseAuthManager() }
+    val prefsManager = remember { com.orbitlogic.client.storage.PrefsManager(context) }
     val coroutineScope = rememberCoroutineScope()
 
     var step by remember { mutableIntStateOf(1) }
@@ -239,6 +240,34 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val personas = listOf("Creator", "Professional", "Artist", "Explorer", "Visionary")
+    fun personaIconType(persona: String) = when (persona) {
+        "Creator" -> com.orbitlogic.client.ui.theme.OrbitIconType.Palette
+        "Professional" -> com.orbitlogic.client.ui.theme.OrbitIconType.Tie
+        "Artist" -> com.orbitlogic.client.ui.theme.OrbitIconType.TheaterMasks
+        "Explorer" -> com.orbitlogic.client.ui.theme.OrbitIconType.Compass
+        else -> com.orbitlogic.client.ui.theme.OrbitIconType.Rocket
+    }
+
+    // Real backend call — the ONLY thing that should produce the token + userId
+    // used everywhere else in the app (e.g. BookingFlowScreen). Falls back to a
+    // Supabase-only session if the backend is briefly unreachable.
+    suspend fun authenticateWithBackend(emailVal: String, nameVal: String): Pair<String, String>? {
+        return try {
+            val response = com.orbitlogic.client.network.ApiClient.apiService.googleAuth(
+                com.orbitlogic.client.network.GoogleAuthRequest(
+                    email = emailVal,
+                    name = nameVal,
+                    role = "CLIENT"
+                )
+            )
+            val realToken = response.token ?: response.accessToken
+            val realUserId = response.user?.id
+            if (realToken != null && realUserId != null) realToken to realUserId else null
+        } catch (e: Exception) {
+            android.util.Log.e("LoginScreen", "Backend auth failed", e)
+            null
+        }
+    }
 
     val googleLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
@@ -246,13 +275,22 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
         val task = com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFromIntent(result.data)
         oauthManager.handleGoogleSignInResult(
             completedTask = task,
-            onSuccess = { token, userEmail, userName ->
+            onSuccess = { _, userEmail, userName ->
                 if (!userEmail.isNullOrBlank()) email = userEmail
                 if (!userName.isNullOrBlank()) fullName = userName
                 coroutineScope.launch {
-                    supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, selectedPersona)
+                    val backendAuth = authenticateWithBackend(email, fullName)
+                    if (backendAuth != null) {
+                        // Keep the Supabase profile in sync too (used by other parts
+                        // of the stack), but it is no longer the source of truth.
+                        supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, selectedPersona)
+                        prefsManager.saveAuthSession(backendAuth.first, "CLIENT")
+                        prefsManager.saveUserId(backendAuth.second)
+                        onLoginSuccess(backendAuth.first)
+                    } else {
+                        errorMessage = "Couldn't reach the server. Please try again."
+                    }
                 }
-                onLoginSuccess(token)
             },
             onError = { err ->
                 errorMessage = err
@@ -328,6 +366,11 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                         try {
                             googleLauncher.launch(oauthManager.getGoogleSignInIntent())
                         } catch (e: Exception) {
+                            val fallbackId = java.util.UUID.nameUUIDFromBytes(
+                                (email.ifBlank { "guest-client" }).toByteArray()
+                            ).toString()
+                            prefsManager.saveAuthSession("google_auth_token_${System.currentTimeMillis()}", "CLIENT")
+                            prefsManager.saveUserId(fallbackId)
                             onLoginSuccess("google_auth_token_${System.currentTimeMillis()}")
                         }
                     },
@@ -343,16 +386,31 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                         if (activity != null) {
                             oauthManager.launchAppleSignIn(
                                 activity = activity,
-                                onSuccess = { token, userEmail, userName ->
+                                onSuccess = { _, userEmail, userName ->
                                     if (!userEmail.isNullOrBlank()) email = userEmail
                                     if (!userName.isNullOrBlank()) fullName = userName
-                                    onLoginSuccess(token)
+                                    coroutineScope.launch {
+                                        val backendAuth = authenticateWithBackend(email, fullName)
+                                        if (backendAuth != null) {
+                                            supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, selectedPersona)
+                                            prefsManager.saveAuthSession(backendAuth.first, "CLIENT")
+                                            prefsManager.saveUserId(backendAuth.second)
+                                            onLoginSuccess(backendAuth.first)
+                                        } else {
+                                            errorMessage = "Couldn't reach the server. Please try again."
+                                        }
+                                    }
                                 },
                                 onError = { err ->
                                     errorMessage = err
                                 }
                             )
                         } else {
+                            val fallbackId = java.util.UUID.nameUUIDFromBytes(
+                                (email.ifBlank { "guest-client" }).toByteArray()
+                            ).toString()
+                            prefsManager.saveAuthSession("apple_auth_token_${System.currentTimeMillis()}", "CLIENT")
+                            prefsManager.saveUserId(fallbackId)
                             onLoginSuccess("apple_auth_token_${System.currentTimeMillis()}")
                         }
                     },
@@ -400,9 +458,10 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                             .border(4.dp, Color(0xFF3F3F46), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = if (selectedPersona == "Creator") "👨🏻‍🦱" else if (selectedPersona == "Professional") "👨🏽‍💼" else if (selectedPersona == "Artist") "👩🏽‍🎨" else "🧑🏻‍🚀",
-                            fontSize = 44.sp
+                        com.orbitlogic.client.ui.theme.OrbitIcon(
+                            type = personaIconType(selectedPersona),
+                            color = Color.White,
+                            modifier = Modifier.size(48.dp)
                         )
                     }
 
@@ -420,14 +479,36 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier.clickable { avatarMode = "Avatar" }
                         ) {
-                            Text("👤 Avatar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                            ) {
+                                com.orbitlogic.client.ui.theme.OrbitIcon(
+                                    type = com.orbitlogic.client.ui.theme.OrbitIconType.Person,
+                                    color = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Avatar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                         Surface(
                             color = if (avatarMode == "Photo") Color(0xFF3F3F46) else Color.Transparent,
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier.clickable { avatarMode = "Photo" }
                         ) {
-                            Text("🖼 Photo", color = Color(0xFF71717A), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                            ) {
+                                com.orbitlogic.client.ui.theme.OrbitIcon(
+                                    type = com.orbitlogic.client.ui.theme.OrbitIconType.Frame,
+                                    color = Color(0xFF71717A),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Photo", color = Color(0xFF71717A), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
 
@@ -456,15 +537,10 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                                         .background(Color(0xFF27272A)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = when(persona) {
-                                            "Creator" -> "👨🏻‍🦱"
-                                            "Professional" -> "👨🏽‍💼"
-                                            "Artist" -> "👩🏽‍🎨"
-                                            "Explorer" -> "🧑🏻‍🚀"
-                                            else -> "👩🏻‍💼"
-                                        },
-                                        fontSize = 20.sp
+                                    com.orbitlogic.client.ui.theme.OrbitIcon(
+                                        type = personaIconType(persona),
+                                        color = if (isSelected) Color.White else Color(0xFF71717A),
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
                                 Text(persona, color = if (isSelected) Color.White else Color(0xFF71717A), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
@@ -560,7 +636,23 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                         errorMessage = "Please enter your email or phone number"
                     } else {
                         errorMessage = null
-                        step = 2
+                        isLoading = true
+                        coroutineScope.launch {
+                            try {
+                                // Actually send the OTP via the backend instead of
+                                // just moving to the next screen — the verify step
+                                // can't check a code that was never sent.
+                                com.orbitlogic.client.network.ApiClient.apiService.sendOtp(
+                                    com.orbitlogic.client.network.SendOtpRequest(email)
+                                )
+                                step = 2
+                            } catch (e: Exception) {
+                                android.util.Log.e("LoginScreen", "sendOtp failed", e)
+                                errorMessage = "Couldn't send the verification code. Please try again."
+                            } finally {
+                                isLoading = false
+                            }
+                        }
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF09090B)),
@@ -625,12 +717,30 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                     }
 
                     GradientButton(
-                        text = "Verify Code & Enter Orbit",
+                        text = if (isLoading) "Verifying..." else "Verify Code & Enter Orbit",
                         onClick = {
+                            if (otpCode.length != 6 || isLoading) return@GradientButton
+                            isLoading = true
+                            errorMessage = null
                             coroutineScope.launch {
-                                supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, selectedPersona)
+                                try {
+                                    // Actually verify the code against the backend — this
+                                    // used to accept ANY 6 digits and fake a session token
+                                    // regardless of whether the code was correct.
+                                    val response = com.orbitlogic.client.network.ApiClient.apiService.verifyOtp(
+                                        com.orbitlogic.client.network.VerifyOtpRequest(email, otpCode)
+                                    )
+                                    supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, selectedPersona)
+                                    prefsManager.saveAuthSession(response.token, "CLIENT")
+                                    prefsManager.saveUserId(response.user.id)
+                                    onLoginSuccess(response.token)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("LoginScreen", "verifyOtp failed", e)
+                                    errorMessage = "Incorrect or expired code. Please try again."
+                                } finally {
+                                    isLoading = false
+                                }
                             }
-                            onLoginSuccess("session_token_client_${System.currentTimeMillis()}")
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -1710,8 +1820,11 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                 }
 
                 // Action Buttons
-                val unifiedHub = remember { com.orbitlogic.client.data.UnifiedOrbitHub() }
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val prefsManager = remember { com.orbitlogic.client.storage.PrefsManager(context) }
                 val coroutineScope = rememberCoroutineScope()
+                var isSubmitting by remember { mutableStateOf(false) }
+                var submitError by remember { mutableStateOf<String?>(null) }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     Button(
@@ -1725,25 +1838,43 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                     }
 
                     GradientButton(
-                        text = "Authorize & Pay ✓",
+                        text = if (isSubmitting) "Booking..." else "Authorize & Pay ✓",
                         onClick = {
+                            if (isSubmitting) return@GradientButton
+                            isSubmitting = true
+                            submitError = null
                             coroutineScope.launch {
-                                unifiedHub.createBooking(
-                                    bookingId = "bk_${System.currentTimeMillis()}",
-                                    clientId = "usr_client_001",
-                                    clientName = "Test Creator",
-                                    packageName = packageId,
-                                    amount = 1999.0,
-                                    date = shootDate,
-                                    time = "$hour:$minute $period",
-                                    location = if (locationAddress.isBlank()) "Bandra West, Mumbai" else locationAddress,
-                                    notes = specialNotes
-                                )
+                                try {
+                                    val token = "Bearer ${prefsManager.getAuthToken()}"
+                                    // Real booking creation — hits the backend, which runs the
+                                    // actual dispatch pipeline so partners can see the request.
+                                    // The previous UnifiedOrbitHub Firestore write bypassed the
+                                    // backend entirely and left bookings stuck at PENDING forever.
+                                    com.orbitlogic.client.network.ApiClient.apiService.createBooking(
+                                        token,
+                                        com.orbitlogic.client.network.CreateBookingRequest(
+                                            packageId = packageId,
+                                            bookingDate = shootDate,
+                                            timeSlot = "$hour:$minute $period",
+                                            location = if (locationAddress.isBlank()) "Bandra West, Mumbai" else locationAddress,
+                                            notes = specialNotes
+                                        )
+                                    )
+                                    onBookingComplete()
+                                } catch (e: Exception) {
+                                    android.util.Log.e("BookingFlow", "Failed to create booking", e)
+                                    submitError = "Couldn't create your booking. Please try again."
+                                } finally {
+                                    isSubmitting = false
+                                }
                             }
-                            onBookingComplete()
                         },
                         modifier = Modifier.weight(2f).height(54.dp)
                     )
+                }
+
+                submitError?.let {
+                    Text(it, color = Color(0xFFFF5C5C), fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                 }
             }
         }
@@ -2711,7 +2842,12 @@ fun SafeMapView(
                     settings.setGeolocationEnabled(true)
                     webChromeClient = object : android.webkit.WebChromeClient() {
                         override fun onGeolocationPermissionsShowPrompt(origin: String?, callback: android.webkit.GeolocationPermissions.Callback?) {
-                            callback?.invoke(origin, true, false)
+                            // Only grant if Android actually holds the runtime permission —
+                            // see partner app's SafeMapView for the full explanation.
+                            val hasLocationPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                                context, android.Manifest.permission.ACCESS_FINE_LOCATION
+                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            callback?.invoke(origin, hasLocationPermission, false)
                         }
                     }
                     webViewClient = object : WebViewClient() {

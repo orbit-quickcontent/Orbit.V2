@@ -230,7 +230,11 @@ fun PermissionPromptModal(
                         .background(Color(0xFF00BFFF).copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("⚡", fontSize = 28.sp)
+                    com.orbitlogic.client.ui.theme.OrbitIcon(
+                        type = com.orbitlogic.client.ui.theme.OrbitIconType.Bolt,
+                        color = Color(0xFF00BFFF),
+                        modifier = Modifier.size(26.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -256,9 +260,9 @@ fun PermissionPromptModal(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    PermissionRowItem("📍 Location Access", "Required for precise shoot location detection & tracking")
-                    PermissionRowItem("📷 Camera Access", "Required for profile photo & shoot instructions")
-                    PermissionRowItem("🔔 Push Notifications", "Required for live shoot status updates")
+                    PermissionRowItem(com.orbitlogic.client.ui.theme.OrbitIconType.LocationPin, "Location Access", "Required for precise shoot location detection & tracking")
+                    PermissionRowItem(com.orbitlogic.client.ui.theme.OrbitIconType.Camera, "Camera Access", "Required for profile photo & shoot instructions")
+                    PermissionRowItem(com.orbitlogic.client.ui.theme.OrbitIconType.Bell, "Push Notifications", "Required for live shoot status updates")
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -269,7 +273,7 @@ fun PermissionPromptModal(
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth().height(48.dp)
                 ) {
-                    Text("Grant All Permissions ⚡", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("Grant All Permissions", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
 
                 TextButton(
@@ -284,11 +288,21 @@ fun PermissionPromptModal(
 }
 
 @Composable
-private fun PermissionRowItem(title: String, desc: String) {
+private fun PermissionRowItem(icon: com.orbitlogic.client.ui.theme.OrbitIconType, title: String, desc: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth()
     ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF00BFFF).copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            com.orbitlogic.client.ui.theme.OrbitIcon(icon, color = Color(0xFF00BFFF), modifier = Modifier.size(16.dp))
+        }
+        Spacer(modifier = Modifier.width(10.dp))
         Column {
             Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             Text(desc, color = Color(0xFF64748B), fontSize = 11.sp)

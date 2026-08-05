@@ -95,14 +95,13 @@ fun MainPartnerNavigationHost() {
         if (isAppLoading) {
             PartnerSplashScreen(onSplashFinished = { isAppLoading = false })
         } else if (!isAuthenticated) {
-            PartnerLoginScreen(onLoginSuccess = { token ->
-                prefsManager.saveAuthSession(token, "prt-arjun")
+            PartnerLoginScreen(onLoginSuccess = { token, partnerId ->
+                prefsManager.saveAuthSession(token, partnerId)
                 isAuthenticated = true
                 currentTab = "home"
-            // Fetch partner profile after login to get partnerId
+            // Fetch partner profile after login to confirm the session is valid
             coroutineScope.launch {
                 try {
-                    val partnerId = prefsManager.getPartnerId() ?: "prt-arjun"
                     val profile = ApiClient.apiService.getPartnerProfile("Bearer $token", partnerId)
                     android.util.Log.d("MainNav", "Partner profile loaded: ${profile.id}")
                 } catch (e: Exception) {
@@ -214,7 +213,11 @@ fun PermissionPromptModal(
                         .background(Color(0xFF00BFFF).copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("⚡", fontSize = 28.sp)
+                    com.orbitlogic.partner.ui.theme.OrbitIcon(
+                        type = com.orbitlogic.partner.ui.theme.OrbitIconType.Bolt,
+                        color = Color(0xFF00BFFF),
+                        modifier = Modifier.size(26.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -240,9 +243,9 @@ fun PermissionPromptModal(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    PermissionRowItem("📍 Location Access", "Required for shoot dispatch matching & live GPS map navigation")
-                    PermissionRowItem("📷 Camera & Microphone", "Required for shoot content capture & verification")
-                    PermissionRowItem("🔔 Push Notifications", "Required for instant shoot dispatch alerts")
+                    PermissionRowItem(com.orbitlogic.partner.ui.theme.OrbitIconType.LocationPin, "Location Access", "Required for shoot dispatch matching & live GPS map navigation")
+                    PermissionRowItem(com.orbitlogic.partner.ui.theme.OrbitIconType.Camera, "Camera & Microphone", "Required for shoot content capture & verification")
+                    PermissionRowItem(com.orbitlogic.partner.ui.theme.OrbitIconType.Bell, "Push Notifications", "Required for instant shoot dispatch alerts")
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -253,7 +256,7 @@ fun PermissionPromptModal(
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth().height(48.dp)
                 ) {
-                    Text("Grant All Permissions ⚡", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("Grant All Permissions", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
 
                 TextButton(
@@ -268,11 +271,21 @@ fun PermissionPromptModal(
 }
 
 @Composable
-private fun PermissionRowItem(title: String, desc: String) {
+private fun PermissionRowItem(icon: com.orbitlogic.partner.ui.theme.OrbitIconType, title: String, desc: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth()
     ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF00BFFF).copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            com.orbitlogic.partner.ui.theme.OrbitIcon(icon, color = Color(0xFF00BFFF), modifier = Modifier.size(16.dp))
+        }
+        Spacer(modifier = Modifier.width(10.dp))
         Column {
             Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             Text(desc, color = Color(0xFF64748B), fontSize = 11.sp)

@@ -22,7 +22,7 @@ class SupabaseAuthManager(
         nameVal: String,
         phoneVal: String = "",
         locationVal: String = "Mumbai, IN"
-    ): Boolean = withContext(Dispatchers.IO) {
+    ): String? = withContext(Dispatchers.IO) {
         try {
             val json = JSONObject().apply {
                 put("email", emailVal)
@@ -50,13 +50,14 @@ class SupabaseAuthManager(
                 val userId = respJson.optJSONObject("user")?.optString("id")
                     ?: respJson.optString("id", UUID.randomUUID().toString())
                 syncPartnerProfile(userId, emailVal, nameVal, phoneVal, locationVal)
-                true
+                userId
             } else {
-                syncPartnerProfile(UUID.nameUUIDFromBytes(emailVal.toByteArray()).toString(), emailVal, nameVal, phoneVal, locationVal)
-                true
+                val userId = UUID.nameUUIDFromBytes(emailVal.toByteArray()).toString()
+                syncPartnerProfile(userId, emailVal, nameVal, phoneVal, locationVal)
+                userId
             }
         } catch (e: Exception) {
-            false
+            null
         }
     }
 

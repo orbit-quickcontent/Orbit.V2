@@ -105,6 +105,17 @@ data class ResetPasswordResponse(val success: Boolean, val message: String)
 data class RefreshTokenRequest(val refreshToken: String)
 data class RefreshTokenResponse(val success: Boolean, val token: String, val accessToken: String, val refreshToken: String)
 
+// Matches backend's POST /auth/google (googleAuthHandler) — this is the ONLY call that
+// should ever produce a real, backend-signed token + real user id. Client-generated
+// placeholder tokens are never accepted by the backend's JWT verification.
+data class GoogleAuthRequest(
+    val email: String,
+    val name: String?,
+    val photoURL: String? = null,
+    val idToken: String? = null,
+    val role: String = "CLIENT"
+)
+
 // ─── API Interface ───────────────────────────────────────────────────────────
 
 interface ApiService {
@@ -116,6 +127,9 @@ interface ApiService {
 
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): LoginResponse
+
+    @POST("auth/google")
+    suspend fun googleAuth(@Body request: GoogleAuthRequest): LoginResponse
 
     @POST("auth/logout")
     suspend fun logout(@Header("Authorization") token: String): SendOtpResponse

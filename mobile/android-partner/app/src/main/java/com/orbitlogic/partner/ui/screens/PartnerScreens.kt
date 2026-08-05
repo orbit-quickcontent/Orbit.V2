@@ -246,7 +246,7 @@ fun PartnerHeader(
 // ─── Screen 1: Partner Login ─────────────────────────────────────────────────
 
 @Composable
-fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
+fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? android.app.Activity
     val oauthManager = remember { com.orbitlogic.partner.auth.OAuthAuthManager(context) }
@@ -258,6 +258,28 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
     var phone by remember { mutableStateOf("") }
     var avatarPreset by remember { mutableStateOf("Creator") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isSubmitting by remember { mutableStateOf(false) }
+
+    // Real backend call — the ONLY thing that should produce the token + partnerId
+    // used everywhere else in the app. Falls back to the Supabase-derived id only
+    // if the backend call fails, so the app can still be used offline-first.
+    suspend fun authenticateWithBackend(emailVal: String, nameVal: String): Pair<String, String>? {
+        return try {
+            val response = com.orbitlogic.partner.network.ApiClient.apiService.googleAuth(
+                com.orbitlogic.partner.network.GoogleAuthRequest(
+                    email = emailVal,
+                    name = nameVal,
+                    role = "PARTNER"
+                )
+            )
+            val realToken = response.token ?: response.accessToken
+            val realId = response.user?.id
+            if (realToken != null && realId != null) realToken to realId else null
+        } catch (e: Exception) {
+            android.util.Log.e("PartnerLogin", "Backend auth failed", e)
+            null
+        }
+    }
 
     val googleLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
@@ -265,13 +287,21 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
         val task = com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFromIntent(result.data)
         oauthManager.handleGoogleSignInResult(
             completedTask = task,
-            onSuccess = { token, userEmail, userName ->
+            onSuccess = { _, userEmail, userName ->
                 if (!userEmail.isNullOrBlank()) email = userEmail
                 if (!userName.isNullOrBlank()) name = userName
                 coroutineScope.launch {
-                    supabaseAuthManager.signUpPartner(email, "OrbitPartner123!", name, phone)
+                    val supabaseId = supabaseAuthManager.signUpPartner(email, "OrbitPartner123!", name, phone)
+                    val backendAuth = authenticateWithBackend(email, name)
+                    if (backendAuth != null) {
+                        onLoginSuccess(backendAuth.first, backendAuth.second)
+                    } else if (supabaseId != null) {
+                        errorMessage = "Connected to Supabase but the app server is unreachable — some features may not sync."
+                        onLoginSuccess("google_partner_token_${System.currentTimeMillis()}", supabaseId)
+                    } else {
+                        errorMessage = "Sign-in failed. Please try again."
+                    }
                 }
-                onLoginSuccess(token)
             },
             onError = { err ->
                 errorMessage = err
@@ -279,11 +309,11 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
         )
     }
 
-    val avatarEmoji = when (avatarPreset) {
-        "Creator" -> "🎨"
-        "Professional" -> "👔"
-        "Artist" -> "🎭"
-        else -> "🧭"
+    val avatarIconType = when (avatarPreset) {
+        "Creator" -> com.orbitlogic.partner.ui.theme.OrbitIconType.Palette
+        "Professional" -> com.orbitlogic.partner.ui.theme.OrbitIconType.Tie
+        "Artist" -> com.orbitlogic.partner.ui.theme.OrbitIconType.TheaterMasks
+        else -> com.orbitlogic.partner.ui.theme.OrbitIconType.Compass
     }
 
     Box(
@@ -332,7 +362,10 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
                         try {
                             googleLauncher.launch(oauthManager.getGoogleSignInIntent())
                         } catch (e: Exception) {
-                            onLoginSuccess("google_partner_token_${System.currentTimeMillis()}")
+                            val fallbackId = java.util.UUID.nameUUIDFromBytes(
+                                (email.ifBlank { "guest-partner" }).toByteArray()
+                            ).toString()
+                            onLoginSuccess("google_partner_token_${System.currentTimeMillis()}", fallbackId)
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White),
@@ -347,17 +380,28 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
                         if (activity != null) {
                             oauthManager.launchAppleSignIn(
                                 activity = activity,
-                                onSuccess = { token, userEmail, userName ->
+                                onSuccess = { _, userEmail, userName ->
                                     if (!userEmail.isNullOrBlank()) email = userEmail
                                     if (!userName.isNullOrBlank()) name = userName
-                                    onLoginSuccess(token)
+                                    coroutineScope.launch {
+                                        val supabaseId = supabaseAuthManager.signUpPartner(email, "OrbitPartner123!", name, phone)
+                                        val backendAuth = authenticateWithBackend(email, name)
+                                        when {
+                                            backendAuth != null -> onLoginSuccess(backendAuth.first, backendAuth.second)
+                                            supabaseId != null -> onLoginSuccess("apple_partner_token_${System.currentTimeMillis()}", supabaseId)
+                                            else -> errorMessage = "Sign-in failed. Please try again."
+                                        }
+                                    }
                                 },
                                 onError = { err ->
                                     errorMessage = err
                                 }
                             )
                         } else {
-                            onLoginSuccess("apple_partner_token_${System.currentTimeMillis()}")
+                            val fallbackId = java.util.UUID.nameUUIDFromBytes(
+                                (email.ifBlank { "guest-partner" }).toByteArray()
+                            ).toString()
+                            onLoginSuccess("apple_partner_token_${System.currentTimeMillis()}", fallbackId)
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
@@ -392,7 +436,11 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
                             .background(SpaceNavy),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(avatarEmoji, fontSize = 36.sp)
+                        com.orbitlogic.partner.ui.theme.OrbitIcon(
+                            type = avatarIconType,
+                            color = OrbitCyan,
+                            modifier = Modifier.size(38.dp)
+                        )
                     }
                 }
 
@@ -400,6 +448,12 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Creator", "Professional", "Artist", "Explorer").forEach { preset ->
+                        val presetIconType = when (preset) {
+                            "Creator" -> com.orbitlogic.partner.ui.theme.OrbitIconType.Palette
+                            "Professional" -> com.orbitlogic.partner.ui.theme.OrbitIconType.Tie
+                            "Artist" -> com.orbitlogic.partner.ui.theme.OrbitIconType.TheaterMasks
+                            else -> com.orbitlogic.partner.ui.theme.OrbitIconType.Compass
+                        }
                         Surface(
                             color = if (avatarPreset == preset) OrbitCyan.copy(alpha = 0.2f) else SpaceNavy,
                             shape = RoundedCornerShape(12.dp),
@@ -412,15 +466,12 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.padding(8.dp)
                             ) {
-                                Text(
-                                    text = when (preset) {
-                                        "Creator" -> "🎨"
-                                        "Professional" -> "👔"
-                                        "Artist" -> "🎭"
-                                        else -> "🧭"
-                                    },
-                                    fontSize = 18.sp
+                                com.orbitlogic.partner.ui.theme.OrbitIcon(
+                                    type = presetIconType,
+                                    color = if (avatarPreset == preset) OrbitCyan else MutedText,
+                                    modifier = Modifier.size(20.dp)
                                 )
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(preset, fontSize = 9.sp, color = if (avatarPreset == preset) White else MutedText, fontWeight = FontWeight.Bold)
                             }
                         }
@@ -483,11 +534,32 @@ fun PartnerLoginScreen(onLoginSuccess: (String) -> Unit) {
                 )
 
                 GradientButton(
-                    text = "Continue to Studio →",
-                    onClick = { onLoginSuccess("partner_token_${System.currentTimeMillis()}") },
-                    enabled = name.isNotBlank() && email.isNotBlank(),
+                    text = if (isSubmitting) "Signing in..." else "Continue to Studio →",
+                    onClick = {
+                        if (isSubmitting) return@GradientButton
+                        isSubmitting = true
+                        errorMessage = null
+                        coroutineScope.launch {
+                            try {
+                                val supabaseId = supabaseAuthManager.signUpPartner(email, "OrbitPartner123!", name, phone)
+                                val backendAuth = authenticateWithBackend(email, name)
+                                when {
+                                    backendAuth != null -> onLoginSuccess(backendAuth.first, backendAuth.second)
+                                    supabaseId != null -> onLoginSuccess("partner_token_${System.currentTimeMillis()}", supabaseId)
+                                    else -> errorMessage = "Sign-in failed. Please try again."
+                                }
+                            } finally {
+                                isSubmitting = false
+                            }
+                        }
+                    },
+                    enabled = name.isNotBlank() && email.isNotBlank() && !isSubmitting,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                errorMessage?.let {
+                    Text(it, color = Color(0xFFFF5C5C), fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -1611,7 +1683,16 @@ fun SafeMapView(
                     settings.setGeolocationEnabled(true)
                     webChromeClient = object : android.webkit.WebChromeClient() {
                         override fun onGeolocationPermissionsShowPrompt(origin: String?, callback: android.webkit.GeolocationPermissions.Callback?) {
-                            callback?.invoke(origin, true, false)
+                            // Only grant the WebView's internal geolocation request if the
+                            // app actually holds the Android runtime permission. Blindly
+                            // passing `true` here used to make "Locate Me" fail silently
+                            // whenever the user had skipped the native permission prompt —
+                            // the OS permission is what actually gates GPS access, this
+                            // callback alone can't override that.
+                            val hasLocationPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                                context, android.Manifest.permission.ACCESS_FINE_LOCATION
+                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            callback?.invoke(origin, hasLocationPermission, false)
                         }
                     }
                     webViewClient = object : WebViewClient() {

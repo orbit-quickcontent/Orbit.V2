@@ -138,6 +138,17 @@ data class RegisterRequest(
     val deviceType: String? = "ANDROID"
 )
 
+// Matches backend's POST /auth/google (googleAuthHandler) — this is the ONLY call that
+// should ever produce a real, backend-signed token + real partner id. Client-generated
+// placeholder tokens are never accepted by the backend's JWT verification.
+data class GoogleAuthRequest(
+    val email: String,
+    val name: String?,
+    val photoURL: String? = null,
+    val idToken: String? = null,
+    val role: String = "PARTNER"
+)
+
 // ─── API Interface ───────────────────────────────────────────────────────────
 
 interface ApiService {
@@ -152,6 +163,9 @@ interface ApiService {
 
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): LoginResponse
+
+    @POST("auth/google")
+    suspend fun googleAuth(@Body request: GoogleAuthRequest): LoginResponse
 
     @POST("auth/register")
     suspend fun register(@Body request: RegisterRequest): LoginResponse
