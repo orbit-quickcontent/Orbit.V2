@@ -29,7 +29,19 @@ jobs:
         cd mobile/android-client
         gradle assembleDebug --no-daemon
 
+    - name: Upload Android Client APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-client-apk
+        path: mobile/android-client/app/build/outputs/apk/debug/app-debug.apk
+
     - name: Build Android Partner APK
       run: |
         cd mobile/android-partner
         gradle assembleDebug --no-daemon
+
+    - name: Upload Android Partner APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-partner-apk
+        path: mobile/android-partner/app/build/outputs/apk/debug/app-debug.apk
