@@ -114,18 +114,18 @@ fun MainClientNavigationHost() {
                 prefsManager.saveAuthSession(token, "CLIENT")
                 isAuthenticated = true
                 currentTab = "home"
-            // Fetch bookings after login
-            coroutineScope.launch {
-                try {
-                    val authToken = "Bearer $token"
-                    val bookings = ApiClient.apiService.getBookings(authToken)
-                    val active = bookings.firstOrNull { it.status != "DELIVERED" && it.status != "CANCELLED" }
-                    if (active != null) {
-                        activeBookingId = active.id
-                    }
-                } catch (_: Exception) {}
-            }
-        })
+                // Fetch bookings after login
+                coroutineScope.launch {
+                    try {
+                        val authToken = "Bearer $token"
+                        val bookings = ApiClient.apiService.getBookings(authToken)
+                        val active = bookings.firstOrNull { it.status != "DELIVERED" && it.status != "CANCELLED" }
+                        if (active != null) {
+                            activeBookingId = active.id
+                        }
+                    } catch (_: Exception) {}
+                }
+            })
     } else {
         Scaffold(
             bottomBar = {

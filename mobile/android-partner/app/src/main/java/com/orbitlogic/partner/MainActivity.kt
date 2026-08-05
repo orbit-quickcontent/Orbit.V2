@@ -99,16 +99,16 @@ fun MainPartnerNavigationHost() {
                 prefsManager.saveAuthSession(token, partnerId)
                 isAuthenticated = true
                 currentTab = "home"
-            // Fetch partner profile after login to confirm the session is valid
-            coroutineScope.launch {
-                try {
-                    val profile = ApiClient.apiService.getPartnerProfile("Bearer $token", partnerId)
-                    android.util.Log.d("MainNav", "Partner profile loaded: ${profile.id}")
-                } catch (e: Exception) {
-                    android.util.Log.e("MainNav", "Failed to load partner profile", e)
+                // Fetch partner profile after login to confirm the session is valid
+                coroutineScope.launch {
+                    try {
+                        val profile = ApiClient.apiService.getPartnerProfile("Bearer $token", partnerId)
+                        android.util.Log.d("MainNav", "Partner profile loaded: ${profile.id}")
+                    } catch (e: Exception) {
+                        android.util.Log.e("MainNav", "Failed to load partner profile", e)
+                    }
                 }
-            }
-        })
+            })
     } else {
         Scaffold(
             containerColor = Color.Black,
