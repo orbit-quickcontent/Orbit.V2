@@ -126,63 +126,64 @@ fun MainClientNavigationHost() {
                     } catch (_: Exception) {}
                 }
             })
-    } else {
-        Scaffold(
-            bottomBar = {
-                ClientBottomNavigationBar(
-                    currentTab = currentTab,
-                    onSelectTab = { currentTab = it }
-                )
-            }
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                androidx.compose.animation.AnimatedContent(
-                    targetState = currentTab,
-                    transitionSpec = {
-                        androidx.compose.animation.ContentTransform(
-                            targetContentEnter = androidx.compose.animation.fadeIn(
-                                animationSpec = androidx.compose.animation.core.tween(180)
-                            ),
-                            initialContentExit = androidx.compose.animation.fadeOut(
-                                animationSpec = androidx.compose.animation.core.tween(180)
+        } else {
+            Scaffold(
+                bottomBar = {
+                    ClientBottomNavigationBar(
+                        currentTab = currentTab,
+                        onSelectTab = { currentTab = it }
+                    )
+                }
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = currentTab,
+                        transitionSpec = {
+                            androidx.compose.animation.ContentTransform(
+                                targetContentEnter = androidx.compose.animation.fadeIn(
+                                    animationSpec = androidx.compose.animation.core.tween(180)
+                                ),
+                                initialContentExit = androidx.compose.animation.fadeOut(
+                                    animationSpec = androidx.compose.animation.core.tween(180)
+                                )
                             )
-                        )
-                    },
-                    label = "ScreenTransition"
-                ) { targetTab ->
-                    when (targetTab) {
-                        "home" -> DashboardHomeScreen(
-                            onNavigateToBooking = { currentTab = "booking" },
-                            onNavigateToPackages = { currentTab = "packages" },
-                            onNavigateToTracking = { id ->
-                                activeBookingId = id
-                                currentTab = "tracking"
-                            },
-                            onNavigateToProfile = { currentTab = "profile" }
-                        )
-                        "packages" -> PackagesScreen(
-                            onSelectPackage = { pkgId ->
-                                selectedPackageId = pkgId
-                                currentTab = "booking"
-                            }
-                        )
-                        "booking" -> BookingFlowScreen(
-                            packageId = selectedPackageId,
-                            onBookingComplete = {
-                                currentTab = "tracking"
-                            }
-                        )
-                        "tracking" -> TrackingScreen(bookingId = activeBookingId)
-                        "profile" -> ProfileScreen(
-                            onLogout = {
-                                prefsManager.clearSession()
-                                isAuthenticated = false
-                            }
-                        )
+                        },
+                        label = "ScreenTransition"
+                    ) { targetTab ->
+                        when (targetTab) {
+                            "home" -> DashboardHomeScreen(
+                                onNavigateToBooking = { currentTab = "booking" },
+                                onNavigateToPackages = { currentTab = "packages" },
+                                onNavigateToTracking = { id ->
+                                    activeBookingId = id
+                                    currentTab = "tracking"
+                                },
+                                onNavigateToProfile = { currentTab = "profile" }
+                            )
+                            "packages" -> PackagesScreen(
+                                onSelectPackage = { pkgId ->
+                                    selectedPackageId = pkgId
+                                    currentTab = "booking"
+                                }
+                            )
+                            "booking" -> BookingFlowScreen(
+                                packageId = selectedPackageId,
+                                onBookingComplete = {
+                                    currentTab = "tracking"
+                                }
+                            )
+                            "tracking" -> TrackingScreen(bookingId = activeBookingId)
+                            "profile" -> ProfileScreen(
+                                onLogout = {
+                                    prefsManager.clearSession()
+                                    isAuthenticated = false
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -200,6 +201,7 @@ fun MainClientNavigationHost() {
         }
     }
 }
+
 
 @Composable
 fun PermissionPromptModal(

@@ -109,63 +109,64 @@ fun MainPartnerNavigationHost() {
                     }
                 }
             })
-    } else {
-        Scaffold(
-            containerColor = Color.Black,
-            bottomBar = {
+        } else {
+            Scaffold(
+                containerColor = Color.Black,
+                bottomBar = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        PartnerBottomNavigationBar(
+                            currentTab = currentTab,
+                            onSelectTab = { currentTab = it }
+                        )
+                    }
+                }
+            ) { innerPadding ->
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
-                    contentAlignment = Alignment.Center
+                        .fillMaxSize()
+                        .background(Color.Black)
+                        .padding(innerPadding)
                 ) {
-                    PartnerBottomNavigationBar(
-                        currentTab = currentTab,
-                        onSelectTab = { currentTab = it }
-                    )
-                }
-            }
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-                    .padding(innerPadding)
-            ) {
-                AnimatedContent(
-                    targetState = currentTab,
-                    transitionSpec = {
-                        ContentTransform(
-                            targetContentEnter = fadeIn(animationSpec = androidx.compose.animation.core.tween(180)),
-                            initialContentExit = fadeOut(animationSpec = androidx.compose.animation.core.tween(180))
-                        )
-                    },
-                    label = "PartnerScreenTransition"
-                ) { targetTab ->
-                    when (targetTab) {
-                        "home" -> PartnerDashboardScreen(
-                            onAcceptDispatch = { currentTab = "nav" },
-                            onNavigateToWork = { currentTab = "nav" }
-                        )
-                        "work" -> PartnerWorkHistoryScreen()
-                        "earnings" -> PartnerWalletScreen(
-                            onGoToSettings = { currentTab = "profile" }
-                        )
-                        "profile" -> PartnerProfileScreen(
-                            onLogout = {
-                                prefsManager.clearSession()
-                                isAuthenticated = false
-                            }
-                        )
-                        "nav" -> MapNavigationScreen(
-                            onStartShooting = { currentTab = "camera" }
-                        )
-                        "camera" -> CameraScreen(
-                            onCompleteShoot = { currentTab = "sync" }
-                        )
-                        "sync" -> VideoSyncScreen(
-                            onSyncFinish = { currentTab = "earnings" }
-                        )
+                    AnimatedContent(
+                        targetState = currentTab,
+                        transitionSpec = {
+                            ContentTransform(
+                                targetContentEnter = fadeIn(animationSpec = androidx.compose.animation.core.tween(180)),
+                                initialContentExit = fadeOut(animationSpec = androidx.compose.animation.core.tween(180))
+                            )
+                        },
+                        label = "PartnerScreenTransition"
+                    ) { targetTab ->
+                        when (targetTab) {
+                            "home" -> PartnerDashboardScreen(
+                                onAcceptDispatch = { currentTab = "nav" },
+                                onNavigateToWork = { currentTab = "nav" }
+                            )
+                            "work" -> PartnerWorkHistoryScreen()
+                            "earnings" -> PartnerWalletScreen(
+                                onGoToSettings = { currentTab = "profile" }
+                            )
+                            "profile" -> PartnerProfileScreen(
+                                onLogout = {
+                                    prefsManager.clearSession()
+                                    isAuthenticated = false
+                                }
+                            )
+                            "nav" -> MapNavigationScreen(
+                                onStartShooting = { currentTab = "camera" }
+                            )
+                            "camera" -> CameraScreen(
+                                onCompleteShoot = { currentTab = "sync" }
+                            )
+                            "sync" -> VideoSyncScreen(
+                                onSyncFinish = { currentTab = "earnings" }
+                            )
+                        }
                     }
                 }
             }
@@ -183,6 +184,7 @@ fun MainPartnerNavigationHost() {
         }
     }
 }
+
 
 @Composable
 fun PermissionPromptModal(
