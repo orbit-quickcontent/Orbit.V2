@@ -211,7 +211,7 @@ async function sendOtpEmail(to: string, otp: string): Promise<{ success: boolean
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = (await req.json()) as any;
     const { email } = body;
 
     if (!email || typeof email !== "string" || !email.includes("@")) {

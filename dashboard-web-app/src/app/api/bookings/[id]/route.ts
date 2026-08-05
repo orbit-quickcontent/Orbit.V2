@@ -1,18 +1,5 @@
-import { NextRequest } from "next/server";
-import { proxyToBackend } from "@/lib/backend-proxy";
-
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  return proxyToBackend(req, `/bookings/${id}`);
-}
-
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  return proxyToBackend(req, `/bookings/${id}`);
-}
+/**
+ * Client Backend | Booking Detail API Route
+ * Re-exports from: @/client/backend/booking-detail-handlers
+ */
+export { GET, PATCH } from "@/client/backend/booking-detail-handlers";

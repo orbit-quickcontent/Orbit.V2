@@ -1,10 +1,5 @@
-import { NextRequest } from "next/server";
-import { proxyToBackend } from "@/lib/backend-proxy";
-
-export async function GET(req: NextRequest) {
-  return proxyToBackend(req, "/users");
-}
-
-export async function POST(req: NextRequest) {
-  return proxyToBackend(req, "/users");
-}
+/**
+ * Client Backend | User Management API Route
+ * Re-exports from: @/client/backend/user-handlers
+ */
+export { GET, POST } from "@/client/backend/user-handlers";

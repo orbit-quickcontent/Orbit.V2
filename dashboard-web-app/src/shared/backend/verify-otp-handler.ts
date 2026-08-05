@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { firestoreDb } from "@/lib/db";
+import { signToken, normalizeRole } from "@/lib/security-auth";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = (await req.json()) as any;
     const { email, otp } = body;
 
     if (!email || !otp) {
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     // Verify OTP matches
     if (record.otp !== otp.toString()) {
       const newAttempts = (record.attempts || 0) + 1;
-      
+
       if (newAttempts >= 5) {
         // If max attempts reached, mark as used/expired
         await firestoreDb.emailOtps.update({
@@ -67,9 +68,70 @@ export async function POST(req: NextRequest) {
       data: { verified: true, used: true }
     });
 
+    // Look up the user in client_users then partner_users.
+    // The mobile apps expect { token, user } — not just { success, message }.
+    let user: any =
+      (await firestoreDb.clientUsers.findUnique({ where: { email: normalizedEmail } })) ||
+      (await firestoreDb.partnerUsers.findUnique({ where: { email: normalizedEmail } }));
+
+    if (!user) {
+      // First-time OTP sign-in: create a CLIENT user automatically.
+      const nowIso = new Date().toISOString();
+      user = await firestoreDb.clientUsers.create({
+        data: {
+          email: normalizedEmail,
+          name: normalizedEmail.split("@")[0],
+          role: "CLIENT",
+          status: "ACTIVE",
+          walletBalance: 0,
+          rating: 5.0,
+          kycStatus: "VERIFIED",
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        },
+      });
+    }
+
+    const userRole = normalizeRole(user.role);
+
+    const token = signToken(
+      {
+        id: user.id,
+        email: user.email,
+        name: user.name || "",
+        role: userRole,
+        type: "access",
+      },
+      15 * 60
+    );
+
+    const refreshToken = signToken(
+      {
+        id: user.id,
+        email: user.email,
+        role: userRole,
+        type: "refresh",
+      },
+      30 * 24 * 60 * 60
+    );
+
     return NextResponse.json({
       success: true,
-      message: "Email verified successfully",
+      token,
+      accessToken: token,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name || "",
+        phone: user.phone || null,
+        role: userRole,
+        brandLogo: user.brandLogo || null,
+        brandFont: user.brandFont || null,
+        brandColor: user.brandColor || null,
+        editorRequirements: user.editorRequirements || null,
+        avatar: user.avatar || null,
+      },
     });
   } catch (err: any) {
     console.error("[Verify OTP API] Error:", err);

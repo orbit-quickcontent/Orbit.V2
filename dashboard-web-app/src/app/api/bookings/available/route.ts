@@ -1,6 +1,5 @@
-import { NextRequest } from "next/server";
-import { proxyToBackend } from "@/lib/backend-proxy";
-
-export async function GET(req: NextRequest) {
-  return proxyToBackend(req, "/bookings/available");
-}
+/**
+ * Partner Backend | Booking Available API Route
+ * Re-exports from: @/partner/backend/booking-available-handlers
+ */
+export { GET } from "@/partner/backend/booking-available-handlers";

@@ -382,6 +382,18 @@ export async function googleAuthHandler(req: NextRequest) {
 
       if (userRole === "PARTNER") {
         user = await firestoreDb.partnerUsers.create({ data: userData });
+        // Auto-create the partner profile so GET /partners/:id works immediately
+        await firestoreDb.partners.create({
+          data: {
+            userId: user.id,
+            location: "Location Pending",
+            availability: true,
+            isVerified: false,
+            rating: 5.0,
+            completedProjects: 0,
+            walletBalance: 0.0
+          }
+        }).catch(() => null); // don't fail the auth if this errors
       } else {
         user = await firestoreDb.clientUsers.create({ data: userData });
       }
