@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd dashboard-web-app && npm run build",
+  "outputDirectory": "dashboard-web-app/.next",
+  "framework": "nextjs"
+}
