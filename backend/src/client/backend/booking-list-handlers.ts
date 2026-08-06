@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
 
     if (!pkg) {
       try {
-        pkg = await firestoreDb.packages.findFirst({})
+        pkg = await firestoreDb.packages.findFirst({ where: {} })
         if (!pkg) {
           // Create a minimal placeholder package so the booking can proceed
           pkg = await firestoreDb.packages.create({
