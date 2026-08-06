@@ -181,4 +181,13 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Path("id") bookingId: String
     ): BookingDto
+
+    @PATCH("bookings/{id}")
+    suspend fun updateBookingStatus(
+        @Header("Authorization") token: String,
+        @Path("id") bookingId: String,
+        @Body request: UpdateBookingStatusRequest
+    ): BookingDto
 }
+
+data class UpdateBookingStatusRequest(val status: String)

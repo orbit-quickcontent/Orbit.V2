@@ -2095,47 +2095,54 @@ fun TrackingScreen(bookingId: String) {
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 1. Top Cancel Booking Button (Conditional Cancellation Rules)
-            Surface(
-                color = if (isCancelled) Color(0xFF1E0A0A) else if (isShootingStarted) Color(0xFF18181B) else Color(0xFF1E0A0A),
-                shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.dp, if (isCancelled) Color(0xFFEF4444) else if (isShootingStarted) Color(0xFF3F3F46) else Color(0xFFEF4444).copy(alpha = 0.8f)),
-                modifier = Modifier
-                    .clickable {
-                        if (isCancelled) return@clickable
-                        if (isShootingStarted) {
-                            android.widget.Toast.makeText(
-                                context,
-                                "Shooting in progress! Cancellation is locked once shooting starts.",
-                                android.widget.Toast.LENGTH_LONG
-                            ).show()
-                        } else {
-                            isCancelled = true
-                            currentStatus = "CANCELLED"
+            // 1. Top Cancel Booking Button (Automatically hidden when cancelled, or once shooting/delivery starts)
+            val isCancellable = !isCancelled && !isShootingStarted && currentStatus != "CANCELLED" && currentStatus != "DELIVERED"
+            if (isCancellable) {
+                var isCancelling by remember { mutableStateOf(false) }
+                Surface(
+                    color = Color(0xFF1E0A0A),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.8f)),
+                    modifier = Modifier
+                        .clickable(enabled = !isCancelling) {
+                            isCancelling = true
                             coroutineScope.launch {
                                 try {
-                                    val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                                    firestore.collection("bookings").document(bookingId).update("status", "CANCELLED")
+                                    val prefsManager = com.orbitlogic.client.storage.PrefsManager(context)
+                                    val token = "Bearer ${prefsManager.getAuthToken()}"
+                                    // 1. Call Backend REST API to cancel booking
+                                    com.orbitlogic.client.network.ApiClient.apiService.updateBookingStatus(
+                                        token,
+                                        bookingId,
+                                        com.orbitlogic.client.network.UpdateBookingStatusRequest(status = "CANCELLED")
+                                    )
+                                    // 2. Sync to Firestore for real-time listener
+                                    try {
+                                        val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                        firestore.collection("bookings").document(bookingId).update("status", "CANCELLED")
+                                    } catch (_: Exception) {}
+
+                                    isCancelled = true
+                                    currentStatus = "CANCELLED"
+                                    android.widget.Toast.makeText(context, "Booking successfully cancelled.", android.widget.Toast.LENGTH_SHORT).show()
                                 } catch (e: Exception) {
                                     android.util.Log.e("TrackingScreen", "Error cancelling booking", e)
+                                    android.widget.Toast.makeText(context, "Failed to cancel booking. Please try again.", android.widget.Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    isCancelling = false
                                 }
                             }
-                            android.widget.Toast.makeText(context, "Booking successfully cancelled.", android.widget.Toast.LENGTH_SHORT).show()
                         }
-                    }
-                    .padding(bottom = 16.dp)
-            ) {
-                Text(
-                    text = when {
-                        isCancelled -> "Booking Cancelled"
-                        isShootingStarted -> "Cancellation Locked (Shooting)"
-                        else -> "Cancel booking"
-                    },
-                    color = if (isShootingStarted && !isCancelled) Color(0xFFA1A1AA) else Color(0xFFEF4444),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp)
-                )
+                        .padding(bottom = 16.dp)
+                ) {
+                    Text(
+                        text = if (isCancelling) "Cancelling..." else "Cancel booking",
+                        color = Color(0xFFEF4444),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp)
+                    )
+                }
             }
 
             // 2. Main Web-style Stepper Container (Matching Screenshot)
