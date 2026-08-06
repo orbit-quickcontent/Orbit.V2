@@ -1387,6 +1387,8 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
     var selectedCity by remember { mutableStateOf("") }
     var selectedArea by remember { mutableStateOf("") }
     var completeAddress by remember { mutableStateOf("") }
+    var gmapsLink by remember { mutableStateOf("") }
+    var contactType by remember { mutableStateOf("Myself") }
     val context = androidx.compose.ui.platform.LocalContext.current
     val savedName = remember(context) { com.orbitlogic.client.storage.PrefsManager(context).getSavedName() }
     var receiverName by remember { mutableStateOf(savedName ?: "") }
