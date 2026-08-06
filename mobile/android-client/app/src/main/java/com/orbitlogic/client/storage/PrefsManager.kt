@@ -11,6 +11,9 @@ class PrefsManager(context: Context) {
         private const val KEY_USER_ROLE = "user_role"
         private const val KEY_USER_ID = "user_id"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
+        private const val KEY_SAVED_NAME = "saved_name"
+        private const val KEY_SAVED_PHONE = "saved_phone"
+        private const val KEY_ONBOARDING_DONE = "onboarding_done"
     }
 
     fun saveAuthSession(token: String, role: String) {
@@ -49,5 +52,29 @@ class PrefsManager(context: Context) {
             putBoolean(KEY_IS_LOGGED_IN, false)
             apply()
         }
+    }
+
+    fun saveName(name: String) {
+        prefs.edit().putString(KEY_SAVED_NAME, name).apply()
+    }
+
+    fun getSavedName(): String? {
+        return prefs.getString(KEY_SAVED_NAME, null)
+    }
+
+    fun savePhone(phone: String) {
+        prefs.edit().putString(KEY_SAVED_PHONE, phone).apply()
+    }
+
+    fun getSavedPhone(): String? {
+        return prefs.getString(KEY_SAVED_PHONE, null)
+    }
+
+    fun setOnboardingDone() {
+        prefs.edit().putBoolean(KEY_ONBOARDING_DONE, true).apply()
+    }
+
+    fun isOnboardingComplete(): Boolean {
+        return prefs.getBoolean(KEY_ONBOARDING_DONE, false)
     }
 }

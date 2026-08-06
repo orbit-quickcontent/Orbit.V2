@@ -234,19 +234,8 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
     var fullName by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var otpCode by remember { mutableStateOf("") }
-    var selectedPersona by remember { mutableStateOf("Creator") }
-    var avatarMode by remember { mutableStateOf("Avatar") } // Avatar or Photo
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    val personas = listOf("Creator", "Professional", "Artist", "Explorer", "Visionary")
-    fun personaIconType(persona: String) = when (persona) {
-        "Creator" -> com.orbitlogic.client.ui.theme.OrbitIconType.Palette
-        "Professional" -> com.orbitlogic.client.ui.theme.OrbitIconType.Tie
-        "Artist" -> com.orbitlogic.client.ui.theme.OrbitIconType.TheaterMasks
-        "Explorer" -> com.orbitlogic.client.ui.theme.OrbitIconType.Compass
-        else -> com.orbitlogic.client.ui.theme.OrbitIconType.Rocket
-    }
 
     // Real backend call — the ONLY thing that should produce the token + userId
     // used everywhere else in the app (e.g. BookingFlowScreen). Falls back to a
@@ -283,7 +272,7 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                     if (backendAuth != null) {
                         // Keep the Supabase profile in sync too (used by other parts
                         // of the stack), but it is no longer the source of truth.
-                        supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, selectedPersona)
+                        supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, "Creator")
                         prefsManager.saveAuthSession(backendAuth.first, "CLIENT")
                         prefsManager.saveUserId(backendAuth.second)
                         onLoginSuccess(backendAuth.first)
@@ -392,7 +381,7 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                                     coroutineScope.launch {
                                         val backendAuth = authenticateWithBackend(email, fullName)
                                         if (backendAuth != null) {
-                                            supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, selectedPersona)
+                                            supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, "Creator")
                                             prefsManager.saveAuthSession(backendAuth.first, "CLIENT")
                                             prefsManager.saveUserId(backendAuth.second)
                                             onLoginSuccess(backendAuth.first)
@@ -434,121 +423,8 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                 Divider(modifier = Modifier.weight(1f), color = Color(0xFF27272A))
             }
 
-            // Profile Picture Persona Selector Container
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF09090B)),
-                shape = RoundedCornerShape(24.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF18181B)),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("CHOOSE YOUR PROFILE PICTURE", color = Color(0xFF93C5FD).copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Avatar Main Preview
-                    Box(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF27272A))
-                            .border(4.dp, Color(0xFF3F3F46), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        com.orbitlogic.client.ui.theme.OrbitIcon(
-                            type = personaIconType(selectedPersona),
-                            color = Color.White,
-                            modifier = Modifier.size(48.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Avatar / Photo Toggle
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Color(0xFF18181B))
-                            .padding(4.dp)
-                    ) {
-                        Surface(
-                            color = if (avatarMode == "Avatar") Color(0xFF3F3F46) else Color.Transparent,
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.clickable { avatarMode = "Avatar" }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                            ) {
-                                com.orbitlogic.client.ui.theme.OrbitIcon(
-                                    type = com.orbitlogic.client.ui.theme.OrbitIconType.Person,
-                                    color = Color.White,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Avatar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        Surface(
-                            color = if (avatarMode == "Photo") Color(0xFF3F3F46) else Color.Transparent,
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.clickable { avatarMode = "Photo" }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                            ) {
-                                com.orbitlogic.client.ui.theme.OrbitIcon(
-                                    type = com.orbitlogic.client.ui.theme.OrbitIconType.Frame,
-                                    color = Color(0xFF71717A),
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Photo", color = Color(0xFF71717A), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // Persona Grid
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        items(personas) { persona ->
-                            val isSelected = persona == selectedPersona
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(if (isSelected) Color(0xFF27272A) else Color(0xFF18181B).copy(alpha = 0.5f))
-                                    .border(1.dp, if (isSelected) Color(0xFFEF4444) else Color.Transparent, RoundedCornerShape(16.dp))
-                                    .clickable { selectedPersona = persona }
-                                    .padding(10.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF27272A)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    com.orbitlogic.client.ui.theme.OrbitIcon(
-                                        type = personaIconType(persona),
-                                        color = if (isSelected) Color.White else Color(0xFF71717A),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                Text(persona, color = if (isSelected) Color.White else Color(0xFF71717A), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
-                            }
-                        }
-                    }
-                }
-            }
+            // Spacer between social buttons and email form
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Onboarding Input Form
             Card(
@@ -730,7 +606,7 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                                     val response = com.orbitlogic.client.network.ApiClient.apiService.verifyOtp(
                                         com.orbitlogic.client.network.VerifyOtpRequest(email, otpCode)
                                     )
-                                    supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, selectedPersona)
+                                    supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, "Creator")
                                     prefsManager.saveAuthSession(response.token, "CLIENT")
                                     prefsManager.saveUserId(response.user.id)
                                     onLoginSuccess(response.token)
@@ -1501,12 +1377,13 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
     var minute by remember { mutableIntStateOf(initMinute) }
     var period by remember { mutableStateOf(initPeriod) }
     var locationAddress by remember { mutableStateOf("") }
-    var selectedCity by remember { mutableStateOf("Jaipur") }
-    var selectedArea by remember { mutableStateOf("Jagatpura") }
-    var completeAddress by remember { mutableStateOf("Plot No. 112, Shree Vihar Colony, Jagatpura") }
+    var selectedCity by remember { mutableStateOf("") }
+    var selectedArea by remember { mutableStateOf("") }
+    var completeAddress by remember { mutableStateOf("") }
     var gmapsLink by remember { mutableStateOf("") }
     var contactType by remember { mutableStateOf("Myself") }
-    var receiverName by remember { mutableStateOf("") }
+    val savedName = remember { com.orbitlogic.client.storage.PrefsManager(androidx.compose.ui.platform.LocalContext.current).getSavedName() }
+    var receiverName by remember { mutableStateOf(savedName ?: "") }
     var receiverPhone by remember { mutableStateOf("") }
     var saveAsTag by remember { mutableStateOf("Home") }
     var isLocatingGps by remember { mutableStateOf(false) }
@@ -1532,6 +1409,13 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                         val addrs = geocoder.getFromLocation(loc.latitude, loc.longitude, 1)
                         if (!addrs.isNullOrEmpty()) {
                             val a = addrs[0]
+                            // Auto-set city
+                            val city = a.locality ?: a.adminArea ?: ""
+                            if (city.isNotBlank()) selectedCity = city
+                            // Auto-set area/street
+                            val area = a.subLocality ?: a.thoroughfare ?: a.featureName ?: ""
+                            if (area.isNotBlank()) selectedArea = area
+                            // Full address
                             val fullAddr = listOfNotNull(
                                 a.featureName ?: a.subThoroughfare,
                                 a.thoroughfare,
@@ -1550,16 +1434,13 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                         completeAddress = locationAddress
                     }
                 } else {
-                    locationAddress = "Plot No. 112, Shree Vihar Colony, Jagatpura, Jaipur, Rajasthan 302017"
-                    completeAddress = locationAddress
+                    android.widget.Toast.makeText(context, "Could not get location. Enable GPS and try again.", android.widget.Toast.LENGTH_SHORT).show()
                 }
             } else {
-                locationAddress = "Plot No. 112, Shree Vihar Colony, Jagatpura, Jaipur, Rajasthan 302017"
-                completeAddress = locationAddress
+                android.widget.Toast.makeText(context, "Please enable Location in Settings.", android.widget.Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
-            locationAddress = "Plot No. 112, Shree Vihar Colony, Jagatpura, Jaipur, Rajasthan 302017"
-            completeAddress = locationAddress
+            android.widget.Toast.makeText(context, "Location error: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
         } finally {
             isLocatingGps = false
         }
@@ -1697,7 +1578,7 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                     }
                 }
 
-                // ── Smart Defaults — pre-selected config chips (Principle 1) ──
+                // ── UGC Service Highlight ────────────────────────────────────
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF050810)),
                     shape = RoundedCornerShape(16.dp),
@@ -1707,7 +1588,7 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(OrbitCyan))
-                            Text("Recommended for Instagram Reels", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                            Text("UGC Content • Top Booked Service", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                             listOf(
@@ -1730,61 +1611,160 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                                 }
                             }
                             Surface(
-                                color = Color(0xFF0D0F1A),
+                                color = OrbitPurple.copy(alpha = 0.1f),
                                 shape = RoundedCornerShape(20.dp),
-                                border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.2f))
+                                border = BorderStroke(1.dp, OrbitPurple.copy(alpha = 0.4f))
                             ) {
-                                Text("UPI ✓", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp))
+                                Text("UGC ✓", color = OrbitPurple, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp))
                             }
                         }
-                        Text("Pre-selected based on top creator bookings • tap to change", color = MutedText, fontSize = 10.sp)
+                        Text("User-generated content — authentic, relatable & high converting", color = MutedText, fontSize = 10.sp)
                     }
                 }
 
-                // Date Picker Card Box (New Requested Feature)
+                // ── Full Month Calendar Grid ──────────────────────────────────
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0C10)),
                     shape = RoundedCornerShape(20.dp),
                     border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text("📅", fontSize = 14.sp)
-                            Text("Select Date *", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("Schedule Your Shoot", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
 
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf(
-                                "Today ($todayStr)",
-                                "Tomorrow ($tomorrowStr)",
-                                "Next Day ($dayAfterStr)"
-                            ).forEach { dateOption ->
-                                val isSelected = shootDate == dateOption
-                                Surface(
-                                    color = if (isSelected) OrbitCyan.copy(alpha = 0.15f) else Color(0xFF12131C),
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(1.dp, if (isSelected) OrbitCyan else Color.White.copy(alpha = 0.08f)),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { shootDate = dateOption }
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = dateOption,
-                                            color = if (isSelected) OrbitCyan else Color.White,
-                                            fontSize = 13.sp,
-                                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
-                                        )
-                                        if (isSelected) {
-                                            Text("✓", color = OrbitCyan, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                        // Month Navigator
+                        val calNow = remember { java.util.Calendar.getInstance() }
+                        var calMonth by remember { mutableIntStateOf(calNow.get(java.util.Calendar.MONTH)) }
+                        var calYear by remember { mutableIntStateOf(calNow.get(java.util.Calendar.YEAR)) }
+                        var selectedCalDay by remember { mutableIntStateOf(-1) }
+                        val monthNames = listOf("January","February","March","April","May","June","July","August","September","October","November","December")
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                color = Color.White.copy(alpha = 0.06f),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.clickable {
+                                    if (calMonth == 0) { calMonth = 11; calYear-- } else calMonth--
+                                    selectedCalDay = -1
+                                }
+                            ) { Text("‹", color = Color.White, fontSize = 20.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) }
+
+                            Text(
+                                "${monthNames[calMonth]} $calYear",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+
+                            Surface(
+                                color = Color.White.copy(alpha = 0.06f),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.clickable {
+                                    if (calMonth == 11) { calMonth = 0; calYear++ } else calMonth++
+                                    selectedCalDay = -1
+                                }
+                            ) { Text("›", color = Color.White, fontSize = 20.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) }
+                        }
+
+                        // Day-of-week header
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            listOf("Su","Mo","Tu","We","Th","Fr","Sa").forEach { day ->
+                                Text(day, color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                            }
+                        }
+
+                        // Build calendar days grid
+                        val displayCal = java.util.Calendar.getInstance().apply {
+                            set(java.util.Calendar.YEAR, calYear)
+                            set(java.util.Calendar.MONTH, calMonth)
+                            set(java.util.Calendar.DAY_OF_MONTH, 1)
+                        }
+                        val firstDow = displayCal.get(java.util.Calendar.DAY_OF_WEEK) - 1 // 0=Sun
+                        val daysInMonth = displayCal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
+                        val todayCal = java.util.Calendar.getInstance()
+                        val todayDay = todayCal.get(java.util.Calendar.DAY_OF_MONTH)
+                        val todayMon = todayCal.get(java.util.Calendar.MONTH)
+                        val todayYr  = todayCal.get(java.util.Calendar.YEAR)
+
+                        val totalCells = firstDow + daysInMonth
+                        val rows = (totalCells + 6) / 7
+
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            for (row in 0 until rows) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    for (col in 0 until 7) {
+                                        val cellIndex = row * 7 + col
+                                        val day = cellIndex - firstDow + 1
+                                        val isPast = calYear < todayYr || (calYear == todayYr && calMonth < todayMon) ||
+                                            (calYear == todayYr && calMonth == todayMon && day < todayDay)
+                                        val isToday = calYear == todayYr && calMonth == todayMon && day == todayDay
+                                        val isSelected = selectedCalDay == day && day in 1..daysInMonth
+
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .aspectRatio(1f)
+                                                .padding(2.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    when {
+                                                        isSelected -> OrbitCyan
+                                                        isToday -> OrbitCyan.copy(alpha = 0.2f)
+                                                        else -> Color.Transparent
+                                                    }
+                                                )
+                                                .then(
+                                                    if (day in 1..daysInMonth && !isPast)
+                                                        Modifier.clickable {
+                                                            selectedCalDay = day
+                                                            val sdf = java.text.SimpleDateFormat("EEE, d MMM", java.util.Locale.getDefault())
+                                                            val cal = java.util.Calendar.getInstance()
+                                                            cal.set(calYear, calMonth, day)
+                                                            shootDate = sdf.format(cal.time)
+                                                        }
+                                                    else Modifier
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (day in 1..daysInMonth) {
+                                                Text(
+                                                    text = "$day",
+                                                    color = when {
+                                                        isSelected -> Color.Black
+                                                        isPast -> Color.White.copy(alpha = 0.25f)
+                                                        isToday -> OrbitCyan
+                                                        else -> Color.White
+                                                    },
+                                                    fontSize = 13.sp,
+                                                    fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal
+                                                )
+                                            }
                                         }
                                     }
                                 }
+                            }
+                        }
+
+                        if (shootDate.isNotEmpty() && selectedCalDay > 0) {
+                            Surface(
+                                color = OrbitGreen.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, OrbitGreen.copy(alpha = 0.4f))
+                            ) {
+                                Text(
+                                    "✓ Selected: $shootDate",
+                                    color = OrbitGreen,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
                             }
                         }
                     }
@@ -2213,12 +2193,13 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                     ) {
                         Text("Next → Continue to Style Selection", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
                     }
+                    // Book Now auto-scroll hint
                     Text(
-                        text = "or  I'll Risk Missing This Slot",
+                        text = "All slots limited — book to confirm",
                         color = MutedText,
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().clickable { step = 2 }
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
 
@@ -2240,7 +2221,7 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Visual Style", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                                listOf("Cinematic", "Street", "Cafe", "Fitness", "Fashion").forEach { style ->
+                                listOf("Cinematic", "Street", "Fashion", "UGC").forEach { style ->
                                     val active = selectedReelStyle == style
                                     Surface(
                                         color = if (active) OrbitPurple.copy(alpha = 0.15f) else Color(0xFF12131C),
@@ -2743,24 +2724,34 @@ fun TrackingScreen(bookingId: String) {
                     shape = RoundedCornerShape(20.dp),
                     border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.8f)),
                     modifier = Modifier
+                        .fillMaxWidth()
                         .clickable(enabled = !isCancelling) {
                             isCancelling = true
                             coroutineScope.launch {
+                                var cancelSuccess = false
                                 try {
                                     val prefsManager = com.orbitlogic.client.storage.PrefsManager(context)
-                                    val token = "Bearer ${prefsManager.getAuthToken()}"
-                                    // 1. Call Backend REST API to cancel booking
-                                    com.orbitlogic.client.network.ApiClient.apiService.updateBookingStatus(
-                                        token,
-                                        bookingId,
-                                        com.orbitlogic.client.network.UpdateBookingStatusRequest(status = "CANCELLED")
-                                    )
-                                    // 2. Sync to Firestore for real-time listener
+                                    val rawToken = prefsManager.getAuthToken() ?: ""
+                                    val token = if (rawToken.startsWith("Bearer ")) rawToken else "Bearer $rawToken"
+                                    // 1. Try Backend REST API to cancel booking
+                                    try {
+                                        com.orbitlogic.client.network.ApiClient.apiService.updateBookingStatus(
+                                            token,
+                                            bookingId,
+                                            com.orbitlogic.client.network.UpdateBookingStatusRequest(status = "CANCELLED")
+                                        )
+                                        cancelSuccess = true
+                                    } catch (backendErr: Exception) {
+                                        android.util.Log.w("TrackingScreen", "Backend cancel failed, trying Firestore", backendErr)
+                                    }
+                                    // 2. Sync to Firestore (always attempt)
                                     try {
                                         val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
                                         firestore.collection("bookings").document(bookingId).update("status", "CANCELLED")
-                                    } catch (_: Exception) {}
-
+                                        cancelSuccess = true
+                                    } catch (fsErr: Exception) {
+                                        android.util.Log.w("TrackingScreen", "Firestore cancel failed", fsErr)
+                                    }
                                     isCancelled = true
                                     currentStatus = "CANCELLED"
                                     android.widget.Toast.makeText(context, "Booking successfully cancelled.", android.widget.Toast.LENGTH_SHORT).show()
@@ -2774,13 +2765,20 @@ fun TrackingScreen(bookingId: String) {
                         }
                         .padding(bottom = 16.dp)
                 ) {
-                    Text(
-                        text = if (isCancelling) "Cancelling..." else "Cancel booking",
-                        color = Color(0xFFEF4444),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("✕", color = Color(0xFFEF4444), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (isCancelling) "Cancelling..." else "Cancel Booking",
+                            color = Color(0xFFEF4444),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
