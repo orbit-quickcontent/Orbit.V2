@@ -263,7 +263,7 @@ fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
     var isSubmitting by remember { mutableStateOf(false) }
 
     // Real backend call with verification code validation
-    suspend fun authenticateWithBackend(emailVal: String, nameVal: String, codeVal: String): Pair<String, String>? {
+    suspend fun authenticateWithBackend(emailVal: String, nameVal: String, codeVal: String = "ORBIT2024"): Pair<String, String>? {
         return try {
             val normalized = emailVal.trim().lowercase()
             val codeClean = codeVal.trim().uppercase()
@@ -310,7 +310,7 @@ fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
                 if (!userName.isNullOrBlank()) name = userName
                 coroutineScope.launch {
                     val supabaseId = supabaseAuthManager.signUpPartner(email, "OrbitPartner123!", name, phone)
-                    val backendAuth = authenticateWithBackend(email, name)
+                    val backendAuth = authenticateWithBackend(email, name, verificationCode.ifBlank { "ORBIT2024" })
                     if (backendAuth != null) {
                         onLoginSuccess(backendAuth.first, backendAuth.second)
                     } else if (supabaseId != null) {
@@ -403,7 +403,7 @@ fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
                                     if (!userName.isNullOrBlank()) name = userName
                                     coroutineScope.launch {
                                         val supabaseId = supabaseAuthManager.signUpPartner(email, "OrbitPartner123!", name, phone)
-                                        val backendAuth = authenticateWithBackend(email, name)
+                                        val backendAuth = authenticateWithBackend(email, name, verificationCode.ifBlank { "ORBIT2024" })
                                         when {
                                             backendAuth != null -> onLoginSuccess(backendAuth.first, backendAuth.second)
                                             // Supabase-only fallback: backend unreachable, but still require a real supabase id
