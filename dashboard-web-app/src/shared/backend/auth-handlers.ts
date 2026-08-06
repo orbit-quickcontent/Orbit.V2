@@ -637,10 +637,148 @@ export async function meHandler(req: NextRequest) {
       },
       partnerProfile,
       activeBooking,
-      bookingsCount: userBookings.length
+      redirectUrl: getRoleRedirectUrl(userRole)
     });
   } catch (err: any) {
-    console.error("[Auth API] Get Me Error:", err);
+    console.error("[Auth API] Me Handler Error:", err);
     return NextResponse.json({ error: "Failed to fetch user session" }, { status: 500 });
+  }
+}
+
+/**
+ * 10. POST /api/partner/verify-code
+ * Handles partner verification code validation with master bypass for orbit.quickcontent@gmail.com / 123456
+ */
+export async function verifyPartnerCodeHandler(req: NextRequest) {
+  try {
+    const body = (await req.json()) as any;
+    const { email, verificationCode, userId } = body;
+
+    const normalizedEmail = (email || "").toLowerCase().trim();
+    const code = (verificationCode || "").toString().trim().toUpperCase();
+
+    // ── Master Bypass for Admin/Owner ─────────────────────────────────────────
+    if (normalizedEmail === "orbit.quickcontent@gmail.com" && (code === "123456" || code === "ORBIT2024")) {
+      const isPartner = await firestoreDb.partnerUsers.findUnique({ where: { email: normalizedEmail } });
+      const nowIso = new Date().toISOString();
+      let partnerUser = isPartner;
+
+      if (!partnerUser) {
+        partnerUser = await firestoreDb.partnerUsers.create({
+          data: {
+            email: normalizedEmail,
+            name: "Orbit Master Partner",
+            role: "PARTNER",
+            status: "ACTIVE",
+            kycStatus: "VERIFIED",
+            createdAt: nowIso,
+            updatedAt: nowIso
+          }
+        });
+      }
+
+      await firestoreDb.partners.upsert({
+        where: { userId: partnerUser.id },
+        create: {
+          userId: partnerUser.id,
+          verificationCode: "123456",
+          isVerified: true,
+          verifiedAt: nowIso,
+          availability: true,
+          location: "Master HQ"
+        },
+        update: {
+          isVerified: true,
+          verifiedAt: nowIso,
+          availability: true
+        }
+      }).catch(() => null);
+
+      const token = signToken({ id: partnerUser.id, email: normalizedEmail, role: "PARTNER", type: "access" }, 30 * 24 * 60 * 60);
+
+      return NextResponse.json({
+        success: true,
+        isVerified: true,
+        masterBypass: true,
+        token,
+        partner: partnerUser,
+        message: "Master partner verified successfully!"
+      });
+    }
+
+    // ── Standard Partner Code Verification ─────────────────────────────────
+    if (!normalizedEmail && !userId) {
+      return NextResponse.json({ error: "Email or User ID is required" }, { status: 400 });
+    }
+
+    if (!code) {
+      return NextResponse.json({ error: "Verification code is required" }, { status: 400 });
+    }
+
+    const partnerUser = await firestoreDb.partnerUsers.findFirst({
+      where: { email: normalizedEmail }
+    });
+
+    if (!partnerUser) {
+      return NextResponse.json({
+        error: "Partner account not found. Please register as a partner first.",
+        requiresAppointment: true,
+        appointmentInfo: {
+          status: "PENDING_OFFLINE_TRAINING",
+          message: "Please complete your offline training session to receive your partner verification code.",
+          supportEmail: "orbit.quickcontent@gmail.com"
+        }
+      }, { status: 404 });
+    }
+
+    const partnerProfile = await firestoreDb.partners.findUnique({ where: { userId: partnerUser.id } });
+
+    // Validate code against stored code or ORBIT2024 default seed code
+    const validCode = partnerProfile?.verificationCode || "ORBIT2024";
+    if (code !== validCode.toUpperCase() && code !== "ORBIT2024") {
+      return NextResponse.json({
+        error: "Invalid partner verification code. Check with your offline trainer.",
+        requiresAppointment: true,
+        appointmentInfo: {
+          status: "PENDING_TRAINING",
+          message: "Your offline training session is pending verification. Please contact support or enter your trainer code.",
+          supportEmail: "orbit.quickcontent@gmail.com"
+        }
+      }, { status: 400 });
+    }
+
+    const nowIso = new Date().toISOString();
+    if (partnerProfile) {
+      await firestoreDb.partners.update({
+        where: { id: partnerProfile.id },
+        data: {
+          isVerified: true,
+          verifiedAt: nowIso,
+          availability: true
+        }
+      });
+    } else {
+      await firestoreDb.partners.create({
+        data: {
+          userId: partnerUser.id,
+          verificationCode: code,
+          isVerified: true,
+          verifiedAt: nowIso,
+          availability: true
+        }
+      });
+    }
+
+    const token = signToken({ id: partnerUser.id, email: normalizedEmail, role: "PARTNER", type: "access" }, 30 * 24 * 60 * 60);
+
+    return NextResponse.json({
+      success: true,
+      isVerified: true,
+      token,
+      message: "Partner verified successfully! Welcome to Orbit Partner Network."
+    });
+  } catch (err: any) {
+    console.error("[Auth API] Verify Partner Code Error:", err);
+    return NextResponse.json({ error: "Partner code verification failed" }, { status: 500 });
   }
 }
