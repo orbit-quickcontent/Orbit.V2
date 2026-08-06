@@ -13,6 +13,7 @@
 
 import { firestoreDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { notifyAccept, notifyClient } from '@/services/websocket.service'
 
 interface AcceptBody {
   partnerId: string
@@ -176,36 +177,18 @@ export async function POST(
         )
     );
 
-    // 6. Notify WebSocket: partner accepted (notify client + other partners)
-    try {
-      await fetch('http://localhost:3003/internal/accept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookingId,
-          partnerId,
-          partnerName: resolvedPartner?.user?.name || 'A partner',
-          booking: updatedBooking,
-        }),
-      })
-
-      // Notify status-update to client
-      await fetch('http://localhost:3003/internal/notify-client', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookingId,
-          event: 'booking:status-update',
-          payload: {
-            bookingId,
-            status: 'ACCEPTED',
-            previousStatus: booking.status,
-          },
-        }),
-      })
-    } catch (wsError) {
-      console.error('Failed to notify WebSocket service:', wsError)
-    }
+    // 6. Notify WebSocket: partner accepted (notify client + other partners) — in-process
+    notifyAccept({
+      bookingId,
+      partnerId,
+      partnerName: resolvedPartner?.user?.name || 'A partner',
+      booking: updatedBooking,
+    })
+    notifyClient({
+      bookingId,
+      event: 'booking:status-update',
+      data: { bookingId, status: 'ACCEPTED', previousStatus: booking.status },
+    })
 
     // 7. Return the updated booking
     return NextResponse.json({ booking: updatedBooking })

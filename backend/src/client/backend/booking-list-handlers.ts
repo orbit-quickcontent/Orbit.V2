@@ -14,6 +14,41 @@ import { validateBody, bookingSchema } from '@/lib/validation'
 import { logAudit } from '@/lib/auth-server'
 import { generatePresignedUrl } from '@/lib/security'
 import { verifyToken } from '@/lib/security-auth'
+import { notifyDispatch } from '@/services/websocket.service'
+
+/**
+ * Trigger the dispatch logic in-process without going through localhost HTTP.
+ * Mirrors booking-dispatch-handlers.ts POST logic.
+ */
+async function triggerDispatch(bookingId: string): Promise<void> {
+  const booking = await firestoreDb.bookings.findUnique({ where: { id: bookingId } })
+  if (!booking || booking.partnerId) return
+
+  let onlinePartners = await firestoreDb.partners.findMany({ where: { availability: true } })
+  if (onlinePartners.length === 0) {
+    const all = await firestoreDb.partners.findMany()
+    if (all.length > 0) {
+      await Promise.all(all.map(p => firestoreDb.partners.update({ where: { id: p.id }, data: { availability: true } })))
+      onlinePartners = await firestoreDb.partners.findMany({ where: { availability: true } })
+    }
+  }
+
+  let declinedBy: string[] = []
+  try { declinedBy = booking.declinedBy ? (typeof booking.declinedBy === 'string' ? JSON.parse(booking.declinedBy) : booking.declinedBy) : [] } catch { declinedBy = [] }
+
+  const active = onlinePartners.filter(p => !declinedBy.includes(p.id)).slice(0, 20)
+  if (active.length === 0) return
+
+  const newRound = (booking.dispatchRound || 0) + 1
+  await Promise.all(active.map(p => firestoreDb.workDispatches.create({ data: { bookingId, partnerId: p.id, status: 'PENDING', round: newRound, dispatchedAt: new Date().toISOString() } })))
+  const updated = await firestoreDb.bookings.update({ where: { id: bookingId }, data: { dispatchRound: newRound, status: 'PARTNER_DISPATCHED' } })
+
+  const pkg = await firestoreDb.packages.findUnique({ where: { id: updated.packageId } })
+  const clientUser = await firestoreDb.clientUsers.findUnique({ where: { id: updated.userId } })
+  const updatedBooking = { ...updated, package: pkg, user: clientUser ? { id: clientUser.id, name: clientUser.name, email: clientUser.email, phone: clientUser.phone } : null }
+
+  notifyDispatch({ bookingId, partnerIds: active.map(p => p.id), booking: updatedBooking, round: newRound })
+}
 
 interface CreateBookingBody {
   userId?: string
@@ -247,13 +282,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Automatically trigger partner dispatch immediately upon creation
+    // Automatically trigger partner dispatch immediately upon creation (in-process, no HTTP)
     ;(async () => {
       try {
-        await fetch(`http://localhost:5000/api/bookings/${booking.id}/dispatch`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        })
+        await triggerDispatch(booking.id)
       } catch (dispatchErr) {
         console.error('Failed to trigger automatic dispatch:', dispatchErr)
       }

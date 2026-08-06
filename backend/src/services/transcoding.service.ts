@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { exec } from "child_process";
 import { firestoreDb } from "../lib/db";
+import { notifyClient } from "./websocket.service";
 
 /**
  * Check if FFmpeg is installed and accessible in the system path.
@@ -131,27 +132,12 @@ export async function startTranscoding(bookingId: string, reelUrl: string): Prom
 
     console.log(`[Transcoder] Booking ${bookingId} updated with hlsPlaylistUrl: ${relativeHlsPath}`);
 
-    // 3. Broadcast WebSocket notification to client that streaming previews are available
-    try {
-      await fetch("http://localhost:3003/internal/notify-client", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bookingId,
-          event: "booking:status-update",
-          payload: {
-            bookingId,
-            status: "DELIVERED",
-            reelUrl: reelUrl,
-            masterReelUrl: reelUrl,
-            hlsPlaylistUrl: relativeHlsPath,
-            deliveredAt: new Date().toISOString()
-          }
-        })
-      });
-    } catch (wsError) {
-      console.error("[Transcoder] Failed to broadcast HLS update notification:", wsError);
-    }
+    // 3. Broadcast WebSocket notification (in-process)
+    notifyClient({
+      bookingId,
+      event: "booking:status-update",
+      data: { bookingId, status: "DELIVERED", reelUrl, masterReelUrl: reelUrl, hlsPlaylistUrl: relativeHlsPath, deliveredAt: new Date().toISOString() },
+    });
 
   } catch (error) {
     console.error("[Transcoder] Background transcoding worker encountered an error:", error);

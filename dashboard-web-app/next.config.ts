@@ -7,6 +7,9 @@ const withPWA = require("next-pwa")({
   disable: process.env.NODE_ENV === "development",
 });
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3003";
+
 const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
@@ -25,11 +28,11 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "http://localhost:5000/api/:path*",
+        destination: `${API_URL}/:path*`,
       },
       {
         source: "/socket.io/:path*",
-        destination: "http://localhost:3003/socket.io/:path*",
+        destination: `${WS_URL}/socket.io/:path*`,
       },
     ];
   },

@@ -1,65 +1,85 @@
-import { supabase } from "@/lib/supabase-client";
+/**
+ * BookingService — Orbit backend API client
+ * Replaces the old Supabase-based implementation.
+ * All calls go through the backend API (NEXT_PUBLIC_API_URL or /api proxy).
+ */
+
+const API = process.env.NEXT_PUBLIC_API_URL || "/api";
+
+function getAuthHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return { "Content-Type": "application/json" };
+  const token = localStorage.getItem("orbit_token") || "";
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 export interface CreateBookingPayload {
   packageId: string;
-  locationAddress: string;
-  latitude: number;
-  longitude: number;
-  totalPrice: number;
-  partnerPayout: number;
-  platformCommission: number;
+  bookingDate: string;
+  timeSlot: string;
+  location?: string;
   notes?: string;
+  razorpayPaymentId?: string;
 }
 
 export class BookingService {
   static async createBooking(payload: CreateBookingPayload) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Authentication required");
-
-    const { data, error } = await supabase
-      .from('bookings')
-      .insert({
-        client_id: user.id,
-        package_id: payload.packageId,
-        location_address: payload.locationAddress,
-        latitude: payload.latitude,
-        longitude: payload.longitude,
-        total_price: payload.totalPrice,
-        partner_payout: payload.partnerPayout,
-        platform_commission: payload.platformCommission,
-        notes: payload.notes,
-        status: 'REQUESTED',
-        payment_status: 'PENDING'
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    const res = await fetch(`${API}/bookings`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    return data.booking;
   }
 
-  static async fetchClientBookings() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-
-    const { data, error } = await supabase
-      .from('bookings')
-      .select('*, packages(*), shoot_tracking(*)')
-      .eq('client_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
+  static async fetchClientBookings(userId?: string) {
+    const params = userId ? `?userId=${userId}` : "";
+    const res = await fetch(`${API}/bookings${params}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    return data.bookings || [];
   }
 
-  static subscribeToBookingRealtime(bookingId: string, onUpdate: (payload: any) => void) {
-    return supabase
-      .channel(`booking:${bookingId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'bookings', filter: `id=eq.${bookingId}` },
-        (payload) => onUpdate(payload.new)
-      )
-      .subscribe();
+  static async getBooking(bookingId: string) {
+    const res = await fetch(`${API}/bookings/${bookingId}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    return data.booking;
+  }
+
+  static async updateBooking(bookingId: string, updates: Record<string, unknown>) {
+    const res = await fetch(`${API}/bookings/${bookingId}`, {
+      method: "PATCH",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    return data.booking;
+  }
+
+  /** Poll booking status every intervalMs milliseconds. Returns a cleanup function. */
+  static pollBooking(
+    bookingId: string,
+    onUpdate: (booking: any) => void,
+    intervalMs = 5000
+  ): () => void {
+    const id = setInterval(async () => {
+      try {
+        const booking = await BookingService.getBooking(bookingId);
+        onUpdate(booking);
+      } catch {
+        // ignore transient errors
+      }
+    }, intervalMs);
+    return () => clearInterval(id);
   }
 }

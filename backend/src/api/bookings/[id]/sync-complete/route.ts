@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { firestoreDb } from "@/lib/db";
+import { notifyClient } from "@/services/websocket.service";
 
 export async function POST(
   request: NextRequest,
@@ -140,42 +141,17 @@ export async function POST(
       }
     }
 
-    // 4. Notify WebSocket service about status change — emit EDITING so client pipeline advances
-    try {
-      // Notify client: footage synced, now in editing
-      await fetch("http://localhost:3003/internal/notify-client", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bookingId,
-          event: "booking:status-update",
-          payload: {
-            bookingId,
-            status: "EDITING",
-            previousStatus: booking.status,
-            reelUrl: null,
-            deliveredAt: null,
-          },
-        }),
-      });
-
-      // Notify editor dashboard: new project available for editing
-      await fetch("http://localhost:3003/internal/notify-client", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bookingId,
-          event: "editor:booking-ready",
-          payload: {
-            bookingId,
-            status: "READY_TO_EDIT",
-            footageUrls,
-          },
-        }),
-      });
-    } catch (wsError) {
-      console.error("Failed to notify WebSocket service of sync-complete:", wsError);
-    }
+    // 4. Notify WebSocket service (in-process)
+    notifyClient({
+      bookingId,
+      event: "booking:status-update",
+      data: { bookingId, status: "EDITING", previousStatus: booking.status, reelUrl: null, deliveredAt: null },
+    })
+    notifyClient({
+      bookingId,
+      event: "editor:booking-ready",
+      data: { bookingId, status: "READY_TO_EDIT", footageUrls },
+    })
 
     // Return the editor metadata dashboard item payload
     return NextResponse.json({

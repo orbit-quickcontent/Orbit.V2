@@ -12,6 +12,7 @@
 
 import { firestoreDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { notifyDispatch } from '@/services/websocket.service'
 
 interface DeclineBody {
   partnerId: string
@@ -141,21 +142,9 @@ export async function POST(
             },
           })
 
-          // Notify WebSocket
+          // Notify WebSocket (in-process)
           const partnerIds = partnersToDispatch.map((p) => p.id)
-          try {
-            await fetch('http://localhost:3003/internal/dispatch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                bookingId,
-                partnerIds,
-                round: newRound,
-              }),
-            })
-          } catch (wsError) {
-            console.error('Failed to notify WebSocket service for re-dispatch:', wsError)
-          }
+          notifyDispatch({ bookingId, partnerIds, round: newRound, booking: null })
 
           reDispatched = true
         } else {

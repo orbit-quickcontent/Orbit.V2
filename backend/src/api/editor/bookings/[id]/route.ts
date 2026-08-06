@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { firestoreDb } from "@/lib/db";
+import { notifyClient } from "@/services/websocket.service";
 
 export async function GET(
   request: NextRequest,
@@ -127,25 +128,12 @@ export async function POST(
       },
     });
 
-    // Notify WebSocket: editor has accepted, status now EDITING
-    try {
-      await fetch("http://localhost:3003/internal/notify-client", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bookingId,
-          event: "booking:status-update",
-          payload: {
-            bookingId,
-            status: "EDITING",
-            previousStatus: booking.status,
-            editorId,
-          },
-        }),
-      });
-    } catch (wsError) {
-      console.error("Failed to notify WebSocket of editor acceptance:", wsError);
-    }
+    // Notify WebSocket: editor has accepted, status now EDITING (in-process)
+    notifyClient({
+      bookingId,
+      event: "booking:status-update",
+      data: { bookingId, status: "EDITING", previousStatus: booking.status, editorId },
+    })
 
     return NextResponse.json({ success: true, booking: updatedRaw });
   } catch (error) {

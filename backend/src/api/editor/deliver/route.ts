@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { firestoreDb } from "@/lib/db";
 import { logAudit } from "@/lib/auth-server";
 import { startTranscoding } from "@/services/transcoding.service";
+import { notifyClient } from "@/services/websocket.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,26 +61,12 @@ export async function POST(request: NextRequest) {
       console.error("Transcoding failed:", transcodeErr);
     });
 
-    // Trigger WebSocket status change to DELIVERED
-    try {
-      await fetch("http://localhost:3003/internal/notify-client", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bookingId,
-          event: "booking:status-update",
-          payload: {
-            bookingId,
-            status: "DELIVERED",
-            reelUrl: reelUrl,
-            masterReelUrl: reelUrl,
-            deliveredAt: now
-          }
-        })
-      });
-    } catch (wsError) {
-      console.error("Failed to notify WebSocket of delivery:", wsError);
-    }
+    // Trigger WebSocket status change to DELIVERED (in-process)
+    notifyClient({
+      bookingId,
+      event: "booking:status-update",
+      data: { bookingId, status: "DELIVERED", reelUrl, masterReelUrl: reelUrl, deliveredAt: now },
+    })
 
     return NextResponse.json({ success: true, booking });
   } catch (error) {

@@ -15,6 +15,7 @@ import { generatePresignedUrl } from '@/lib/security'
 import { decryptAccountNumber } from '@/services/security.service'
 import { executePayout } from '@/services/payout.service'
 import { logBankAudit } from '@/services/audit.service'
+import { notifyDispatch, notifyClient } from '@/services/websocket.service'
 
 interface UpdateBookingBody {
   status?: string
@@ -206,21 +207,9 @@ export async function PATCH(
             },
           })
 
-          // Notify WebSocket
+          // Notify WebSocket (in-process)
           const partnerIds = partnersToDispatch.map((p) => p.id)
-          try {
-            await fetch('http://localhost:3003/internal/dispatch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                bookingId: id,
-                partnerIds,
-                round: newRound,
-              }),
-            })
-          } catch (wsError) {
-            console.error('Failed to notify WebSocket for re-dispatch:', wsError)
-          }
+          notifyDispatch({ bookingId: id, partnerIds, round: newRound, booking: null })
         }
       } catch (reDispatchError) {
         console.error('Error during auto re-dispatch after cancellation:', reDispatchError)
@@ -393,65 +382,29 @@ export async function PATCH(
       partner,
     }
 
-    // Notify client via WebSocket server
+    // Notify client via WebSocket (in-process)
     if (body.status !== undefined && body.status !== existing.status) {
-      try {
-        await fetch('http://localhost:3003/internal/notify-client', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            bookingId: id,
-            event: 'booking:status-update',
-            payload: {
-              bookingId: id,
-              status: booking.status,
-              previousStatus: existing.status,
-              reelUrl: updatedRaw.reelUrl || null,
-              deliveredAt: updatedRaw.deliveredAt || null,
-            },
-          }),
-        })
-      } catch (wsError) {
-        console.error('Failed to notify WebSocket of status update:', wsError)
-      }
+      notifyClient({
+        bookingId: id,
+        event: 'booking:status-update',
+        data: { bookingId: id, status: booking.status, previousStatus: existing.status, reelUrl: updatedRaw.reelUrl || null, deliveredAt: updatedRaw.deliveredAt || null },
+      })
     }
 
     if (body.syncPercentage !== undefined && body.syncPercentage !== existing.syncPercentage) {
-      try {
-        await fetch('http://localhost:3003/internal/notify-client', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            bookingId: id,
-            event: 'booking:sync-update',
-            payload: {
-              bookingId: id,
-              syncPercentage: booking.syncPercentage,
-            },
-          }),
-        })
-      } catch (wsError) {
-        console.error('Failed to notify WebSocket of sync update:', wsError)
-      }
+      notifyClient({
+        bookingId: id,
+        event: 'booking:sync-update',
+        data: { bookingId: id, syncPercentage: booking.syncPercentage },
+      })
     }
 
     if (body.editCountdown !== undefined && body.editCountdown !== existing.editCountdown) {
-      try {
-        await fetch('http://localhost:3003/internal/notify-client', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            bookingId: id,
-            event: 'booking:countdown-update',
-            payload: {
-              bookingId: id,
-              editCountdown: booking.editCountdown,
-            },
-          }),
-        })
-      } catch (wsError) {
-        console.error('Failed to notify WebSocket of countdown update:', wsError)
-      }
+      notifyClient({
+        bookingId: id,
+        event: 'booking:countdown-update',
+        data: { bookingId: id, editCountdown: booking.editCountdown },
+      })
     }
 
     return NextResponse.json({ booking })

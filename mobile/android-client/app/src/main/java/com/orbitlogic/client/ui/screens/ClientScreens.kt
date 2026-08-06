@@ -227,7 +227,7 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? android.app.Activity
     val oauthManager = remember { com.orbitlogic.client.auth.OAuthAuthManager(context) }
-    val supabaseAuthManager = remember { com.orbitlogic.client.data.SupabaseAuthManager() }
+    val orbitAuthManager = remember { com.orbitlogic.client.data.OrbitAuthManager() }
     val prefsManager = remember { com.orbitlogic.client.storage.PrefsManager(context) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -272,9 +272,6 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                 coroutineScope.launch {
                     val backendAuth = authenticateWithBackend(email, fullName)
                     if (backendAuth != null) {
-                        // Keep the Supabase profile in sync too (used by other parts
-                        // of the stack), but it is no longer the source of truth.
-                        supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, "Creator")
                         prefsManager.saveAuthSession(backendAuth.first, "CLIENT")
                         prefsManager.saveUserId(backendAuth.second)
                         onLoginSuccess(backendAuth.first)
@@ -2692,7 +2689,7 @@ fun ClientSplashScreen(onSplashFinished: () -> Unit) {
 
             val statusText = when {
                 progress < 0.35f -> "Initializing Cinema Engine..."
-                progress < 0.70f -> "Connecting to Supabase RLS..."
+                progress < 0.70f -> "Connecting to Orbit backend..."
                 progress < 0.95f -> "Establishing Real-time Socket :3003..."
                 else -> "Ready"
             }

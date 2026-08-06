@@ -250,7 +250,7 @@ fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? android.app.Activity
     val oauthManager = remember { com.orbitlogic.partner.auth.OAuthAuthManager(context) }
-    val supabaseAuthManager = remember { com.orbitlogic.partner.data.SupabaseAuthManager() }
+    val orbitAuthManager = remember { com.orbitlogic.partner.data.OrbitAuthManager() }
     val coroutineScope = rememberCoroutineScope()
 
     var name by remember { mutableStateOf("") }
@@ -309,14 +309,9 @@ fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
                 if (!userEmail.isNullOrBlank()) email = userEmail
                 if (!userName.isNullOrBlank()) name = userName
                 coroutineScope.launch {
-                    val supabaseId = supabaseAuthManager.signUpPartner(email, "OrbitPartner123!", name, phone)
                     val backendAuth = authenticateWithBackend(email, name, verificationCode.ifBlank { "ORBIT2024" })
                     if (backendAuth != null) {
                         onLoginSuccess(backendAuth.first, backendAuth.second)
-                    } else if (supabaseId != null) {
-                        // Backend unreachable — do NOT create a fake token. Show a message so
-                        // the user retries when the server is available.
-                        errorMessage = "Connected to Supabase but the app server is unreachable — please try again in a moment."
                     } else {
                         errorMessage = "Sign-in failed. Please try again."
                     }
@@ -402,15 +397,9 @@ fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
                                     if (!userEmail.isNullOrBlank()) email = userEmail
                                     if (!userName.isNullOrBlank()) name = userName
                                     coroutineScope.launch {
-                                        val supabaseId = supabaseAuthManager.signUpPartner(email, "OrbitPartner123!", name, phone)
                                         val backendAuth = authenticateWithBackend(email, name, verificationCode.ifBlank { "ORBIT2024" })
                                         when {
                                             backendAuth != null -> onLoginSuccess(backendAuth.first, backendAuth.second)
-                                            // Supabase-only fallback: backend unreachable, but still require a real supabase id
-                                            supabaseId != null -> {
-                                                errorMessage = "Connected to Supabase but the app server is unreachable — some features may not work."
-                                                // Do not call onLoginSuccess with a fake token; require backend to be reachable
-                                            }
                                             else -> errorMessage = "Apple Sign-in failed. Please try again."
                                         }
                                     }

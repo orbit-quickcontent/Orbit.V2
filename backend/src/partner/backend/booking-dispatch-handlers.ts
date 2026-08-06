@@ -11,6 +11,7 @@
 
 import { firestoreDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { notifyDispatch } from '@/services/websocket.service'
 
 export async function POST(
   _request: NextRequest,
@@ -156,22 +157,9 @@ export async function POST(
       } : null,
     }
 
-    // 7. Notify WebSocket service to push dispatch to partners
+    // 7. Notify WebSocket service to push dispatch to partners (in-process)
     const partnerIds = partnersToDispatch.map((p) => p.id)
-    try {
-      await fetch('http://localhost:3003/internal/dispatch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookingId,
-          partnerIds,
-          booking: updatedBooking,
-          round: newRound,
-        }),
-      })
-    } catch (wsError) {
-      console.error('Failed to notify WebSocket service:', wsError)
-    }
+    notifyDispatch({ bookingId, partnerIds, booking: updatedBooking, round: newRound })
 
     // 8. Return result
     return NextResponse.json({
