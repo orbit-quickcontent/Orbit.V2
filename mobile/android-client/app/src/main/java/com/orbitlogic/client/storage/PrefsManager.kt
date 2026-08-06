@@ -14,7 +14,9 @@ class PrefsManager(context: Context) {
         private const val KEY_SAVED_NAME = "saved_name"
         private const val KEY_SAVED_PHONE = "saved_phone"
         private const val KEY_ONBOARDING_DONE = "onboarding_done"
+        private const val KEY_LIGHT_THEME = "is_light_theme"
     }
+
 
     fun saveAuthSession(token: String, role: String) {
         prefs.edit().apply {
@@ -76,5 +78,13 @@ class PrefsManager(context: Context) {
 
     fun isOnboardingComplete(): Boolean {
         return prefs.getBoolean(KEY_ONBOARDING_DONE, false)
+    }
+
+    fun setLightTheme(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_LIGHT_THEME, enabled).apply()
+    }
+
+    fun isLightTheme(): Boolean {
+        return prefs.getBoolean(KEY_LIGHT_THEME, false)
     }
 }

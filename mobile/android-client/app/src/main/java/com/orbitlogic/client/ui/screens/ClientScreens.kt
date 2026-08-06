@@ -135,16 +135,24 @@ fun ClientTopAppBar(
     avatarLetter: String = "G",
     onSearchClick: () -> Unit = {},
     onNotifClick: () -> Unit = {},
-    onProfileClick: () -> Unit = {}
+    onProfileClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {}
 ) {
+    val isLight = com.orbitlogic.client.ui.theme.LocalOrbitIsLight.current
+    val headerBg = if (isLight) com.orbitlogic.client.ui.theme.LightSurface else Color.Black
+    val headerText = if (isLight) com.orbitlogic.client.ui.theme.LightTextPrimary else Color.White
+    val headerSub = if (isLight) com.orbitlogic.client.ui.theme.LightTextTertiary else Color(0xFF94A3B8)
+    val iconBg = if (isLight) com.orbitlogic.client.ui.theme.LightBg else Color(0xFF1E1E24)
+    val iconBorder = if (isLight) com.orbitlogic.client.ui.theme.LightBorder else Color(0xFF2E2E38)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.Black)
+            .background(headerBg)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Left: Avatar + Greeting
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -153,66 +161,60 @@ fun ClientTopAppBar(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF00B2FE))
+                    .background(
+                        if (isLight)
+                            com.orbitlogic.client.ui.theme.LightPrimary
+                        else
+                            Color(0xFF00B2FE)
+                    )
                     .clickable { onProfileClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = avatarLetter,
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Text(text = avatarLetter, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
             Column {
-                Text(
-                    text = greeting,
-                    color = Color(0xFF94A3B8),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Normal
-                )
-                Text(
-                    text = "Hi, $userName",
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Text(text = greeting, color = headerSub, fontSize = 12.sp, fontWeight = FontWeight.Normal)
+                Text(text = "Hi, $userName", color = headerText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
         }
 
+        // Right: Action Buttons
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Search
             Box(
                 modifier = Modifier
-                    .size(38.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF1E1E24))
-                    .border(1.dp, Color(0xFF2E2E38), CircleShape)
+                    .background(iconBg)
+                    .border(1.dp, iconBorder, CircleShape)
                     .clickable { onSearchClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Text("🔍", fontSize = 14.sp)
+                Text("🔍", fontSize = 15.sp)
             }
+            // Notifications
             Box(
                 modifier = Modifier
-                    .size(38.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF1E1E24))
-                    .border(1.dp, Color(0xFF2E2E38), CircleShape)
+                    .background(iconBg)
+                    .border(1.dp, iconBorder, CircleShape)
                     .clickable { onNotifClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Text("🔔", fontSize = 14.sp)
+                Text("🔔", fontSize = 15.sp)
             }
+            // Settings
             Box(
                 modifier = Modifier
-                    .size(38.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF1E1E24))
-                    .border(1.dp, Color(0xFF2E2E38), CircleShape)
-                    .clickable { onProfileClick() },
+                    .background(iconBg)
+                    .border(1.dp, iconBorder, CircleShape)
+                    .clickable { onSettingsClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Text("v", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("⚙️", fontSize = 14.sp)
             }
         }
     }
@@ -643,20 +645,25 @@ fun DashboardHomeScreen(
     onNavigateToBooking: () -> Unit,
     onNavigateToPackages: () -> Unit,
     onNavigateToTracking: (String) -> Unit,
-    onNavigateToProfile: () -> Unit
+    onNavigateToProfile: () -> Unit,
+    onSearchClick: () -> Unit = {},
+    onNotifClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {}
 ) {
+    val isLight = com.orbitlogic.client.ui.theme.LocalOrbitIsLight.current
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(if (isLight) com.orbitlogic.client.ui.theme.LightBg else Color.Black)
     ) {
         ClientTopAppBar(
             userName = "g",
             greeting = "Good morning",
             avatarLetter = "G",
             onProfileClick = onNavigateToProfile,
-            onSearchClick = onNavigateToPackages,
-            onNotifClick = { onNavigateToTracking("bk_active_901") }
+            onSearchClick = onSearchClick,
+            onNotifClick = onNotifClick,
+            onSettingsClick = onSettingsClick
         )
 
         Column(
@@ -3256,11 +3263,23 @@ fun TrackingScreen(bookingId: String) {
 // ─── Screen 6: Profile & Account Settings ────────────────────────────────────
 
 @Composable
-fun ProfileScreen(onLogout: () -> Unit) {
+fun ProfileScreen(
+    onLogout: () -> Unit,
+    isLightTheme: Boolean = false,
+    onToggleTheme: () -> Unit = {}
+) {
+    val isLight = com.orbitlogic.client.ui.theme.LocalOrbitIsLight.current
+    val bg = if (isLight) com.orbitlogic.client.ui.theme.LightBg else SpaceNavy
+    val cardBg = if (isLight) com.orbitlogic.client.ui.theme.LightSurface else Color(0xFF0F121C)
+    val textPrimary = if (isLight) com.orbitlogic.client.ui.theme.LightTextPrimary else Color.White
+    val textSecondary = if (isLight) com.orbitlogic.client.ui.theme.LightTextSecondary else MutedText
+    val borderColor = if (isLight) com.orbitlogic.client.ui.theme.LightBorder else OrbitBorder.copy(alpha = 0.3f)
+    val accentColor = if (isLight) com.orbitlogic.client.ui.theme.LightPrimary else OrbitCyan
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SpaceNavy)
+            .background(bg)
     ) {
         ClientTopAppBar()
 
@@ -3284,7 +3303,7 @@ fun ProfileScreen(onLogout: () -> Unit) {
                             modifier = Modifier
                                 .size(90.dp)
                                 .clip(CircleShape)
-                                .background(Brush.linearGradient(listOf(OrbitCyan, OrbitPurple))),
+                                .background(Brush.linearGradient(listOf(accentColor, OrbitPurple))),
                             contentAlignment = Alignment.Center
                         ) {
                             Text("TU", fontSize = 36.sp, fontWeight = FontWeight.Black, color = Color.White)
@@ -3294,7 +3313,7 @@ fun ProfileScreen(onLogout: () -> Unit) {
                                 .size(16.dp)
                                 .clip(CircleShape)
                                 .background(Color(0xFF00FF85))
-                                .border(3.dp, SpaceNavyLight, CircleShape)
+                                .border(3.dp, if (isLight) Color.White else SpaceNavyLight, CircleShape)
                                 .align(Alignment.BottomEnd)
                                 .offset(x = (-4).dp, y = (-4).dp)
                         )
@@ -3302,7 +3321,7 @@ fun ProfileScreen(onLogout: () -> Unit) {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Text("Test User", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    Text("Test User", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = textPrimary)
 
                     Row(
                         modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
@@ -3310,23 +3329,23 @@ fun ProfileScreen(onLogout: () -> Unit) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Surface(
-                            color = OrbitCyan.copy(alpha = 0.15f),
+                            color = accentColor.copy(alpha = 0.15f),
                             shape = RoundedCornerShape(16.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.3f))
+                            border = BorderStroke(1.dp, accentColor.copy(alpha = 0.3f))
                         ) {
-                            Text("🎬 CREATOR", color = OrbitCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                            Text("🎬 CREATOR", color = accentColor, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
                         }
-                        Text("🎨 Creator Persona", color = MutedText, fontSize = 12.sp)
+                        Text("🎨 Creator Persona", color = textSecondary, fontSize = 12.sp)
                     }
 
                     Button(
                         onClick = {},
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, OrbitCyan),
+                        border = BorderStroke(1.dp, accentColor),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.height(34.dp)
                     ) {
-                        Text("CLIENT MEMBERSHIP", color = OrbitCyan, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                        Text("CLIENT MEMBERSHIP", color = accentColor, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
                     }
                 }
             }
@@ -3338,33 +3357,33 @@ fun ProfileScreen(onLogout: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("General Information", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("General Information", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = textPrimary)
                     Button(
                         onClick = {},
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.08f)),
+                        colors = ButtonDefaults.buttonColors(containerColor = accentColor.copy(alpha = 0.1f)),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                     ) {
-                        Text("✏️ Edit", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("✏️ Edit", color = accentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Full Name", color = MutedText, fontSize = 13.sp)
-                        Text("Test User", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("Full Name", color = textSecondary, fontSize = 13.sp)
+                        Text("Test User", color = textPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Email Address", color = MutedText, fontSize = 13.sp)
-                        Text("test@example.com", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("Email Address", color = textSecondary, fontSize = 13.sp)
+                        Text("test@example.com", color = textPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Phone Number", color = MutedText, fontSize = 13.sp)
-                        Text("+91 9876543210", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("Phone Number", color = textSecondary, fontSize = 13.sp)
+                        Text("+91 9876543210", color = textPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Creative Style Preset:", color = MutedText, fontSize = 13.sp)
-                        Text("Creator", color = OrbitCyan, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("Creative Style Preset:", color = textSecondary, fontSize = 13.sp)
+                        Text("Creator", color = accentColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 }
             }
@@ -3372,6 +3391,34 @@ fun ProfileScreen(onLogout: () -> Unit) {
             // Menu Settings Card
             GlassCard(modifier = Modifier.padding(bottom = 20.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Theme Switcher Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Box(
+                                modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(accentColor.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) { Text(if (isLight) "☀️" else "🌙", fontSize = 16.sp) }
+                            Column {
+                                Text(if (isLight) "Light Theme" else "Dark Theme", fontWeight = FontWeight.Bold, color = textPrimary, fontSize = 14.sp)
+                                Text("Switch visual style of ORBIT", color = textSecondary, fontSize = 11.sp)
+                            }
+                        }
+                        Switch(
+                            checked = isLight,
+                            onCheckedChange = { onToggleTheme() },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = accentColor
+                            )
+                        )
+                    }
+
+                    Divider(color = borderColor)
+
                     Row(
                         modifier = Modifier.fillMaxWidth().clickable { },
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -3379,18 +3426,18 @@ fun ProfileScreen(onLogout: () -> Unit) {
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Box(
-                                modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(OrbitCyan.copy(alpha = 0.15f)),
+                                modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(accentColor.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center
                             ) { Text("🛡", fontSize = 16.sp) }
                             Column {
-                                Text("Privacy & Security", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
-                                Text("Manage credentials & direct permissions", color = MutedText, fontSize = 11.sp)
+                                Text("Privacy & Security", fontWeight = FontWeight.Bold, color = textPrimary, fontSize = 14.sp)
+                                Text("Manage credentials & direct permissions", color = textSecondary, fontSize = 11.sp)
                             }
                         }
-                        Text("›", color = MutedText, fontSize = 20.sp)
+                        Text("›", color = textSecondary, fontSize = 20.sp)
                     }
 
-                    Divider(color = OrbitBorder.copy(alpha = 0.3f))
+                    Divider(color = borderColor)
 
                     Row(
                         modifier = Modifier.fillMaxWidth().clickable { },
@@ -3403,14 +3450,14 @@ fun ProfileScreen(onLogout: () -> Unit) {
                                 contentAlignment = Alignment.Center
                             ) { Text("⚙️", fontSize = 16.sp) }
                             Column {
-                                Text("App Settings", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
-                                Text("Toggle notifications & sound fx", color = MutedText, fontSize = 11.sp)
+                                Text("App Settings", fontWeight = FontWeight.Bold, color = textPrimary, fontSize = 14.sp)
+                                Text("Toggle notifications & sound fx", color = textSecondary, fontSize = 11.sp)
                             }
                         }
-                        Text("›", color = MutedText, fontSize = 20.sp)
+                        Text("›", color = textSecondary, fontSize = 20.sp)
                     }
 
-                    Divider(color = OrbitBorder.copy(alpha = 0.3f))
+                    Divider(color = borderColor)
 
                     Row(
                         modifier = Modifier.fillMaxWidth().clickable { },
@@ -3419,18 +3466,19 @@ fun ProfileScreen(onLogout: () -> Unit) {
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Box(
-                                modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = 0.1f)),
+                                modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(textSecondary.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center
                             ) { Text("❓", fontSize = 16.sp) }
                             Column {
-                                Text("Help & Support", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
-                                Text("FAQs & support ticket logs", color = MutedText, fontSize = 11.sp)
+                                Text("Help & Support", fontWeight = FontWeight.Bold, color = textPrimary, fontSize = 14.sp)
+                                Text("FAQs & support ticket logs", color = textSecondary, fontSize = 11.sp)
                             }
                         }
-                        Text("›", color = MutedText, fontSize = 20.sp)
+                        Text("›", color = textSecondary, fontSize = 20.sp)
                     }
                 }
             }
+
 
             // Log Out Button
             Button(
@@ -3579,4 +3627,497 @@ fun SafeMapView(
     }
 }
 
+// ─── Search Overlay Screen ──────────────────────────────────────────────────
 
+@Composable
+fun SearchOverlayScreen(
+    isLight: Boolean,
+    onDismiss: () -> Unit,
+    onNavigateToPackages: () -> Unit
+) {
+    val bg = if (isLight) com.orbitlogic.client.ui.theme.LightSurface else Color(0xFF0A0C14)
+    val textPrimary = if (isLight) com.orbitlogic.client.ui.theme.LightTextPrimary else Color.White
+    val textSecondary = if (isLight) com.orbitlogic.client.ui.theme.LightTextSecondary else Color(0xFF94A3B8)
+    val inputBg = if (isLight) com.orbitlogic.client.ui.theme.LightInput else Color(0xFF12141C)
+    val borderColor = if (isLight) com.orbitlogic.client.ui.theme.LightBorder else Color(0xFF2A2C38)
+    val accentColor = if (isLight) com.orbitlogic.client.ui.theme.LightPrimary else OrbitCyan
+
+    var query by remember { mutableStateOf("") }
+    val suggestions = listOf(
+        "UGC Video Shoot" to "User-generated content reels",
+        "Instagram Reel" to "Vertical 9:16 short-form",
+        "Product Shoot" to "E-commerce & brand content",
+        "YouTube Short" to "60-second YouTube content",
+        "Cinematic Shoot" to "Premium film-style production",
+        "Portrait Session" to "Professional headshots & portraits"
+    )
+    val filtered = if (query.isBlank()) suggestions else suggestions.filter {
+        it.first.contains(query, ignoreCase = true) || it.second.contains(query, ignoreCase = true)
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable { onDismiss() }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.72f)
+                .align(Alignment.TopCenter)
+                .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+                .background(bg)
+                .clickable(enabled = false) {}
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp, vertical = 20.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Search", color = textPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(if (isLight) com.orbitlogic.client.ui.theme.LightBg else Color(0xFF1A1C28))
+                            .clickable { onDismiss() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("✕", color = textSecondary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Search Input
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(inputBg)
+                        .border(1.dp, if (query.isNotBlank()) accentColor else borderColor, RoundedCornerShape(16.dp))
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("🔍", fontSize = 16.sp)
+                        androidx.compose.foundation.text.BasicTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            modifier = Modifier.weight(1f),
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                color = textPrimary,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            decorationBox = { inner ->
+                                if (query.isEmpty()) Text("Search shoots, packages, styles...", color = if (isLight) com.orbitlogic.client.ui.theme.LightPlaceholder else Color(0xFF64748B), fontSize = 15.sp)
+                                inner()
+                            }
+                        )
+                        if (query.isNotBlank()) {
+                            Box(
+                                modifier = Modifier.size(20.dp).clip(CircleShape)
+                                    .background(textSecondary.copy(alpha = 0.15f))
+                                    .clickable { query = "" },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("✕", color = textSecondary, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(
+                    if (query.isBlank()) "Popular searches" else "Results (${filtered.size})",
+                    color = textSecondary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Results
+                androidx.compose.foundation.lazy.LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    androidx.compose.foundation.lazy.items(filtered) { (title, subtitle) ->
+                        Surface(
+                            color = if (isLight) com.orbitlogic.client.ui.theme.LightSurface else Color(0xFF12141C),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, if (isLight) com.orbitlogic.client.ui.theme.LightDivider else Color(0xFF22242F)),
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                onNavigateToPackages()
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp))
+                                        .background(if (isLight) com.orbitlogic.client.ui.theme.LightPrimaryTint else accentColor.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("🎬", fontSize = 16.sp)
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(title, color = textPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(subtitle, color = textSecondary, fontSize = 12.sp)
+                                }
+                                Text("→", color = accentColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Notifications Overlay Screen ────────────────────────────────────────────
+
+@Composable
+fun NotificationsOverlayScreen(
+    isLight: Boolean,
+    onDismiss: () -> Unit
+) {
+    val bg = if (isLight) com.orbitlogic.client.ui.theme.LightSurface else Color(0xFF0A0C14)
+    val textPrimary = if (isLight) com.orbitlogic.client.ui.theme.LightTextPrimary else Color.White
+    val textSecondary = if (isLight) com.orbitlogic.client.ui.theme.LightTextSecondary else Color(0xFF94A3B8)
+    val accentColor = if (isLight) com.orbitlogic.client.ui.theme.LightPrimary else OrbitCyan
+    val successColor = if (isLight) com.orbitlogic.client.ui.theme.LightSuccess else OrbitGreen
+
+    val notifications = listOf(
+        Triple("Booking Confirmed", "Your shoot is scheduled for today at 2:00 PM", "✅"),
+        Triple("Creator En Route", "Your creator is 10 minutes away", "🚗"),
+        Triple("Shoot Started", "Your session has begun. Great content incoming!", "🎬"),
+        Triple("Editing in Progress", "Your footage is being edited by our team", "✂️"),
+        Triple("Content Delivered", "Your reels are ready to download!", "🎉")
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable { onDismiss() }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.78f)
+                .align(Alignment.TopCenter)
+                .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+                .background(bg)
+                .clickable(enabled = false) {}
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp, vertical = 20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Notifications", color = textPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text("${notifications.size} updates", color = textSecondary, fontSize = 12.sp)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp).clip(CircleShape)
+                            .background(if (isLight) com.orbitlogic.client.ui.theme.LightBg else Color(0xFF1A1C28))
+                            .clickable { onDismiss() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("✕", color = textSecondary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                androidx.compose.foundation.lazy.LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    androidx.compose.foundation.lazy.items(notifications.reversed()) { (title, msg, icon) ->
+                        Surface(
+                            color = if (isLight) com.orbitlogic.client.ui.theme.LightSurface else Color(0xFF12141C),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, if (isLight) com.orbitlogic.client.ui.theme.LightDivider else Color(0xFF22242F)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
+                                        .background(if (isLight) com.orbitlogic.client.ui.theme.LightPrimaryTint else accentColor.copy(alpha = 0.1f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(icon, fontSize = 20.sp)
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(title, color = textPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(msg, color = textSecondary, fontSize = 12.sp)
+                                }
+                                Box(
+                                    modifier = Modifier.size(8.dp).clip(CircleShape).background(accentColor)
+                                )
+                            }
+                        }
+                    }
+                    item {
+                        Text(
+                            "No more notifications",
+                            color = textSecondary,
+                            fontSize = 12.sp,
+                            modifier = androidx.compose.ui.Modifier.fillMaxWidth().padding(top = 8.dp),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── App Settings Overlay Screen ─────────────────────────────────────────────
+
+@Composable
+fun AppSettingsOverlayScreen(
+    isLight: Boolean,
+    onDismiss: () -> Unit,
+    onToggleTheme: () -> Unit,
+    onRequestPermissions: () -> Unit
+) {
+    val bg = if (isLight) com.orbitlogic.client.ui.theme.LightSurface else Color(0xFF0A0C14)
+    val bg2 = if (isLight) com.orbitlogic.client.ui.theme.LightBg else Color(0xFF12141C)
+    val textPrimary = if (isLight) com.orbitlogic.client.ui.theme.LightTextPrimary else Color.White
+    val textSecondary = if (isLight) com.orbitlogic.client.ui.theme.LightTextSecondary else Color(0xFF94A3B8)
+    val borderColor = if (isLight) com.orbitlogic.client.ui.theme.LightDivider else Color(0xFF22242F)
+    val accentColor = if (isLight) com.orbitlogic.client.ui.theme.LightPrimary else OrbitCyan
+    val surfaceColor = if (isLight) com.orbitlogic.client.ui.theme.LightSurface else Color(0xFF14161E)
+    val rowBg = if (isLight) com.orbitlogic.client.ui.theme.LightSurface else Color(0xFF16181F)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable { onDismiss() }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.82f)
+                .align(Alignment.TopCenter)
+                .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+                .background(bg)
+                .clickable(enabled = false) {}
+        ) {
+            androidx.compose.foundation.rememberScrollState().let { scrollState ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                        .padding(horizontal = 20.dp, vertical = 20.dp)
+                ) {
+                    // Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Settings", color = textPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            Text("App preferences & controls", color = textSecondary, fontSize = 12.sp)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp).clip(CircleShape)
+                                .background(bg2)
+                                .clickable { onDismiss() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("✕", color = textSecondary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // ─ Appearance Section ─────────────────────────────────
+                    Text("APPEARANCE", color = textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Surface(
+                        color = rowBg,
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, borderColor),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Box(
+                                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp))
+                                        .background(if (isLight) com.orbitlogic.client.ui.theme.LightPrimaryTint else accentColor.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(if (isLight) "☀️" else "🌙", fontSize = 18.sp)
+                                }
+                                Column {
+                                    Text(if (isLight) "Light Theme" else "Dark Theme", color = textPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("Tap to switch theme", color = textSecondary, fontSize = 12.sp)
+                                }
+                            }
+                            Switch(
+                                checked = isLight,
+                                onCheckedChange = { onToggleTheme() },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = accentColor,
+                                    uncheckedThumbColor = Color.White,
+                                    uncheckedTrackColor = if (isLight) com.orbitlogic.client.ui.theme.LightBorder else Color(0xFF3A3C48)
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // ─ Notifications Section ──────────────────────────────
+                    Text("NOTIFICATIONS", color = textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    var notifEnabled by remember { mutableStateOf(true) }
+                    var bookingAlerts by remember { mutableStateOf(true) }
+                    var marketingAlerts by remember { mutableStateOf(false) }
+
+                    listOf(
+                        Triple("Push Notifications", "All app notifications", notifEnabled to { v: Boolean -> notifEnabled = v }),
+                        Triple("Booking Alerts", "Status updates & reminders", bookingAlerts to { v: Boolean -> bookingAlerts = v }),
+                        Triple("Promotions", "Offers & new packages", marketingAlerts to { v: Boolean -> marketingAlerts = v })
+                    ).forEach { (title, subtitle, statePair) ->
+                        val (checked, setter) = statePair
+                        Surface(
+                            color = rowBg,
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, borderColor),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(title, color = textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                    Text(subtitle, color = textSecondary, fontSize = 12.sp)
+                                }
+                                Switch(
+                                    checked = checked,
+                                    onCheckedChange = { setter(it) },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = accentColor
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // ─ Permissions Section ─────────────────────────────────
+                    Text("PERMISSIONS", color = textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Surface(
+                        color = rowBg,
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, borderColor),
+                        modifier = Modifier.fillMaxWidth().clickable { onRequestPermissions() }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Box(
+                                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp))
+                                        .background(if (isLight) Color(0xFFFFF7ED) else Color(0xFF2A1F0A)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("🔐", fontSize = 18.sp)
+                                }
+                                Column {
+                                    Text("App Permissions", color = textPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("Location, Camera, Notifications", color = textSecondary, fontSize = 12.sp)
+                                }
+                            }
+                            Text("›", color = textSecondary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // ─ About Section ──────────────────────────────────────
+                    Text("ABOUT", color = textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    listOf(
+                        "App Version" to "2.4.1 (build 241)",
+                        "Terms of Service" to "View terms",
+                        "Privacy Policy" to "View policy"
+                    ).forEachIndexed { idx, (label, value) ->
+                        Surface(
+                            color = rowBg,
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, borderColor),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(label, color = textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                Text(value, color = textSecondary, fontSize = 13.sp)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Close button
+                    Button(
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isLight) com.orbitlogic.client.ui.theme.LightPrimary else Color(0xFF1E3A5F)
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth().height(52.dp)
+                    ) {
+                        Text("Done", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    }
+                }
+            }
+        }
+    }
+}

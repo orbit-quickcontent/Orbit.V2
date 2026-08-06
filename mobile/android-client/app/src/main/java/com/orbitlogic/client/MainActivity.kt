@@ -3,6 +3,8 @@ package com.orbitlogic.client
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,12 +37,22 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            OrbitTheme {
+            val context = this
+            val prefsManager = remember { com.orbitlogic.client.storage.PrefsManager(context) }
+            var isLightTheme by remember { mutableStateOf(prefsManager.isLightTheme()) }
+
+            OrbitTheme(useLightTheme = isLightTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainClientNavigationHost()
+                    MainClientNavigationHost(
+                        isLightTheme = isLightTheme,
+                        onToggleTheme = {
+                            isLightTheme = !isLightTheme
+                            prefsManager.setLightTheme(isLightTheme)
+                        }
+                    )
                 }
             }
         }
@@ -48,7 +60,10 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainClientNavigationHost() {
+fun MainClientNavigationHost(
+    isLightTheme: Boolean,
+    onToggleTheme: () -> Unit
+) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefsManager = remember { com.orbitlogic.client.storage.PrefsManager(context) }
     var isAppLoading by remember { mutableStateOf(true) }
@@ -57,6 +72,11 @@ fun MainClientNavigationHost() {
     var selectedPackageId by remember { mutableStateOf("pkg-professional") }
     var activeBookingId by remember { mutableStateOf("bk_active_901") }
     val coroutineScope = rememberCoroutineScope()
+
+    // ── Overlay panel states ────────────────────────────────────────────────
+    var showSearch by remember { mutableStateOf(false) }
+    var showNotifications by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
 
     val requiredPermissions = remember {
         mutableStateListOf(
@@ -90,16 +110,13 @@ fun MainClientNavigationHost() {
         }
     }
 
-    // Load the most recent active booking ID from the API on auth
     LaunchedEffect(isAuthenticated) {
         if (isAuthenticated) {
             try {
                 val token = "Bearer ${prefsManager.getAuthToken()}"
                 val bookings = ApiClient.apiService.getBookings(token)
                 val active = bookings.firstOrNull { it.status != "DELIVERED" && it.status != "CANCELLED" }
-                if (active != null) {
-                    activeBookingId = active.id
-                }
+                if (active != null) activeBookingId = active.id
             } catch (e: Exception) {
                 android.util.Log.e("MainNav", "Failed to load bookings", e)
             }
@@ -114,15 +131,12 @@ fun MainClientNavigationHost() {
                 prefsManager.saveAuthSession(token, "CLIENT")
                 isAuthenticated = true
                 currentTab = "home"
-                // Fetch bookings after login
                 coroutineScope.launch {
                     try {
                         val authToken = "Bearer $token"
                         val bookings = ApiClient.apiService.getBookings(authToken)
                         val active = bookings.firstOrNull { it.status != "DELIVERED" && it.status != "CANCELLED" }
-                        if (active != null) {
-                            activeBookingId = active.id
-                        }
+                        if (active != null) activeBookingId = active.id
                     } catch (_: Exception) {}
                 }
             })
@@ -131,25 +145,23 @@ fun MainClientNavigationHost() {
                 bottomBar = {
                     ClientBottomNavigationBar(
                         currentTab = currentTab,
+                        isLight = isLightTheme,
                         onSelectTab = { currentTab = it }
                     )
-                }
+                },
+                containerColor = if (isLightTheme) LightBg else SpaceNavy
             ) { innerPadding ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
                 ) {
-                    androidx.compose.animation.AnimatedContent(
+                    AnimatedContent(
                         targetState = currentTab,
                         transitionSpec = {
-                            androidx.compose.animation.ContentTransform(
-                                targetContentEnter = androidx.compose.animation.fadeIn(
-                                    animationSpec = androidx.compose.animation.core.tween(180)
-                                ),
-                                initialContentExit = androidx.compose.animation.fadeOut(
-                                    animationSpec = androidx.compose.animation.core.tween(180)
-                                )
+                            ContentTransform(
+                                targetContentEnter = fadeIn(animationSpec = tween(180)),
+                                initialContentExit = fadeOut(animationSpec = tween(180))
                             )
                         },
                         label = "ScreenTransition"
@@ -162,7 +174,10 @@ fun MainClientNavigationHost() {
                                     activeBookingId = id
                                     currentTab = "tracking"
                                 },
-                                onNavigateToProfile = { currentTab = "profile" }
+                                onNavigateToProfile = { currentTab = "profile" },
+                                onSearchClick = { showSearch = true },
+                                onNotifClick = { showNotifications = true },
+                                onSettingsClick = { showSettings = true }
                             )
                             "packages" -> PackagesScreen(
                                 onSelectPackage = { pkgId ->
@@ -172,16 +187,16 @@ fun MainClientNavigationHost() {
                             )
                             "booking" -> BookingFlowScreen(
                                 packageId = selectedPackageId,
-                                onBookingComplete = {
-                                    currentTab = "tracking"
-                                }
+                                onBookingComplete = { currentTab = "tracking" }
                             )
                             "tracking" -> TrackingScreen(bookingId = activeBookingId)
                             "profile" -> ProfileScreen(
                                 onLogout = {
                                     prefsManager.clearSession()
                                     isAuthenticated = false
-                                }
+                                },
+                                isLightTheme = isLightTheme,
+                                onToggleTheme = onToggleTheme
                             )
                         }
                     }
@@ -189,14 +204,38 @@ fun MainClientNavigationHost() {
             }
         }
 
+        // ── Overlay Panels ──────────────────────────────────────────────────
+        if (showSearch) {
+            SearchOverlayScreen(
+                isLight = isLightTheme,
+                onDismiss = { showSearch = false },
+                onNavigateToPackages = {
+                    showSearch = false
+                    currentTab = "packages"
+                }
+            )
+        }
+
+        if (showNotifications) {
+            NotificationsOverlayScreen(
+                isLight = isLightTheme,
+                onDismiss = { showNotifications = false }
+            )
+        }
+
+        if (showSettings) {
+            AppSettingsOverlayScreen(
+                isLight = isLightTheme,
+                onDismiss = { showSettings = false },
+                onToggleTheme = onToggleTheme,
+                onRequestPermissions = { permissionLauncher.launch(requiredPermissions.toTypedArray()) }
+            )
+        }
+
         if (!isAppLoading && showPermissionModal) {
             PermissionPromptModal(
-                onGrantPermissions = {
-                    permissionLauncher.launch(requiredPermissions.toTypedArray())
-                },
-                onDismiss = {
-                    showPermissionModal = false
-                }
+                onGrantPermissions = { permissionLauncher.launch(requiredPermissions.toTypedArray()) },
+                onDismiss = { showPermissionModal = false }
             )
         }
     }
@@ -208,17 +247,20 @@ fun PermissionPromptModal(
     onGrantPermissions: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val isLight = LocalOrbitIsLight.current
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.85f))
+            .background(Color.Black.copy(alpha = 0.7f))
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F121C)),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isLight) LightSurface else Color(0xFF0F121C)
+            ),
             shape = RoundedCornerShape(24.dp),
-            border = BorderStroke(1.dp, Color(0xFF00BFFF).copy(alpha = 0.4f)),
+            border = BorderStroke(1.dp, if (isLight) LightBorder else Color(0xFF00BFFF).copy(alpha = 0.4f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -229,35 +271,30 @@ fun PermissionPromptModal(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF00BFFF).copy(alpha = 0.15f)),
+                        .background(if (isLight) LightPrimaryTint else Color(0xFF00BFFF).copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
                     com.orbitlogic.client.ui.theme.OrbitIcon(
                         type = com.orbitlogic.client.ui.theme.OrbitIconType.Bolt,
-                        color = Color(0xFF00BFFF),
+                        color = if (isLight) LightPrimary else Color(0xFF00BFFF),
                         modifier = Modifier.size(26.dp)
                     )
                 }
-
                 Spacer(modifier = Modifier.height(16.dp))
-
                 Text(
                     "App Permissions Required",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color.White
+                    color = if (isLight) LightTextPrimary else Color.White
                 )
-
                 Text(
                     "Orbit requires device permissions to deliver high-precision shoot location selection, creator tracking, and booking updates.",
                     fontSize = 13.sp,
-                    color = Color(0xFF94A3B8),
+                    color = if (isLight) LightTextTertiary else Color(0xFF94A3B8),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
-
                 Spacer(modifier = Modifier.height(12.dp))
-
                 Column(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -266,23 +303,31 @@ fun PermissionPromptModal(
                     PermissionRowItem(com.orbitlogic.client.ui.theme.OrbitIconType.Camera, "Camera Access", "Required for profile photo & shoot instructions")
                     PermissionRowItem(com.orbitlogic.client.ui.theme.OrbitIconType.Bell, "Push Notifications", "Required for live shoot status updates")
                 }
-
                 Spacer(modifier = Modifier.height(20.dp))
-
                 Button(
                     onClick = onGrantPermissions,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00BFFF)),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isLight) LightPrimary else Color(0xFF00BFFF)
+                    ),
                     shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
                 ) {
-                    Text("Grant All Permissions", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(
+                        "Grant All Permissions",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
                 }
-
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.padding(top = 4.dp)
                 ) {
-                    Text("Skip for Now", color = Color(0xFF64748B), fontSize = 12.sp)
+                    Text(
+                        "Skip for Now",
+                        color = if (isLight) LightTextTertiary else Color(0xFF64748B),
+                        fontSize = 12.sp
+                    )
                 }
             }
         }
@@ -291,6 +336,7 @@ fun PermissionPromptModal(
 
 @Composable
 private fun PermissionRowItem(icon: com.orbitlogic.client.ui.theme.OrbitIconType, title: String, desc: String) {
+    val isLight = LocalOrbitIsLight.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth()
@@ -299,54 +345,60 @@ private fun PermissionRowItem(icon: com.orbitlogic.client.ui.theme.OrbitIconType
             modifier = Modifier
                 .size(32.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF00BFFF).copy(alpha = 0.12f)),
+                .background(if (isLight) LightPrimaryTint else Color(0xFF00BFFF).copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
-            com.orbitlogic.client.ui.theme.OrbitIcon(icon, color = Color(0xFF00BFFF), modifier = Modifier.size(16.dp))
+            com.orbitlogic.client.ui.theme.OrbitIcon(icon, color = if (isLight) LightPrimary else Color(0xFF00BFFF), modifier = Modifier.size(16.dp))
         }
         Spacer(modifier = Modifier.width(10.dp))
         Column {
-            Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            Text(desc, color = Color(0xFF64748B), fontSize = 11.sp)
+            Text(title, color = if (isLight) LightTextPrimary else Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text(desc, color = if (isLight) LightTextTertiary else Color(0xFF64748B), fontSize = 11.sp)
         }
     }
 }
 
+// ─── Bottom Navigation Bar ────────────────────────────────────────────────────
+
 @Composable
 fun ClientBottomNavigationBar(
     currentTab: String,
+    isLight: Boolean,
     onSelectTab: (String) -> Unit
 ) {
     val tabs = remember { listOf("home", "packages", "tracking", "profile") }
     val selectedIndex = tabs.indexOf(currentTab).coerceAtLeast(0)
 
-    // Hardware-accelerated ultra-smooth animation for sliding option indicator
-    val animatedIndex by androidx.compose.animation.core.animateFloatAsState(
+    val animatedIndex by animateFloatAsState(
         targetValue = selectedIndex.toFloat(),
-        animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
-            stiffness = androidx.compose.animation.core.Spring.StiffnessHigh
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessHigh
         ),
         label = "slidingIndicatorOffset"
     )
 
-    // Calculate movement delta to dynamically resize and stretch shape according to the box path
     val movementDelta = kotlin.math.abs(animatedIndex - selectedIndex.toFloat())
     val stretchFactor = 1.0f + (movementDelta * 0.25f).coerceAtMost(0.35f)
 
-    // Calculate edge curve factors so end/start corners curve seamlessly to match outer capsule box
     val leftCurveFactor = (1.0f - animatedIndex).coerceIn(0.0f, 1.0f)
     val rightCurveFactor = (animatedIndex - (tabs.size - 2).toFloat()).coerceIn(0.0f, 1.0f)
-
     val startCornerRadius = 16.dp + (10.dp * leftCurveFactor)
     val endCornerRadius = 16.dp + (10.dp * rightCurveFactor)
-
     val dynamicPillShape = RoundedCornerShape(
         topStart = startCornerRadius,
         bottomStart = startCornerRadius,
         topEnd = endCornerRadius,
         bottomEnd = endCornerRadius
     )
+
+    // Theme-adaptive colours
+    val navBg = if (isLight) Color.White.copy(alpha = 0.92f) else Color(0xFF0A0C10).copy(alpha = 0.92f)
+    val navBorder = if (isLight) LightBorder else Color.White.copy(alpha = 0.12f)
+    val pillBg = if (isLight) LightPrimaryTint else Color(0xFF161824).copy(alpha = 0.95f)
+    val pillBorder = if (isLight) LightPrimary.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.18f)
+    val activeColor = if (isLight) LightPrimary else Color(0xFF00F0FF)
+    val inactiveColor = if (isLight) LightTextTertiary else Color(0xFF8E92A0)
 
     Box(
         modifier = Modifier
@@ -355,10 +407,10 @@ fun ClientBottomNavigationBar(
         contentAlignment = Alignment.Center
     ) {
         Surface(
-            color = Color(0xFF0A0C10).copy(alpha = 0.90f),
+            color = navBg,
             shape = RoundedCornerShape(32.dp),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-            shadowElevation = 16.dp,
+            border = BorderStroke(1.dp, navBorder),
+            shadowElevation = if (isLight) 8.dp else 16.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp)
@@ -374,21 +426,17 @@ fun ClientBottomNavigationBar(
                 val overflowX = (dynamicWidth - tabWidth) / 2f
                 val finalOffset = (baseIndicatorOffset - overflowX).coerceIn(0.dp, maxWidth - dynamicWidth)
 
-                // Smooth Dynamic Resizing Active Option Background Pill + Top Glow Bar with Curved Edges
+                // Active pill indicator
                 Box(
                     modifier = Modifier
                         .offset(x = finalOffset)
                         .width(dynamicWidth)
                         .fillMaxHeight()
                         .clip(dynamicPillShape)
-                        .background(Color(0xFF161824).copy(alpha = 0.95f))
-                        .border(
-                            width = 1.dp,
-                            color = Color.White.copy(alpha = 0.18f),
-                            shape = dynamicPillShape
-                        )
+                        .background(pillBg)
+                        .border(width = 1.dp, color = pillBorder, shape = dynamicPillShape)
                 ) {
-                    // Top gradient line indicator resizing dynamically with the shape box
+                    // Top accent bar
                     val topLineWidth = (32.dp * stretchFactor).coerceIn(32.dp, 56.dp)
                     Box(
                         modifier = Modifier
@@ -397,23 +445,23 @@ fun ClientBottomNavigationBar(
                             .height(3.dp)
                             .clip(RoundedCornerShape(2.dp))
                             .background(
-                                Brush.horizontalGradient(
-                                    listOf(Color(0xFF00F0FF), Color(0xFFA056FF))
-                                )
+                                if (isLight)
+                                    Brush.horizontalGradient(listOf(LightPrimary, LightPurple))
+                                else
+                                    Brush.horizontalGradient(listOf(Color(0xFF00F0FF), Color(0xFFA056FF)))
                             )
                     )
                 }
 
-                // Row of Nav Items
                 Row(
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    BottomNavItem("Home", "home", currentTab == "home") { onSelectTab("home") }
-                    BottomNavItem("Packages", "packages", currentTab == "packages") { onSelectTab("packages") }
-                    BottomNavItem("Track", "tracking", currentTab == "tracking") { onSelectTab("tracking") }
-                    BottomNavItem("Profile", "profile", currentTab == "profile") { onSelectTab("profile") }
+                    BottomNavItem("Home", "home", currentTab == "home", activeColor, inactiveColor) { onSelectTab("home") }
+                    BottomNavItem("Packages", "packages", currentTab == "packages", activeColor, inactiveColor) { onSelectTab("packages") }
+                    BottomNavItem("Track", "tracking", currentTab == "tracking", activeColor, inactiveColor) { onSelectTab("tracking") }
+                    BottomNavItem("Profile", "profile", currentTab == "profile", activeColor, inactiveColor) { onSelectTab("profile") }
                 }
             }
         }
@@ -423,68 +471,29 @@ fun ClientBottomNavigationBar(
 @Composable
 fun HomeVectorIcon(color: Color, modifier: Modifier = Modifier) {
     androidx.compose.foundation.Canvas(modifier = modifier.size(20.dp)) {
-        val w = size.width
-        val h = size.height
+        val w = size.width; val h = size.height
         val path = androidx.compose.ui.graphics.Path().apply {
-            moveTo(w * 0.5f, h * 0.12f)
-            lineTo(w * 0.88f, h * 0.44f)
-            lineTo(w * 0.78f, h * 0.44f)
-            lineTo(w * 0.78f, h * 0.88f)
-            lineTo(w * 0.22f, h * 0.88f)
-            lineTo(w * 0.22f, h * 0.44f)
-            lineTo(w * 0.12f, h * 0.44f)
-            close()
+            moveTo(w * 0.5f, h * 0.12f); lineTo(w * 0.88f, h * 0.44f); lineTo(w * 0.78f, h * 0.44f)
+            lineTo(w * 0.78f, h * 0.88f); lineTo(w * 0.22f, h * 0.88f); lineTo(w * 0.22f, h * 0.44f)
+            lineTo(w * 0.12f, h * 0.44f); close()
         }
-        drawPath(
-            path = path,
-            color = color,
-            style = Stroke(
-                width = 2.dp.toPx(),
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round
-            )
-        )
-        // Door arch
+        drawPath(path = path, color = color, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         val doorPath = androidx.compose.ui.graphics.Path().apply {
-            moveTo(w * 0.40f, h * 0.88f)
-            lineTo(w * 0.40f, h * 0.62f)
-            lineTo(w * 0.60f, h * 0.62f)
-            lineTo(w * 0.60f, h * 0.88f)
+            moveTo(w * 0.40f, h * 0.88f); lineTo(w * 0.40f, h * 0.62f); lineTo(w * 0.60f, h * 0.62f); lineTo(w * 0.60f, h * 0.88f)
         }
-        drawPath(
-            path = doorPath,
-            color = color,
-            style = Stroke(
-                width = 1.8.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-        )
+        drawPath(path = doorPath, color = color, style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round))
     }
 }
 
 @Composable
 fun PackageVectorIcon(color: Color, modifier: Modifier = Modifier) {
     androidx.compose.foundation.Canvas(modifier = modifier.size(20.dp)) {
-        val w = size.width
-        val h = size.height
+        val w = size.width; val h = size.height
         val boxPath = androidx.compose.ui.graphics.Path().apply {
-            moveTo(w * 0.5f, h * 0.12f)
-            lineTo(w * 0.88f, h * 0.32f)
-            lineTo(w * 0.88f, h * 0.72f)
-            lineTo(w * 0.5f, h * 0.90f)
-            lineTo(w * 0.12f, h * 0.72f)
-            lineTo(w * 0.12f, h * 0.32f)
-            close()
+            moveTo(w * 0.5f, h * 0.12f); lineTo(w * 0.88f, h * 0.32f); lineTo(w * 0.88f, h * 0.72f)
+            lineTo(w * 0.5f, h * 0.90f); lineTo(w * 0.12f, h * 0.72f); lineTo(w * 0.12f, h * 0.32f); close()
         }
-        drawPath(
-            path = boxPath,
-            color = color,
-            style = Stroke(
-                width = 1.8.dp.toPx(),
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round
-            )
-        )
+        drawPath(path = boxPath, color = color, style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         drawLine(color = color, start = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.52f), end = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.90f), strokeWidth = 1.8.dp.toPx())
         drawLine(color = color, start = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.52f), end = androidx.compose.ui.geometry.Offset(w * 0.88f, h * 0.32f), strokeWidth = 1.8.dp.toPx())
         drawLine(color = color, start = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.52f), end = androidx.compose.ui.geometry.Offset(w * 0.12f, h * 0.32f), strokeWidth = 1.8.dp.toPx())
@@ -495,23 +504,9 @@ fun PackageVectorIcon(color: Color, modifier: Modifier = Modifier) {
 fun TrackVectorIcon(color: Color, modifier: Modifier = Modifier) {
     androidx.compose.foundation.Canvas(modifier = modifier.size(20.dp)) {
         val center = androidx.compose.ui.geometry.Offset(size.width * 0.5f, size.height * 0.5f)
-        drawCircle(
-            color = color,
-            radius = size.width * 0.42f,
-            center = center,
-            style = Stroke(width = 1.8.dp.toPx())
-        )
-        drawCircle(
-            color = color,
-            radius = size.width * 0.24f,
-            center = center,
-            style = Stroke(width = 1.8.dp.toPx())
-        )
-        drawCircle(
-            color = color,
-            radius = size.width * 0.08f,
-            center = center
-        )
+        drawCircle(color = color, radius = size.width * 0.42f, center = center, style = Stroke(width = 1.8.dp.toPx()))
+        drawCircle(color = color, radius = size.width * 0.24f, center = center, style = Stroke(width = 1.8.dp.toPx()))
+        drawCircle(color = color, radius = size.width * 0.08f, center = center)
     }
 }
 
@@ -520,26 +515,24 @@ fun RowScope.BottomNavItem(
     label: String,
     tabKey: String,
     isSelected: Boolean,
+    activeColor: Color,
+    inactiveColor: Color,
     onClick: () -> Unit
 ) {
-    val tabScale by androidx.compose.animation.core.animateFloatAsState(
+    val isLight = LocalOrbitIsLight.current
+    val tabScale by animateFloatAsState(
         targetValue = if (isSelected) 1.05f else 1.0f,
-        animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
-        ),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "tabScale"
     )
-
-    val iconColor by androidx.compose.animation.animateColorAsState(
-        targetValue = if (isSelected) Color(0xFF00F0FF) else Color(0xFF8E92A0),
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+    val iconColor by animateColorAsState(
+        targetValue = if (isSelected) activeColor else inactiveColor,
+        animationSpec = tween(durationMillis = 200),
         label = "iconColor"
     )
-
-    val textColor by androidx.compose.animation.animateColorAsState(
-        targetValue = if (isSelected) Color(0xFF00F0FF) else Color(0xFF8E92A0),
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+    val textColor by animateColorAsState(
+        targetValue = if (isSelected) activeColor else inactiveColor,
+        animationSpec = tween(durationMillis = 200),
         label = "textColor"
     )
 
@@ -561,38 +554,27 @@ fun RowScope.BottomNavItem(
                 "packages" -> PackageVectorIcon(color = iconColor)
                 "tracking" -> TrackVectorIcon(color = iconColor)
                 "profile" -> {
-                    val avatarBorderColor by androidx.compose.animation.animateColorAsState(
-                        targetValue = if (isSelected) Color.White else Color.White.copy(alpha = 0.15f),
-                        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
-                        label = "avatarBorderColor"
+                    val avatarBg by animateColorAsState(
+                        targetValue = if (isSelected) activeColor else inactiveColor.copy(alpha = 0.2f),
+                        label = "avatarBg"
                     )
-                    val avatarTextColor by androidx.compose.animation.animateColorAsState(
-                        targetValue = if (isSelected) Color.Black else Color(0xFF8E92A0),
-                        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
-                        label = "avatarTextColor"
-                    )
-
                     Box(
                         modifier = Modifier
                             .size(22.dp)
                             .clip(CircleShape)
-                            .background(
-                                if (isSelected) Brush.horizontalGradient(listOf(Color(0xFF00F0FF), Color(0xFFA056FF)))
-                                else Brush.linearGradient(listOf(Color(0xFF222630), Color(0xFF16181E)))
-                            )
-                            .border(1.dp, avatarBorderColor, CircleShape),
+                            .background(avatarBg.copy(alpha = 0.25f))
+                            .border(1.5.dp, avatarBg, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "TU",
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Black,
-                            color = avatarTextColor
+                            color = avatarBg
                         )
                     }
                 }
             }
-
             Text(
                 text = label,
                 fontSize = 10.sp,
