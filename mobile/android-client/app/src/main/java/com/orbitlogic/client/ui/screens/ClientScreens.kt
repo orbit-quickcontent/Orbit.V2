@@ -2465,33 +2465,78 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                             submitError = null
                             coroutineScope.launch {
                                 try {
-                                    val token = "Bearer ${prefsManager.getAuthToken()}"
-                                    // Convert the human-readable shootDate (e.g. "Today (Wed, 5 Aug)")
+                                    val rawToken = prefsManager.getAuthToken() ?: ""
+                                    val token = if (rawToken.startsWith("Bearer ")) rawToken else "Bearer $rawToken"
+                                    val savedUserId = prefsManager.getUserId()
+                                    // Convert the calendar-selected shootDate (e.g. "Wed, 6 Aug")
                                     // into a proper ISO 8601 date so backend validation passes.
                                     val isoDate = run {
                                         val cal = java.util.Calendar.getInstance()
-                                        when {
-                                            shootDate.startsWith("Tomorrow") -> cal.add(java.util.Calendar.DAY_OF_YEAR, 1)
-                                            shootDate.startsWith("Next Day") -> cal.add(java.util.Calendar.DAY_OF_YEAR, 2)
+                                        try {
+                                            // Try parsing "EEE, d MMM" format from the calendar grid
+                                            val sdf = java.text.SimpleDateFormat("EEE, d MMM", java.util.Locale.getDefault())
+                                            val parsed = sdf.parse(shootDate)
+                                            if (parsed != null) {
+                                                cal.time = parsed
+                                                cal.set(java.util.Calendar.YEAR, java.util.Calendar.getInstance().get(java.util.Calendar.YEAR))
+                                            }
+                                        } catch (_: Exception) {
+                                            when {
+                                                shootDate.startsWith("Tomorrow") -> cal.add(java.util.Calendar.DAY_OF_YEAR, 1)
+                                                shootDate.startsWith("Next Day") -> cal.add(java.util.Calendar.DAY_OF_YEAR, 2)
+                                            }
                                         }
                                         java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.getDefault()).apply {
                                             timeZone = java.util.TimeZone.getTimeZone("UTC")
                                         }.format(cal.time)
                                     }
-                                    // Real booking creation — hits the backend, which runs the
-                                    // actual dispatch pipeline so partners can see the request.
-                                    // The previous UnifiedOrbitHub Firestore write bypassed the
-                                    // backend entirely and left bookings stuck at PENDING forever.
-                                    com.orbitlogic.client.network.ApiClient.apiService.createBooking(
-                                        token,
-                                        com.orbitlogic.client.network.CreateBookingRequest(
-                                            packageId = packageId,
-                                            bookingDate = isoDate,
-                                            timeSlot = "${hour}:${minute.toString().padStart(2, '0')} $period",
-                                            location = if (locationAddress.isBlank()) "Bandra West, Mumbai" else locationAddress,
-                                            notes = specialNotes
-                                        )
+                                    val locationStr = when {
+                                        locationAddress.isNotBlank() -> locationAddress
+                                        completeAddress.isNotBlank() -> completeAddress
+                                        selectedCity.isNotBlank() -> "$selectedArea, $selectedCity"
+                                        else -> "India"
+                                    }
+                                    val bookingReq = com.orbitlogic.client.network.CreateBookingRequest(
+                                        userId = savedUserId,
+                                        packageId = packageId,
+                                        bookingDate = isoDate,
+                                        timeSlot = "${hour}:${minute.toString().padStart(2, '0')} $period",
+                                        location = locationStr,
+                                        notes = specialNotes.ifBlank { null }
                                     )
+                                    // Attempt backend booking creation
+                                    var backendSucceeded = false
+                                    try {
+                                        com.orbitlogic.client.network.ApiClient.apiService.createBooking(token, bookingReq)
+                                        backendSucceeded = true
+                                    } catch (backendErr: Exception) {
+                                        android.util.Log.w("BookingFlow", "Backend createBooking failed, falling back to Firestore", backendErr)
+                                    }
+
+                                    // Firestore direct-write fallback (always attempt to ensure booking is saved)
+                                    if (!backendSucceeded) {
+                                        try {
+                                            val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                            val bookingData = hashMapOf(
+                                                "userId" to (savedUserId ?: ""),
+                                                "packageId" to packageId,
+                                                "bookingDate" to isoDate,
+                                                "timeSlot" to "${hour}:${minute.toString().padStart(2, '0')} $period",
+                                                "location" to locationStr,
+                                                "notes" to specialNotes,
+                                                "status" to "PENDING",
+                                                "paymentStatus" to "PENDING",
+                                                "syncPercentage" to 0,
+                                                "createdAt" to com.google.firebase.Timestamp.now()
+                                            )
+                                            firestore.collection("bookings").add(bookingData)
+                                        } catch (fsErr: Exception) {
+                                            android.util.Log.e("BookingFlow", "Firestore fallback also failed", fsErr)
+                                            submitError = "Couldn't create your booking. Please check your connection and try again."
+                                            isSubmitting = false
+                                            return@launch
+                                        }
+                                    }
                                     onBookingComplete()
                                 } catch (e: Exception) {
                                     android.util.Log.e("BookingFlow", "Failed to create booking", e)

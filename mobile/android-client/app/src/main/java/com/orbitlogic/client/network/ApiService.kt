@@ -58,11 +58,20 @@ data class BookingDto(
 )
 
 data class CreateBookingRequest(
+    val userId: String? = null,
     val packageId: String,
     val bookingDate: String,
     val timeSlot: String,
     val location: String,
     val notes: String?
+)
+
+// Backend wraps the created booking in { booking: {...} }
+data class BookingResponse(
+    val booking: BookingDto?,
+    // Fallback: some endpoints return fields directly at top level
+    val id: String? = null,
+    val status: String? = null
 )
 
 data class UpdateUserRequest(
@@ -168,7 +177,7 @@ interface ApiService {
     suspend fun createBooking(
         @Header("Authorization") token: String,
         @Body request: CreateBookingRequest
-    ): BookingDto
+    ): BookingResponse
 
     @GET("bookings/{id}")
     suspend fun getBookingDetails(
