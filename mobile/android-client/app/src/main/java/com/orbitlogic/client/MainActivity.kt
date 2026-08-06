@@ -195,8 +195,7 @@ fun MainClientNavigationHost(
                                     prefsManager.clearSession()
                                     isAuthenticated = false
                                 },
-                                isLightTheme = isLightTheme,
-                                onToggleTheme = onToggleTheme
+                                onOpenSettings = { showSettings = true }
                             )
                         }
                     }

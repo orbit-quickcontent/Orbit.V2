@@ -3265,8 +3265,7 @@ fun TrackingScreen(bookingId: String) {
 @Composable
 fun ProfileScreen(
     onLogout: () -> Unit,
-    isLightTheme: Boolean = false,
-    onToggleTheme: () -> Unit = {}
+    onOpenSettings: () -> Unit = {}
 ) {
     val isLight = com.orbitlogic.client.ui.theme.LocalOrbitIsLight.current
     val bg = if (isLight) com.orbitlogic.client.ui.theme.LightBg else SpaceNavy
@@ -3281,7 +3280,9 @@ fun ProfileScreen(
             .fillMaxSize()
             .background(bg)
     ) {
-        ClientTopAppBar()
+        ClientTopAppBar(
+            onSettingsClick = onOpenSettings
+        )
 
         Column(
             modifier = Modifier
@@ -3391,34 +3392,6 @@ fun ProfileScreen(
             // Menu Settings Card
             GlassCard(modifier = Modifier.padding(bottom = 20.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    // Theme Switcher Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Box(
-                                modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(accentColor.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) { Text(if (isLight) "☀️" else "🌙", fontSize = 16.sp) }
-                            Column {
-                                Text(if (isLight) "Light Theme" else "Dark Theme", fontWeight = FontWeight.Bold, color = textPrimary, fontSize = 14.sp)
-                                Text("Switch visual style of ORBIT", color = textSecondary, fontSize = 11.sp)
-                            }
-                        }
-                        Switch(
-                            checked = isLight,
-                            onCheckedChange = { onToggleTheme() },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = accentColor
-                            )
-                        )
-                    }
-
-                    Divider(color = borderColor)
-
                     Row(
                         modifier = Modifier.fillMaxWidth().clickable { },
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -3440,7 +3413,7 @@ fun ProfileScreen(
                     Divider(color = borderColor)
 
                     Row(
-                        modifier = Modifier.fillMaxWidth().clickable { },
+                        modifier = Modifier.fillMaxWidth().clickable { onOpenSettings() },
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -3451,13 +3424,14 @@ fun ProfileScreen(
                             ) { Text("⚙️", fontSize = 16.sp) }
                             Column {
                                 Text("App Settings", fontWeight = FontWeight.Bold, color = textPrimary, fontSize = 14.sp)
-                                Text("Toggle notifications & sound fx", color = textSecondary, fontSize = 11.sp)
+                                Text("Theme visual style, notifications & controls", color = textSecondary, fontSize = 11.sp)
                             }
                         }
                         Text("›", color = textSecondary, fontSize = 20.sp)
                     }
 
                     Divider(color = borderColor)
+
 
                     Row(
                         modifier = Modifier.fillMaxWidth().clickable { },
