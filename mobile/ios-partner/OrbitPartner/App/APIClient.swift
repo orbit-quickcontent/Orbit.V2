@@ -45,7 +45,10 @@ struct PartnerProfile: Codable, Identifiable {
 
 class APIClient {
     static let shared = APIClient()
-    private let baseURL = URL(string: "http://localhost:3001/api/")!
+    private let baseURL: URL = {
+        let urlStr = ProcessInfo.processInfo.environment["ORBIT_API_URL"] ?? "https://app.orbit-quickcontent.com/api/"
+        return URL(string: urlStr)!
+    }()
     
     private init() {}
     

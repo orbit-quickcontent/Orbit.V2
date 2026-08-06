@@ -380,7 +380,6 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                                     coroutineScope.launch {
                                         val backendAuth = authenticateWithBackend(email, fullName)
                                         if (backendAuth != null) {
-                                            supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, "Creator")
                                             prefsManager.saveAuthSession(backendAuth.first, "CLIENT")
                                             prefsManager.saveUserId(backendAuth.second)
                                             onLoginSuccess(backendAuth.first)
@@ -605,7 +604,6 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
                                     val response = com.orbitlogic.client.network.ApiClient.apiService.verifyOtp(
                                         com.orbitlogic.client.network.VerifyOtpRequest(email, otpCode)
                                     )
-                                    supabaseAuthManager.signUpWithEmail(email, "OrbitClient123!", fullName, phone, "Creator")
                                     prefsManager.saveAuthSession(response.token, "CLIENT")
                                     prefsManager.saveUserId(response.user.id)
                                     onLoginSuccess(response.token)

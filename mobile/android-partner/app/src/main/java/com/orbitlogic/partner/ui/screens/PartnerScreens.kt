@@ -574,15 +574,11 @@ fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
                         appointmentMessage = null
                         coroutineScope.launch {
                             try {
-                                val supabaseId = supabaseAuthManager.signUpPartner(email, "OrbitPartner123!", name, phone)
                                 val backendAuth = authenticateWithBackend(email, name, verificationCode)
                                 when {
                                     backendAuth != null -> onLoginSuccess(backendAuth.first, backendAuth.second)
                                     email.trim().lowercase() == "orbit.quickcontent@gmail.com" && verificationCode.trim() == "123456" -> {
                                         onLoginSuccess("master_token_123456", "master_partner_id")
-                                    }
-                                    supabaseId != null -> {
-                                        errorMessage = "Connected to Supabase but the app server is unreachable — please try again."
                                     }
                                     else -> {
                                         errorMessage = "Invalid verification code or unverified account."
@@ -749,7 +745,7 @@ fun PartnerSplashScreen(onSplashFinished: () -> Unit) {
 
             val statusText = when {
                 progress < 0.35f -> "Initializing Partner Network..."
-                progress < 0.70f -> "Syncing Supabase Auth & RLS..."
+                progress < 0.70f -> "Connecting to Orbit backend..."
                 progress < 0.95f -> "Connecting to WebSocket :3003..."
                 else -> "Online"
             }

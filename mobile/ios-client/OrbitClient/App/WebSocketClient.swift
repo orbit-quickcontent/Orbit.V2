@@ -7,7 +7,8 @@ class WebSocketClient: NSObject {
     private override init() {}
     
     func connect(token: String, onBookingUpdate: @escaping (String, String) -> Void) {
-        guard let url = URL(string: "ws://localhost:3001/socket.io/?EIO=4&transport=websocket") else {
+        let wsUrl = ProcessInfo.processInfo.environment["ORBIT_WS_URL"] ?? "wss://api.orbit-quickcontent.com"
+        guard let url = URL(string: "\(wsUrl)/socket.io/?EIO=4&transport=websocket") else {
             return
         }
         
