@@ -789,6 +789,31 @@ fun DashboardHomeScreen(
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
+            // ── Reciprocity — social proof, value before commitment (Principle 3)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF050D12)),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.size(8.dp).clip(CircleShape).background(OrbitCyan)
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Creators available near you right now", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Browse portfolios & pricing — no sign-up needed", color = MutedText, fontSize = 11.sp)
+                    }
+                    Surface(color = OrbitCyan.copy(alpha = 0.12f), shape = RoundedCornerShape(8.dp)) {
+                        Text("3 LIVE", color = OrbitCyan, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                    }
+                }
+            }
+
             // Subtitle header matching image
             Text(
                 text = "Ready to create something cinematic?",
@@ -1477,8 +1502,29 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
     var period by remember { mutableStateOf(initPeriod) }
     var locationAddress by remember { mutableStateOf("") }
     var specialNotes by remember { mutableStateOf("") }
+    // step 1 = date/time/location, step 2 = IKEA personalization, step 3 = review & pay
     var step by remember { mutableIntStateOf(1) }
     var selectedPaymentMethod by remember { mutableStateOf("upi") }
+
+    // Smart Defaults — pre-selected options (Principle 1)
+    var selectedDuration by remember { mutableStateOf("30 min") }
+    var selectedQuality by remember { mutableStateOf("4K") }
+    var selectedAudio by remember { mutableStateOf("Wireless Mic Included") }
+
+    // IKEA Effect — reel personalization (Principle 4)
+    var selectedReelStyle by remember { mutableStateOf("Cinematic") }
+    var selectedMusicMood by remember { mutableStateOf("Energetic") }
+    var campaignTitle by remember { mutableStateOf("") }
+
+    // Loss Aversion — countdown timer (Principle 5)
+    var slotSecondsLeft by remember { mutableIntStateOf(299) } // 4:59
+    LaunchedEffect(Unit) {
+        while (slotSecondsLeft > 0) {
+            delay(1000)
+            slotSecondsLeft--
+        }
+    }
+    val slotTimerDisplay = "%d:%02d".format(slotSecondsLeft / 60, slotSecondsLeft % 60)
 
     Column(
         modifier = Modifier
@@ -1494,34 +1540,142 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            OrbitHeader(title = "Configure Session", subtitle = "Selected Tier: ${packageId.uppercase()}")
+            // ── Goal Gradient Progress Bar (Principle 2) ──────────────────────
+            val progressSteps = listOf(
+                "Date & Time" to 0.33f,
+                "Your Style" to 0.67f,
+                "Confirm & Pay" to 1.0f
+            )
+            val currentProgress = progressSteps[step - 1].second
+            val animatedProgress by animateFloatAsState(
+                targetValue = currentProgress,
+                animationSpec = tween(600, easing = FastOutSlowInEasing),
+                label = "bookingProgress"
+            )
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0C10)),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(
+                            text = progressSteps[step - 1].first,
+                            color = OrbitCyan,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = "${(currentProgress * 100).toInt()}% Complete",
+                            color = MutedText,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(Color.White.copy(alpha = 0.08f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(animatedProgress)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(Brush.horizontalGradient(listOf(OrbitCyan, OrbitPurple)))
+                        )
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        progressSteps.forEachIndexed { i, (label, _) ->
+                            Text(
+                                text = label,
+                                color = if (i < step) OrbitCyan else MutedText,
+                                fontSize = 10.sp,
+                                fontWeight = if (i + 1 == step) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            }
 
             if (step == 1) {
-                // Top Notice Pill Banner
+                // ── Loss Aversion — urgency banner (Principle 5) ──────────────
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0C10)),
-                    shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A0A0A)),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color(0xFFFF5C5C).copy(alpha = 0.4f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color.White),
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFFFF5C5C).copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("✓", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                            Text("⚡", fontSize = 16.sp)
                         }
-                        Column {
-                            Text("Booked for right now!", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text("A partner will be dispatched immediately.", color = MutedText, fontSize = 12.sp)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("2 creators nearby available now", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Slot expires in: $slotTimerDisplay", color = Color(0xFFFF5C5C), fontSize = 12.sp, fontWeight = FontWeight.Black)
                         }
+                        Surface(
+                            color = Color(0xFFFF5C5C).copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("LIVE", color = Color(0xFFFF5C5C), fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                        }
+                    }
+                }
+
+                // ── Smart Defaults — pre-selected config chips (Principle 1) ──
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF050810)),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.25f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(OrbitCyan))
+                            Text("Recommended for Instagram Reels", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            listOf(
+                                "30 min" to (selectedDuration == "30 min"),
+                                "4K" to (selectedQuality == "4K"),
+                                "Mic ✓" to (selectedAudio == "Wireless Mic Included")
+                            ).forEach { (label, active) ->
+                                Surface(
+                                    color = if (active) OrbitCyan.copy(alpha = 0.12f) else Color(0xFF0D0F1A),
+                                    shape = RoundedCornerShape(20.dp),
+                                    border = BorderStroke(1.dp, if (active) OrbitCyan.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.08f))
+                                ) {
+                                    Text(
+                                        text = label,
+                                        color = if (active) OrbitCyan else MutedText,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                                    )
+                                }
+                            }
+                            Surface(
+                                color = Color(0xFF0D0F1A),
+                                shape = RoundedCornerShape(20.dp),
+                                border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.2f))
+                            ) {
+                                Text("UPI ✓", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp))
+                            }
+                        }
+                        Text("Pre-selected based on top creator bookings • tap to change", color = MutedText, fontSize = 10.sp)
                     }
                 }
 
@@ -1732,14 +1886,125 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                     )
                 }
 
-                // Action Bar
-                GradientButton(
-                    text = "Review Order →",
-                    onClick = { step = 2 },
-                    modifier = Modifier.fillMaxWidth().height(54.dp)
-                )
+                // Loss Aversion CTA pair
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GradientButton(
+                        text = "Book Now →",
+                        onClick = { step = 2 },
+                        modifier = Modifier.fillMaxWidth().height(54.dp)
+                    )
+                    Text(
+                        text = "or  I'll Risk Missing This Slot",
+                        color = MutedText,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().clickable { step = 2 }
+                    )
+                }
+
+            } else if (step == 2) {
+                // ── Step 2: IKEA Effect — reel personalisation (Principle 4) ──
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0C10)),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, OrbitPurple.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Column {
+                            Text("Your Reel Style", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                            Text("Personalise your shoot — this is your project", color = MutedText, fontSize = 12.sp)
+                        }
+
+                        // Reel style selector
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Visual Style", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                listOf("Cinematic", "Street", "Cafe", "Fitness", "Fashion").forEach { style ->
+                                    val active = selectedReelStyle == style
+                                    Surface(
+                                        color = if (active) OrbitPurple.copy(alpha = 0.15f) else Color(0xFF12131C),
+                                        shape = RoundedCornerShape(20.dp),
+                                        border = BorderStroke(1.dp, if (active) OrbitPurple else Color.White.copy(alpha = 0.08f)),
+                                        modifier = Modifier.clickable { selectedReelStyle = style }
+                                    ) {
+                                        Text(style, color = if (active) OrbitPurple else MutedText, fontSize = 11.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Normal, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
+                                    }
+                                }
+                            }
+                        }
+
+                        // Music mood selector
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Music Mood", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf("Energetic", "Chill", "Dramatic", "Minimal").forEach { mood ->
+                                    val active = selectedMusicMood == mood
+                                    Surface(
+                                        color = if (active) OrbitCyan.copy(alpha = 0.12f) else Color(0xFF12131C),
+                                        shape = RoundedCornerShape(20.dp),
+                                        border = BorderStroke(1.dp, if (active) OrbitCyan.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.08f)),
+                                        modifier = Modifier.clickable { selectedMusicMood = mood }
+                                    ) {
+                                        Text(mood, color = if (active) OrbitCyan else MutedText, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
+                                    }
+                                }
+                            }
+                        }
+
+                        // Campaign title / Brand Kit
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("Campaign Name  (saves to your Brand Kit)", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            OutlinedTextField(
+                                value = campaignTitle,
+                                onValueChange = { campaignTitle = it },
+                                placeholder = { Text("e.g. Summer Drop 2026", color = Color(0xFF71717A), fontSize = 13.sp) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = OrbitPurple,
+                                    unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
+                                    focusedContainerColor = Color(0xFF0A0C10),
+                                    unfocusedContainerColor = Color(0xFF0A0C10)
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        }
+
+                        if (selectedReelStyle.isNotEmpty() && selectedMusicMood.isNotEmpty()) {
+                            Surface(
+                                color = OrbitPurple.copy(alpha = 0.08f),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, OrbitPurple.copy(alpha = 0.2f))
+                            ) {
+                                Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Text("✓", color = OrbitPurple, fontWeight = FontWeight.Black)
+                                    Text("Your reel style is ready — $selectedReelStyle • $selectedMusicMood", color = OrbitPurple, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = { step = 1 },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.05f)),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+                        modifier = Modifier.weight(1f).height(54.dp)
+                    ) {
+                        Text("← Back", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                    GradientButton(
+                        text = "Continue →",
+                        onClick = { step = 3 },
+                        modifier = Modifier.weight(2f).height(54.dp)
+                    )
+                }
+
             } else {
-                // Step 2: Review Session Details & Choose Payment Method
+                // Step 3: Review Session Details & Choose Payment Method
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0C10)),
                     shape = RoundedCornerShape(20.dp),
@@ -1771,6 +2036,16 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Client Contact:", color = MutedText, fontSize = 13.sp)
                             Text("Test User (+91 9876543210)", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Reel Style:", color = MutedText, fontSize = 13.sp)
+                            Text("$selectedReelStyle • $selectedMusicMood", color = OrbitPurple, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                        if (campaignTitle.isNotBlank()) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Campaign:", color = MutedText, fontSize = 13.sp)
+                                Text(campaignTitle, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                            }
                         }
 
                         Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
@@ -1819,6 +2094,50 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                     }
                 }
 
+                // ── Contrast Effect — contextual add-ons (Principle 6) ────────
+                var addMic by remember { mutableStateOf(false) }
+                var addLighting by remember { mutableStateOf(false) }
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0C10)),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.2f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Upgrade Your Reel", color = Color.White, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                        Text("Upgrade your ₹1,999 reel with studio audio for just ₹99", color = MutedText, fontSize = 12.sp)
+
+                        listOf(
+                            Triple("Studio Mic", "+₹99", addMic) to { addMic = !addMic },
+                            Triple("Cinematic Lighting", "+₹149", addLighting) to { addLighting = !addLighting }
+                        ).forEach { (info, toggle) ->
+                            val (label, price, checked) = info
+                            Surface(
+                                color = if (checked) OrbitCyan.copy(alpha = 0.08f) else Color(0xFF0D0F1A),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, if (checked) OrbitCyan.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.07f)),
+                                modifier = Modifier.fillMaxWidth().clickable { toggle() }
+                            ) {
+                                Row(modifier = Modifier.padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Column {
+                                        Text(label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                        Text("Small add relative to your ₹1,999 booking", color = MutedText, fontSize = 10.sp)
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(price, color = OrbitCyan, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                                        Checkbox(checked = checked, onCheckedChange = { toggle() }, colors = CheckboxDefaults.colors(checkedColor = OrbitCyan, uncheckedColor = MutedText))
+                                    }
+                                }
+                            }
+                        }
+                        val total = 1999 + (if (addMic) 99 else 0) + (if (addLighting) 149 else 0)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("Total", color = MutedText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("₹$total", color = OrbitCyan, fontWeight = FontWeight.Black, fontSize = 26.sp)
+                        }
+                    }
+                }
+
                 // Action Buttons
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val prefsManager = remember { com.orbitlogic.client.storage.PrefsManager(context) }
@@ -1828,7 +2147,7 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     Button(
-                        onClick = { step = 1 },
+                        onClick = { step = 2 },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.05f)),
                         shape = RoundedCornerShape(16.dp),
                         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),

@@ -810,6 +810,95 @@ fun PartnerDashboardScreen(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
+            // ── Goal Gradient — daily earnings progress (Principle 2) ──────────
+            val dailyGoal = 2500
+            val earned = 1800 // TODO: replace with real wallet balance from API
+            val bookingsDone = 3
+            val bookingsGoal = 5
+            val earningsProgress = (earned.toFloat() / dailyGoal).coerceIn(0f, 1f)
+            val animatedEarningsProgress by animateFloatAsState(
+                targetValue = earningsProgress,
+                animationSpec = tween(800, easing = FastOutSlowInEasing),
+                label = "earningsProgress"
+            )
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF050D0A)),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, OrbitGreen.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text("Today's Progress", color = White, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                            Text("$bookingsDone of $bookingsGoal bookings completed", color = MutedText, fontSize = 12.sp)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("₹$earned", color = OrbitGreen, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                            Text("₹${dailyGoal - earned} to goal", color = MutedText, fontSize = 11.sp)
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(Color.White.copy(alpha = 0.07f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(animatedEarningsProgress)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(Brush.horizontalGradient(listOf(OrbitGreen, OrbitCyan)))
+                        )
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("₹0", color = MutedText, fontSize = 10.sp)
+                        Text("Goal: ₹$dailyGoal", color = MutedText, fontSize = 10.sp)
+                    }
+                }
+            }
+
+            // ── Loss Aversion — demand alert (Principle 5) ────────────────────
+            if (!isOnline) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF140A00)),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, Color(0xFFFF9500).copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFFFF9500).copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("⚡", fontSize = 15.sp)
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("High-demand area active now", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Go online to avoid missing bookings", color = Color(0xFFFF9500), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Button(
+                            onClick = { isOnline = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500)),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(36.dp)
+                        ) {
+                            Text("Go Online", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+
             // Incoming Real Dispatch Request Alert Card
             if (isOnline && activeDispatch != null) {
                 val currentBooking = activeDispatch!!
