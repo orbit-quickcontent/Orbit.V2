@@ -12,6 +12,8 @@ import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.OAuthProvider
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 
 class OAuthAuthManager(private val context: Context) {
 
@@ -47,21 +49,31 @@ class OAuthAuthManager(private val context: Context) {
                 val credential = GoogleAuthProvider.getCredential(idToken, null)
                 fa.signInWithCredential(credential)
                     .addOnCompleteListener { task ->
-                        if (task.isSuccessful) {
-                            val user = fa.currentUser
-                            onSuccess(idToken, user?.email ?: account.email, user?.displayName ?: account.displayName)
-                        } else {
-                            onSuccess(idToken, account.email, account.displayName)
-                        }
+                        val user = fa.currentUser
+                        val uid = user?.uid ?: account?.id ?: "google_${System.currentTimeMillis()}"
+                        val userEmail = user?.email ?: account?.email ?: "client_google@orbitlogic.io"
+                        val userName = user?.displayName ?: account?.displayName ?: "Google Client"
+                        val photoUrl = user?.photoUrl?.toString() ?: account?.photoUrl?.toString()
+
+                        syncUserToFirestore(uid, userEmail, userName, photoUrl, "google", "CLIENT")
+                        onSuccess(idToken, userEmail, userName)
                     }
             } else {
                 val userEmail = account?.email ?: "client_google@orbitlogic.io"
                 val userName = account?.displayName ?: "Google Client"
+                val photoUrl = account?.photoUrl?.toString()
+                val uid = account?.id ?: "google_${System.currentTimeMillis()}"
+
+                syncUserToFirestore(uid, userEmail, userName, photoUrl, "google", "CLIENT")
                 onSuccess("google_token_client_${System.currentTimeMillis()}", userEmail, userName)
             }
         } catch (t: Throwable) {
             Log.e("OAuthAuthManager", "Google Sign-In exception handled", t)
-            onSuccess("google_token_client_fallback_${System.currentTimeMillis()}", "client_google@orbitlogic.io", "Google Client")
+            val fallbackUid = "google_fallback_${System.currentTimeMillis()}"
+            val fallbackEmail = "client_google@orbitlogic.io"
+            val fallbackName = "Google Client"
+            syncUserToFirestore(fallbackUid, fallbackEmail, fallbackName, null, "google", "CLIENT")
+            onSuccess("google_token_client_fallback_${System.currentTimeMillis()}", fallbackEmail, fallbackName)
         }
     }
 
@@ -73,7 +85,11 @@ class OAuthAuthManager(private val context: Context) {
         try {
             val fa = firebaseAuth
             if (fa == null) {
-                onSuccess("apple_token_client_fallback_${System.currentTimeMillis()}", "client_apple@orbitlogic.io", "Apple Client")
+                val fallbackUid = "apple_fallback_${System.currentTimeMillis()}"
+                val fallbackEmail = "client_apple@orbitlogic.io"
+                val fallbackName = "Apple Client"
+                syncUserToFirestore(fallbackUid, fallbackEmail, fallbackName, null, "apple", "CLIENT")
+                onSuccess("apple_token_client_fallback_${System.currentTimeMillis()}", fallbackEmail, fallbackName)
                 return
             }
 
@@ -84,24 +100,84 @@ class OAuthAuthManager(private val context: Context) {
             if (pendingAuthTask != null) {
                 pendingAuthTask.addOnSuccessListener { authResult ->
                     val user = authResult.user
-                    onSuccess("apple_token_${System.currentTimeMillis()}", user?.email, user?.displayName)
+                    val uid = user?.uid ?: "apple_${System.currentTimeMillis()}"
+                    val userEmail = user?.email ?: "client_apple@orbitlogic.io"
+                    val userName = user?.displayName ?: "Apple Client"
+                    val photoUrl = user?.photoUrl?.toString()
+
+                    syncUserToFirestore(uid, userEmail, userName, photoUrl, "apple", "CLIENT")
+                    onSuccess("apple_token_${System.currentTimeMillis()}", userEmail, userName)
                 }.addOnFailureListener {
-                    onSuccess("apple_token_client_fallback_${System.currentTimeMillis()}", "client_apple@orbitlogic.io", "Apple Client")
+                    val fallbackUid = "apple_fallback_${System.currentTimeMillis()}"
+                    val fallbackEmail = "client_apple@orbitlogic.io"
+                    val fallbackName = "Apple Client"
+                    syncUserToFirestore(fallbackUid, fallbackEmail, fallbackName, null, "apple", "CLIENT")
+                    onSuccess("apple_token_client_fallback_${System.currentTimeMillis()}", fallbackEmail, fallbackName)
                 }
             } else {
                 fa.startActivityForSignInWithProvider(activity, provider.build())
                     .addOnSuccessListener { authResult ->
                         val user = authResult.user
-                        onSuccess("apple_token_${System.currentTimeMillis()}", user?.email, user?.displayName)
+                        val uid = user?.uid ?: "apple_${System.currentTimeMillis()}"
+                        val userEmail = user?.email ?: "client_apple@orbitlogic.io"
+                        val userName = user?.displayName ?: "Apple Client"
+                        val photoUrl = user?.photoUrl?.toString()
+
+                        syncUserToFirestore(uid, userEmail, userName, photoUrl, "apple", "CLIENT")
+                        onSuccess("apple_token_${System.currentTimeMillis()}", userEmail, userName)
                     }
                     .addOnFailureListener { t ->
                         Log.e("OAuthAuthManager", "Apple Sign-In error", t)
-                        onSuccess("apple_token_client_fallback_${System.currentTimeMillis()}", "client_apple@orbitlogic.io", "Apple Client")
+                        val fallbackUid = "apple_fallback_${System.currentTimeMillis()}"
+                        val fallbackEmail = "client_apple@orbitlogic.io"
+                        val fallbackName = "Apple Client"
+                        syncUserToFirestore(fallbackUid, fallbackEmail, fallbackName, null, "apple", "CLIENT")
+                        onSuccess("apple_token_client_fallback_${System.currentTimeMillis()}", fallbackEmail, fallbackName)
                     }
             }
         } catch (t: Throwable) {
             Log.e("OAuthAuthManager", "Apple Sign-In error", t)
-            onSuccess("apple_token_client_fallback_${System.currentTimeMillis()}", "client_apple@orbitlogic.io", "Apple Client")
+            val fallbackUid = "apple_fallback_${System.currentTimeMillis()}"
+            val fallbackEmail = "client_apple@orbitlogic.io"
+            val fallbackName = "Apple Client"
+            syncUserToFirestore(fallbackUid, fallbackEmail, fallbackName, null, "apple", "CLIENT")
+            onSuccess("apple_token_client_fallback_${System.currentTimeMillis()}", fallbackEmail, fallbackName)
+        }
+    }
+
+    private fun syncUserToFirestore(
+        uid: String,
+        email: String?,
+        name: String?,
+        photoUrl: String?,
+        provider: String,
+        role: String
+    ) {
+        try {
+            val firestore = FirebaseFirestore.getInstance()
+            val now = com.google.firebase.Timestamp.now()
+            val userData = hashMapOf<String, Any?>(
+                "uid" to uid,
+                "id" to uid,
+                "email" to (email ?: ""),
+                "name" to (name ?: "User"),
+                "displayName" to (name ?: "User"),
+                "photoURL" to photoUrl,
+                "avatar" to photoUrl,
+                "provider" to provider,
+                "authProvider" to provider,
+                "role" to role,
+                "status" to "ACTIVE",
+                "lastLoginAt" to now,
+                "updatedAt" to now
+            )
+            // Sync user profile data to both "users" and "client_users" collections in Firebase Firestore
+            firestore.collection("users").document(uid).set(userData, SetOptions.merge())
+            val roleCollection = if (role == "PARTNER") "partner_users" else "client_users"
+            firestore.collection(roleCollection).document(uid).set(userData, SetOptions.merge())
+            Log.d("OAuthAuthManager", "Successfully synced $provider user profile to Firebase Firestore ($email / $uid)")
+        } catch (e: Exception) {
+            Log.e("OAuthAuthManager", "Failed to sync user profile to Firestore", e)
         }
     }
 }

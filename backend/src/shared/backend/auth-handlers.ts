@@ -371,6 +371,8 @@ export async function googleAuthHandler(req: NextRequest) {
         displayName: name || "Google User",
         photoURL: photoURL || null,
         avatar: photoURL || null,
+        provider: "google",
+        authProvider: "google",
         role: userRole,
         status: "ACTIVE",
         walletBalance: 0,
@@ -379,6 +381,8 @@ export async function googleAuthHandler(req: NextRequest) {
         createdAt: nowIso,
         updatedAt: nowIso
       };
+
+
 
       if (userRole === "PARTNER") {
         user = await firestoreDb.partnerUsers.create({ data: userData });
@@ -461,6 +465,8 @@ export async function appleAuthHandler(req: NextRequest) {
         email: normalizedEmail,
         name: name || "Apple User",
         displayName: name || "Apple User",
+        provider: "apple",
+        authProvider: "apple",
         role: userRole,
         status: "ACTIVE",
         walletBalance: 0,
@@ -469,6 +475,8 @@ export async function appleAuthHandler(req: NextRequest) {
         createdAt: nowIso,
         updatedAt: nowIso
       };
+
+
 
       if (userRole === "PARTNER") {
         user = await firestoreDb.partnerUsers.create({ data: userData });
