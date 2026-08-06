@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:5000/api";
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_API_URL || "http://localhost:5000/api";
 
 /**
  * Proxies a Next.js App Router request to the orbit-marketplace/backend Express server.

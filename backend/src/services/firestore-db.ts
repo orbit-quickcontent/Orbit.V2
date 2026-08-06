@@ -564,5 +564,19 @@ export const firestoreDb = {
       const snap = await getDoc(docRef);
       return parseDates({ id: snap.id, ...snap.data() });
     }
-  }
+  },
+
+  custom: (colName: string) => ({
+    findUnique: async ({ where }: { where: { id: string } }) => {
+      const snap = await getDoc(doc(db, colName, where.id));
+      if (!snap.exists()) return null;
+      return parseDates({ id: snap.id, ...snap.data() });
+    },
+    create: async ({ data }: { data: any }) => {
+      const id = data.id || doc(collection(db, colName)).id;
+      const payload = { ...data, id };
+      await setDoc(doc(db, colName, id), payload);
+      return parseDates(payload);
+    }
+  })
 };

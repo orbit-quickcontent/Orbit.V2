@@ -1,51 +1,39 @@
+import pino from "pino";
+import { Request, Response, NextFunction } from "express";
+import { randomUUID } from "crypto";
+
+export const logger = pino({
+  level: process.env.LOG_LEVEL || "info",
+  formatters: {
+    level: (label) => ({ level: label }),
+  },
+  timestamp: pino.stdTimeFunctions.isoTime,
+});
+
 /**
- * Backend | Lightweight Structured Logger
- *
- * Zero-dependency structured logger providing JSON log format in production
- * and human-readable console output in development.
- *
- * Category: Shared Backend - Utilities
+ * Express middleware attaching a unique Request ID (X-Request-ID header)
+ * and structured JSON logging per request.
  */
+export function requestLogger(req: Request, res: Response, next: NextFunction): void {
+  const startTime = Date.now();
+  const requestId = (req.headers["x-request-id"] as string) || randomUUID();
+  req.requestId = requestId;
+  res.setHeader("X-Request-ID", requestId);
 
-interface LogMeta {
-  [key: string]: any;
+  res.on("finish", () => {
+    const latencyMs = Date.now() - startTime;
+    const userId = req.user?.id || "anonymous";
+
+    logger.info({
+      requestId,
+      userId,
+      method: req.method,
+      route: req.originalUrl,
+      statusCode: res.statusCode,
+      latencyMs,
+      userAgent: req.headers["user-agent"],
+    });
+  });
+
+  next();
 }
-
-class Logger {
-  private isProduction = process.env.NODE_ENV === 'production';
-
-  private formatMessage(level: string, message: string, meta?: LogMeta): string {
-    const timestamp = new Date().toISOString();
-    if (this.isProduction) {
-      return JSON.stringify({
-        timestamp,
-        level,
-        message,
-        ...meta,
-      });
-    }
-    const metaStr = meta && Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
-    return `[${timestamp}] [${level.toUpperCase()}] ${message}${metaStr}`;
-  }
-
-  info(message: string, meta?: LogMeta): void {
-    console.log(this.formatMessage('info', message, meta));
-  }
-
-  warn(message: string, meta?: LogMeta): void {
-    console.warn(this.formatMessage('warn', message, meta));
-  }
-
-  error(message: string, meta?: LogMeta): void {
-    console.error(this.formatMessage('error', message, meta));
-  }
-
-  debug(message: string, meta?: LogMeta): void {
-    if (process.env.LOG_LEVEL === 'debug' || !this.isProduction) {
-      console.debug(this.formatMessage('debug', message, meta));
-    }
-  }
-}
-
-export const logger = new Logger();
-export default logger;

@@ -24,7 +24,8 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
     }
 
     // Fetch booking details
-    fetch(`http://localhost:5000/api/editor/bookings/${bookingId}`)
+    const API = process.env.NEXT_PUBLIC_API_URL || "/api";
+    fetch(`${API}/editor/bookings/${bookingId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.booking) {
@@ -104,8 +105,8 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
     setIsUploading(true);
     setUploadProgress(0);
 
-    const storageKey = `reels/${bookingId}_${Date.now()}_${file.name}`;
-    const uploadUrl = `http://localhost:5000/api/upload/mock-s3?key=${encodeURIComponent(storageKey)}`;
+    const API = process.env.NEXT_PUBLIC_API_URL || "/api";
+    const uploadUrl = `${API}/upload/mock-s3?key=${encodeURIComponent(storageKey)}`;
 
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", uploadUrl);
@@ -122,7 +123,8 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
       if (xhr.status === 200 || xhr.status === 204) {
         setUploadProgress(100);
         setTimeout(() => {
-          const finalUrl = `http://localhost:5000/upload/${storageKey}`;
+          const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/api$/, "");
+          const finalUrl = `${API_BASE}/upload/${storageKey}`;
           setReelUrl(finalUrl);
           setIsUploading(false);
         }, 400);
@@ -144,7 +146,8 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
 
   const handleAcceptAssignment = () => {
     setIsLoading(true);
-    fetch(`http://localhost:5000/api/bookings/${bookingId}`, {
+    const API = process.env.NEXT_PUBLIC_API_URL || "/api";
+    fetch(`${API}/bookings/${bookingId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -172,7 +175,8 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
     setIsDelivering(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/editor/deliver", {
+      const API = process.env.NEXT_PUBLIC_API_URL || "/api";
+      const res = await fetch(`${API}/editor/deliver`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -360,7 +364,7 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
                             </div>
                           </div>
                           <a
-                            href={url.startsWith("http") ? url : `http://localhost:5000${url}`}
+                            href={url.startsWith("http") ? url : `${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '')}${url}`}
                             download
                             target="_blank"
                             rel="noopener noreferrer"
@@ -396,7 +400,7 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
                             </div>
                           </div>
                           <a
-                            href={url.startsWith("http") ? url : `http://localhost:5000${url}`}
+                            href={url.startsWith("http") ? url : `${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '')}${url}`}
                             download
                             target="_blank"
                             rel="noopener noreferrer"

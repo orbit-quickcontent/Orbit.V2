@@ -1,85 +1,92 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import path from 'path';
-import apiRouter from './routes/api.router';
-import { initWebSocketService } from './services/websocket.service';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import path from "path";
+import helmet from "helmet";
+import apiRouter from "./routes/api.router";
+import { initWebSocketService } from "./services/websocket.service";
+import { validateEnv } from "./lib/env-validator";
+import { requestLogger, logger } from "./lib/logger";
 
-// Load environment variables
+// 1. Load environment variables
 dotenv.config();
 
-// Sentry Error Monitoring & Structured Logging setup
-if (process.env.SENTRY_DSN && process.env.NODE_ENV === 'production') {
+// 2. Validate environment schema on startup (server halts if required vars are missing)
+validateEnv();
+
+// 3. Sentry Error Monitoring setup
+if (process.env.SENTRY_DSN && process.env.NODE_ENV === "production") {
   try {
-    const Sentry = require('@sentry/node');
+    const Sentry = require("@sentry/node");
     Sentry.init({
       dsn: process.env.SENTRY_DSN,
       environment: process.env.NODE_ENV,
       tracesSampleRate: 0.1,
     });
-    console.log('[Sentry] Backend monitoring initialized.');
+    logger.info("[Sentry] Backend monitoring initialized.");
   } catch (err) {
-    console.warn('[Sentry] @sentry/node load notice:', (err as Error).message);
+    logger.warn({ error: (err as Error).message }, "[Sentry] @sentry/node load notice");
   }
 }
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable production CORS
+// 4. Security Headers (Helmet)
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Disabled for REST API server to allow S3/WebSocket media origins
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+
+// 5. Enable CORS for configured frontend origins
 const allowedOrigins = [
-  'https://orbit-quickcontent.com',
-  'https://www.orbit-quickcontent.com',
-  'https://app.orbit-quickcontent.com',
-  'https://api.orbit-quickcontent.com',
-  'capacitor://localhost',
-  'http://localhost',
-  'http://localhost:3000',
-  'http://localhost:5000'
+  "https://orbit-quickcontent.com",
+  "https://www.orbit-quickcontent.com",
+  "https://app.orbit-quickcontent.com",
+  "https://api.orbit-quickcontent.com",
+  process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  "capacitor://localhost",
+  "http://localhost",
+  "http://localhost:3000",
+  "http://localhost:5000",
 ];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, postman)
-    if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(null, true); // Permissive in dev/fallback
-  },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'api-key', 'accept'],
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === "development") {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS policy violation"));
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Idempotency-Key", "api-key", "accept"],
+    credentials: true,
+  })
+);
 
-// Health check endpoint for Docker & load balancer
-app.get('/health', (_req, res) => {
+// 6. Request Logger Middleware (Pino JSON logger + Request ID)
+app.use(requestLogger);
+
+// 7. Health check endpoint
+app.get("/health", (_req, res) => {
   res.status(200).json({
-    status: 'healthy',
+    status: "healthy",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: process.memoryUsage(),
   });
 });
 
-import { validatePresignedToken } from './lib/security';
+import { validatePresignedToken } from "./lib/security";
 
-// Request logger middleware
-app.use((req, res, next) => {
-  console.log(`[API-Request] ${req.method} ${req.url}`);
-  const originalJson = res.json;
-  res.json = function (body) {
-    console.log(`[API-Response] ${req.method} ${req.url} -> Status ${res.statusCode} (Body: ${JSON.stringify(body).slice(0, 200)})`);
-    return originalJson.apply(this, arguments as any);
-  };
-  next();
-});
-
-// Secure uploads middleware enforcing 15-minute presigned tokens for video streams/downloads
+// 8. Secure static uploads middleware enforcing presigned tokens for reels
 const secureUploadsMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const token = (req.query.token as string) || null;
   const expires = (req.query.expires as string) || null;
-  
-  // Clean url path (remove query params) and build canonical path relative to /upload/reels
+
   const cleanPath = req.path;
   const fullUrlPath = `/upload/reels${cleanPath}`;
 
@@ -89,16 +96,16 @@ const secureUploadsMiddleware = (req: express.Request, res: express.Response, ne
   next();
 };
 
-app.use('/upload/reels', secureUploadsMiddleware, express.static(path.join(__dirname, '../../dashboard-web-app/public/upload/reels')));
-app.use('/upload', express.static(path.join(__dirname, '../../dashboard-web-app/public/upload')));
+app.use("/upload/reels", secureUploadsMiddleware, express.static(path.join(__dirname, "../../dashboard-web-app/public/upload/reels")));
+app.use("/upload", express.static(path.join(__dirname, "../../dashboard-web-app/public/upload")));
 
-// Mount main unified API routes
-app.use('/api', apiRouter);
+// 9. Mount main unified API routes
+app.use("/api", apiRouter);
 
-// Start WebSocket server on port 3003
-const wsService = initWebSocketService();
+// 10. Start WebSocket server on port 3003
+initWebSocketService();
 
-// Start HTTP REST server on port 5000 (0.0.0.0 for emulator/LAN access)
-app.listen(Number(PORT), '0.0.0.0', () => {
-  console.log(`[API] Standalone REST API server running on http://0.0.0.0:${PORT}`);
+// 11. Start HTTP REST server on port 5000
+app.listen(Number(PORT), "0.0.0.0", () => {
+  logger.info(`[API] Standalone REST API server running on http://0.0.0.0:${PORT}`);
 });

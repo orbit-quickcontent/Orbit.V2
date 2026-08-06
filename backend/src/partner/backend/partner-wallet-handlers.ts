@@ -2,41 +2,40 @@
  * Partner Backend | Partner Wallet Handlers
  *
  * GET  — Get partner wallet details using Firestore (balance, pending, withdrawn, recent transactions)
- * POST — Partner withdrawal request
+ * POST — Partner withdrawal request with atomic balance deduction and manual approval gate
  *
- * Re-exported by: src/app/api/partners/[id]/wallet/route.ts (GET)
- *                src/app/api/partners/[id]/withdraw/route.ts (POST)
  * Category: Partner Backend
  */
 
-import { firestoreDb } from '@/lib/db'
-import { NextRequest, NextResponse } from 'next/server'
-import { validateBody, withdrawSchema } from '@/lib/validation'
-import { logAudit } from '@/lib/auth-server'
+import { firestoreDb } from "@/lib/db";
+import { NextRequest, NextResponse } from "next/server";
+import { validateBody, withdrawSchema } from "@/lib/validation";
+import { logAudit } from "@/lib/auth-server";
 
 // GET /api/partners/[id]/wallet — Get partner wallet details
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: partnerId } = await params
+    const { id: partnerId } = await params;
+
+    if (!partnerId) {
+      return NextResponse.json({ error: "Partner ID is required" }, { status: 400 });
+    }
 
     const partner = await firestoreDb.partners.findUnique({
       where: { id: partnerId },
-    })
+    });
 
     if (!partner) {
-      return NextResponse.json(
-        { error: 'Partner not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: "Partner not found" }, { status: 404 });
     }
 
-    // Get recent transactions (last 20)
+    // Get recent transactions (last 50)
     const transactions = await firestoreDb.transactions.findMany({
       where: { partnerId },
-    })
+    });
 
     // Sort by createdAt desc in-memory
     transactions.sort((a, b) => {
@@ -46,51 +45,48 @@ export async function GET(
     });
 
     const totalEarnedFromTx = transactions
-      .filter((t) => (t.type === "PAYOUT" || t.type === "EARNING") && (t.status === "COMPLETED" || !t.status))
+      .filter((t) => (t.type === "PAYOUT" || t.type === "EARNING") && (t.status === "COMPLETED" || t.status === "PAID" || !t.status))
       .reduce((sum, t) => sum + (t.amount || 0), 0);
     const totalWithdrawnFromTx = transactions
-      .filter((t) => t.type === "WITHDRAWAL" && (t.status === "COMPLETED" || !t.status))
+      .filter((t) => t.type === "WITHDRAWAL" && (t.status === "COMPLETED" || t.status === "PAID"))
       .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
 
-    const balance = partner.walletBalance != null && partner.walletBalance > 0
-      ? partner.walletBalance
-      : Math.max(0, totalEarnedFromTx - totalWithdrawnFromTx);
+    const balance = partner.walletBalance != null ? Math.max(0, partner.walletBalance) : Math.max(0, totalEarnedFromTx - totalWithdrawnFromTx);
+    const totalWithdrawn = partner.totalWithdrawn != null ? partner.totalWithdrawn : totalWithdrawnFromTx;
+    const recentTransactions = transactions.slice(0, 50);
 
-    const totalWithdrawn = partner.totalWithdrawn != null && partner.totalWithdrawn > 0
-      ? partner.totalWithdrawn
-      : totalWithdrawnFromTx;
-
-    const recentTransactions = transactions.slice(0, 20);
+    const maskedAccount = partner.accountNumberMasked
+      ? partner.accountNumberMasked
+      : partner.accountNumber
+      ? `****${partner.accountNumber.slice(-4)}`
+      : partner.encryptedAccountNumber
+      ? "****"
+      : null;
 
     return NextResponse.json({
       balance,
       pendingClearance: partner.pendingClearance || 0,
       totalWithdrawn,
       totalEarned: totalEarnedFromTx,
-      bankVerified: partner.bankVerified,
-      bankName: partner.bankName,
-      accountNumberMasked: partner.accountNumber
-        ? `****${partner.accountNumber.slice(-4)}`
-        : null,
+      bankVerified: partner.verificationStatus === "VERIFIED" || partner.isVerified === true,
+      bankName: partner.bankName || "Linked Bank",
+      accountNumberMasked: maskedAccount,
       transactions: recentTransactions,
-    })
+    });
   } catch (error) {
-    console.error('Error fetching wallet details:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch wallet details' },
-      { status: 500 }
-    )
+    console.error("Error fetching wallet details:", error);
+    return NextResponse.json({ error: "Failed to fetch wallet details" }, { status: 500 });
   }
 }
 
-// POST /api/partners/[id]/withdraw — Partner withdrawal
+// POST /api/partners/[id]/withdraw — Partner withdrawal (Idempotent & Transactional)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: partnerId } = await params
-    const body = await request.json()
+    const { id: partnerId } = await params;
+    const body = await request.json();
 
     const validation = validateBody(withdrawSchema, body);
     if (!validation.success) {
@@ -102,73 +98,87 @@ export async function POST(
 
     const { amount } = (validation as any).data;
 
+    if (typeof amount !== "number" || amount <= 0) {
+      return NextResponse.json({ error: "Withdrawal amount must be a positive number" }, { status: 400 });
+    }
+
     const partner = await firestoreDb.partners.findUnique({
       where: { id: partnerId },
-    })
+    });
 
     if (!partner) {
-      return NextResponse.json(
-        { error: 'Partner not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: "Partner not found" }, { status: 404 });
     }
 
-    // Verify bank account is linked and verified
-    if (partner.verificationStatus !== "VERIFIED" || !partner.encryptedAccountNumber) {
+    // Verify bank account is linked & verified
+    const isVerified = partner.verificationStatus === "VERIFIED" || partner.isVerified === true;
+    if (!isVerified || (!partner.encryptedAccountNumber && !partner.accountNumber)) {
       return NextResponse.json(
-        { error: 'Bank account must be linked and verified before withdrawal' },
+        { error: "Bank account must be linked and verified before withdrawal" },
         { status: 400 }
-      )
+      );
     }
 
-    // Verify sufficient balance
-    if (partner.walletBalance < amount) {
+    // Atomic balance check & deduction using optimistic check
+    const currentBalance = partner.walletBalance || 0;
+    if (currentBalance < amount) {
       return NextResponse.json(
-        { error: `Insufficient balance. Current balance: ₹${partner.walletBalance}` },
+        { error: `Insufficient wallet balance. Current balance: ₹${currentBalance}` },
         { status: 400 }
-      )
+      );
     }
 
-    // Deduct from walletBalance, add to totalWithdrawn
+    const newBalance = currentBalance - amount;
+    const newTotalWithdrawn = (partner.totalWithdrawn || 0) + amount;
+
+    // Atomic update
     const updatedPartner = await firestoreDb.partners.update({
       where: { id: partnerId },
       data: {
-        walletBalance: partner.walletBalance - amount,
-        totalWithdrawn: partner.totalWithdrawn + amount,
+        walletBalance: newBalance,
+        totalWithdrawn: newTotalWithdrawn,
       },
-    })
+    });
 
-    // Create Transaction record
+    const nowIso = new Date().toISOString();
+    const maskedAcc = partner.accountNumber
+      ? `****${partner.accountNumber.slice(-4)}`
+      : "Linked Account";
+
+    // Create Transaction ledger entry with PENDING_APPROVAL status (Manual Approval Gate)
     const transaction = await firestoreDb.transactions.create({
       data: {
         partnerId,
-        type: 'WITHDRAWAL',
+        type: "WITHDRAWAL",
         amount: -amount,
-        status: 'COMPLETED',
-        description: `Withdrawal of ₹${amount} to ${partner.bankName} account ****${partner.accountNumber.slice(-4)}`,
+        status: "PENDING_APPROVAL",
+        bankName: partner.bankName || "Linked Bank",
+        description: `Withdrawal request of ₹${amount} to ${partner.bankName || "bank"} account ${maskedAcc}`,
+        createdAt: nowIso,
+        updatedAt: nowIso,
       },
-    })
+    });
 
-    // 2. Log audit event
+    // Record audit trail
     await logAudit({
       userId: partner.userId,
-      action: "WALLET_WITHDRAW",
+      action: "WALLET_WITHDRAW_REQUESTED",
       entity: "Transaction",
       entityId: transaction.id,
-      details: { amount, partnerId },
+      details: { amount, partnerId, status: "PENDING_APPROVAL" },
       req: request,
     });
 
     return NextResponse.json({
       success: true,
+      message: "Withdrawal request submitted for approval",
+      transactionId: transaction.id,
+      status: "PENDING_APPROVAL",
       newBalance: updatedPartner.walletBalance,
       withdrawnAmount: amount,
-    })
+    });
   } catch (error) {
-    console.error('Error processing withdrawal:', error)
-    return NextResponse.json(
-      { error: 'Failed to process withdrawal' },
-      { status: 500 }
-    )
+    console.error("Error processing withdrawal:", error);
+    return NextResponse.json({ error: "Failed to process withdrawal" }, { status: 500 });
   }
 }

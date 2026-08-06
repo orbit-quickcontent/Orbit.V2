@@ -1,12 +1,20 @@
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || "orbit-super-secret-jwt-key";
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error("CRITICAL SECURITY ERROR: JWT_SECRET environment variable is missing!");
+  }
+  return secret;
+}
+
+export type UserRole = "CLIENT" | "PARTNER" | "EDITOR" | "ADMIN" | "SUPER_ADMIN";
 
 export interface JWTPayload {
   id: string;
   email: string;
   name?: string;
-  role: string;
+  role: UserRole | string;
   type?: "access" | "refresh" | "reset";
   iat?: number;
   exp?: number;
@@ -30,13 +38,15 @@ function base64UrlDecode(str: string): string {
 }
 
 /**
- * Sign a JWT token with a specified expiration (default: 15 minutes for access tokens, 30 days for refresh tokens).
+ * Sign a JWT token with a specified expiration (default: 24 hours for access tokens).
  */
-export function signToken(payload: JWTPayload, expiresInSeconds: number = 15 * 60): string {
+export function signToken(payload: JWTPayload, expiresInSeconds: number = 24 * 60 * 60): string {
+  const secret = getJwtSecret();
   const header = { alg: "HS256", typ: "JWT" };
   const now = Math.floor(Date.now() / 1000);
   const fullPayload: JWTPayload = {
     ...payload,
+    role: normalizeRole(payload.role),
     iat: now,
     exp: now + expiresInSeconds,
   };
@@ -44,7 +54,7 @@ export function signToken(payload: JWTPayload, expiresInSeconds: number = 15 * 6
   const encodedHeader = base64UrlEncode(JSON.stringify(header));
   const encodedPayload = base64UrlEncode(JSON.stringify(fullPayload));
 
-  const signature = createHmac("sha256", JWT_SECRET)
+  const signature = createHmac("sha256", secret)
     .update(`${encodedHeader}.${encodedPayload}`)
     .digest();
   const encodedSignature = base64UrlEncode(signature);
@@ -53,24 +63,40 @@ export function signToken(payload: JWTPayload, expiresInSeconds: number = 15 * 6
 }
 
 /**
- * Verify and decode a JWT token. Returns null if invalid or expired.
+ * Verify and decode a JWT token using timing-safe signature comparison.
+ * Returns null if invalid or expired.
  */
 export function verifyToken(token: string): JWTPayload | null {
   try {
     if (!token) return null;
+    const secret = getJwtSecret();
     const cleanToken = token.replace(/^Bearer\s+/i, "").trim();
     const parts = cleanToken.split(".");
     if (parts.length !== 3) return null;
 
     const [encodedHeader, encodedPayload, encodedSignature] = parts;
 
-    const expectedSignature = base64UrlEncode(
-      createHmac("sha256", JWT_SECRET)
-        .update(`${encodedHeader}.${encodedPayload}`)
-        .digest()
-    );
+    const expectedSignatureBuf = createHmac("sha256", secret)
+      .update(`${encodedHeader}.${encodedPayload}`)
+      .digest();
+    
+    // Decode actual signature to buffer for timingSafeEqual
+    let actualSignatureBuf: Buffer;
+    try {
+      let base64Sig = encodedSignature.replace(/-/g, "+").replace(/_/g, "/");
+      while (base64Sig.length % 4) base64Sig += "=";
+      actualSignatureBuf = Buffer.from(base64Sig, "base64");
+    } catch {
+      return null;
+    }
 
-    if (encodedSignature !== expectedSignature) return null;
+    if (expectedSignatureBuf.length !== actualSignatureBuf.length) {
+      return null;
+    }
+
+    if (!timingSafeEqual(expectedSignatureBuf, actualSignatureBuf)) {
+      return null;
+    }
 
     const payload = JSON.parse(base64UrlDecode(encodedPayload)) as JWTPayload;
     const now = Math.floor(Date.now() / 1000);
@@ -86,7 +112,7 @@ export function verifyToken(token: string): JWTPayload | null {
 /**
  * Maps role strings to standardized role format (CLIENT, PARTNER, EDITOR, ADMIN, SUPER_ADMIN).
  */
-export function normalizeRole(role: string | null | undefined): string {
+export function normalizeRole(role: string | null | undefined): UserRole {
   if (!role) return "CLIENT";
   const r = role.toUpperCase().trim();
   if (r === "USER" || r === "CLIENT") return "CLIENT";

@@ -159,7 +159,7 @@ export function initWebSocketService() {
     const secret = process.env.INTERNAL_WS_SECRET;
     if (!secret) return true; // not configured — allow (dev/local mode)
     if (req.headers['x-internal-secret'] === secret) return true;
-    res.status(403).json({ error: 'Forbidden' });
+    res.status(401).json({ error: 'Unauthorized: Invalid internal secret' });
     return false;
   };
 

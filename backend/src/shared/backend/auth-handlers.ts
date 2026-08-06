@@ -26,19 +26,20 @@ export async function loginHandler(req: NextRequest) {
       user = await firestoreDb.clientUsers.findUnique({ where: { email: normalizedEmail } });
     }
 
-    if (!user) {
-      return NextResponse.json({ error: "Invalid credentials or user not found" }, { status: 401 });
+    // Reject login if user has no passwordHash (e.g. registered via OAuth/OTP)
+    if (!user.passwordHash) {
+      console.warn(`[Auth Warning] Failed login for ${normalizedEmail}: Account registered via OAuth/OTP`);
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    // Verify password if set
-    if (user.passwordHash) {
-      if (!password) {
-        return NextResponse.json({ error: "Password is required" }, { status: 400 });
-      }
-      const isValid = verifyPassword(password, user.passwordHash);
-      if (!isValid) {
-        return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
-      }
+    if (!password) {
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    }
+
+    const isValid = verifyPassword(password, user.passwordHash);
+    if (!isValid) {
+      console.warn(`[Auth Warning] Failed login for ${normalizedEmail}: Incorrect password`);
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
     const userRole = normalizeRole(role || user.role);
