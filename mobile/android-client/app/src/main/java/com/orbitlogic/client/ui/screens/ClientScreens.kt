@@ -1387,16 +1387,13 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
     var selectedCity by remember { mutableStateOf("") }
     var selectedArea by remember { mutableStateOf("") }
     var completeAddress by remember { mutableStateOf("") }
-    var gmapsLink by remember { mutableStateOf("") }
-    var contactType by remember { mutableStateOf("Myself") }
-    val savedName = remember { com.orbitlogic.client.storage.PrefsManager(androidx.compose.ui.platform.LocalContext.current).getSavedName() }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val savedName = remember(context) { com.orbitlogic.client.storage.PrefsManager(context).getSavedName() }
     var receiverName by remember { mutableStateOf(savedName ?: "") }
     var receiverPhone by remember { mutableStateOf("") }
     var saveAsTag by remember { mutableStateOf("Home") }
     var isLocatingGps by remember { mutableStateOf(false) }
     var specialNotes by remember { mutableStateOf("") }
-
-    val context = androidx.compose.ui.platform.LocalContext.current
     fun fetchCurrentLocation() {
         isLocatingGps = true
         try {
@@ -3720,10 +3717,10 @@ fun SearchOverlayScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Results
-                androidx.compose.foundation.lazy.LazyColumn(
+                LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    androidx.compose.foundation.lazy.items(filtered) { (title, subtitle) ->
+                    items(filtered) { (title, subtitle) ->
                         Surface(
                             color = if (isLight) com.orbitlogic.client.ui.theme.LightSurface else Color(0xFF12141C),
                             shape = RoundedCornerShape(14.dp),
@@ -3821,10 +3818,10 @@ fun NotificationsOverlayScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                androidx.compose.foundation.lazy.LazyColumn(
+                LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    androidx.compose.foundation.lazy.items(notifications.reversed()) { (title, msg, icon) ->
+                    items(notifications.reversed()) { (title, msg, icon) ->
                         Surface(
                             color = if (isLight) com.orbitlogic.client.ui.theme.LightSurface else Color(0xFF12141C),
                             shape = RoundedCornerShape(16.dp),
