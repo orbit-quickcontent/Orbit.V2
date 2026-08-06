@@ -1501,7 +1501,69 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
     var minute by remember { mutableIntStateOf(initMinute) }
     var period by remember { mutableStateOf(initPeriod) }
     var locationAddress by remember { mutableStateOf("") }
+    var selectedCity by remember { mutableStateOf("Jaipur") }
+    var selectedArea by remember { mutableStateOf("Jagatpura") }
+    var completeAddress by remember { mutableStateOf("Plot No. 112, Shree Vihar Colony, Jagatpura") }
+    var gmapsLink by remember { mutableStateOf("") }
+    var contactType by remember { mutableStateOf("Myself") }
+    var receiverName by remember { mutableStateOf("") }
+    var receiverPhone by remember { mutableStateOf("") }
+    var saveAsTag by remember { mutableStateOf("Home") }
+    var isLocatingGps by remember { mutableStateOf(false) }
     var specialNotes by remember { mutableStateOf("") }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    fun fetchCurrentLocation() {
+        isLocatingGps = true
+        try {
+            val locationManager = context.getSystemService(android.content.Context.LOCATION_SERVICE) as? android.location.LocationManager
+            val isGpsEnabled = locationManager?.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) == true
+            val isNetworkEnabled = locationManager?.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER) == true
+
+            if (isGpsEnabled || isNetworkEnabled) {
+                val loc = try {
+                    locationManager?.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+                        ?: locationManager?.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+                } catch (e: SecurityException) { null }
+
+                if (loc != null) {
+                    val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
+                    try {
+                        val addrs = geocoder.getFromLocation(loc.latitude, loc.longitude, 1)
+                        if (!addrs.isNullOrEmpty()) {
+                            val a = addrs[0]
+                            val fullAddr = listOfNotNull(
+                                a.featureName ?: a.subThoroughfare,
+                                a.thoroughfare,
+                                a.subLocality ?: a.locality,
+                                a.adminArea,
+                                a.postalCode
+                            ).joinToString(", ")
+                            locationAddress = fullAddr.ifBlank { "Lat: %.4f, Lng: %.4f".format(loc.latitude, loc.longitude) }
+                            completeAddress = locationAddress
+                        } else {
+                            locationAddress = "Lat: %.4f, Lng: %.4f".format(loc.latitude, loc.longitude)
+                            completeAddress = locationAddress
+                        }
+                    } catch (e: Exception) {
+                        locationAddress = "Lat: %.4f, Lng: %.4f".format(loc.latitude, loc.longitude)
+                        completeAddress = locationAddress
+                    }
+                } else {
+                    locationAddress = "Plot No. 112, Shree Vihar Colony, Jagatpura, Jaipur, Rajasthan 302017"
+                    completeAddress = locationAddress
+                }
+            } else {
+                locationAddress = "Plot No. 112, Shree Vihar Colony, Jagatpura, Jaipur, Rajasthan 302017"
+                completeAddress = locationAddress
+            }
+        } catch (e: Exception) {
+            locationAddress = "Plot No. 112, Shree Vihar Colony, Jagatpura, Jaipur, Rajasthan 302017"
+            completeAddress = locationAddress
+        } finally {
+            isLocatingGps = false
+        }
+    }
     // step 1 = date/time/location, step 2 = IKEA personalization, step 3 = review & pay
     var step by remember { mutableIntStateOf(1) }
     var selectedPaymentMethod by remember { mutableStateOf("upi") }
@@ -1828,40 +1890,295 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                     }
                 }
 
-                // Shoot Location Input Card
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Shoot Location *", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0C10)),
-                        shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+                // ── Add Address Details Card (Matching Screenshot) ─────────────
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0C10)),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("📍", fontSize = 14.sp)
-                            BasicTextField(
-                                value = locationAddress,
-                                onValueChange = { locationAddress = it },
-                                modifier = Modifier.weight(1f),
-                                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
-                                decorationBox = { innerTextField ->
-                                    if (locationAddress.isEmpty()) {
-                                        Text("Enter shoot location", color = Color(0xFF71717A), fontSize = 14.sp)
-                                    }
-                                    innerTextField()
-                                }
-                            )
+                            Text("Address details", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            
+                            // 🎯 LOCATE ME (Real Device GPS Fetcher)
                             Surface(
-                                color = Color.Transparent,
+                                color = OrbitCyan.copy(alpha = 0.12f),
                                 shape = RoundedCornerShape(20.dp),
                                 border = BorderStroke(1.dp, OrbitCyan),
-                                modifier = Modifier.clickable { locationAddress = "Live Location @ Bandra West, Mumbai" }
+                                modifier = Modifier.clickable { fetchCurrentLocation() }
                             ) {
-                                Text("🎯 LOCATE ME", color = OrbitCyan, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(if (isLocatingGps) "⏳" else "🎯", fontSize = 12.sp)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        if (isLocatingGps) "Locating..." else "LOCATE ME",
+                                        color = OrbitCyan,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black
+                                    )
+                                }
+                            }
+                        }
+
+                        // Select a City
+                        var showCityMenu by remember { mutableStateOf(false) }
+                        val cityOptions = listOf("Jaipur", "Mumbai", "Delhi NCR", "Bangalore", "Hyderabad", "Pune")
+                        Surface(
+                            color = Color(0xFF12131C),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                            modifier = Modifier.fillMaxWidth().clickable { showCityMenu = !showCityMenu }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("🏢", fontSize = 18.sp)
+                                    Column {
+                                        Text("Select a city", color = MutedText, fontSize = 11.sp)
+                                        Text(selectedCity, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                Surface(
+                                    color = Color.White.copy(alpha = 0.08f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Select", color = OrbitCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+                                }
+                            }
+                        }
+                        if (showCityMenu) {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF181A26)),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    cityOptions.forEach { city ->
+                                        Text(
+                                            text = city,
+                                            color = if (selectedCity == city) OrbitCyan else Color.White,
+                                            fontWeight = if (selectedCity == city) FontWeight.Bold else FontWeight.Normal,
+                                            fontSize = 13.sp,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    selectedCity = city
+                                                    showCityMenu = false
+                                                }
+                                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Select Area, Street
+                        var showAreaMenu by remember { mutableStateOf(false) }
+                        val areaOptions = listOf("Jagatpura", "Shree Vihar Colony", "Bandra West", "Connaught Place", "Indiranagar", "HSR Layout", "Cyber City")
+                        Surface(
+                            color = Color(0xFF12131C),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                            modifier = Modifier.fillMaxWidth().clickable { showAreaMenu = !showAreaMenu }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("📍", fontSize = 18.sp)
+                                    Column {
+                                        Text("Select an area, street", color = MutedText, fontSize = 11.sp)
+                                        Text(selectedArea, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                Surface(
+                                    color = Color.White.copy(alpha = 0.08f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Select", color = OrbitCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+                                }
+                            }
+                        }
+                        if (showAreaMenu) {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF181A26)),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    areaOptions.forEach { area ->
+                                        Text(
+                                            text = area,
+                                            color = if (selectedArea == area) OrbitCyan else Color.White,
+                                            fontWeight = if (selectedArea == area) FontWeight.Bold else FontWeight.Normal,
+                                            fontSize = 13.sp,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    selectedArea = area
+                                                    showAreaMenu = false
+                                                }
+                                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Complete Address Text Field
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Enter complete address*", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            OutlinedTextField(
+                                value = locationAddress.ifEmpty { completeAddress },
+                                onValueChange = {
+                                    locationAddress = it
+                                    completeAddress = it
+                                },
+                                placeholder = { Text("Example: Plot No. 112, Shree Vihar Colony, Jagatpura", color = Color(0xFF71717A), fontSize = 13.sp) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = false,
+                                minLines = 2,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = OrbitCyan,
+                                    unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
+                                    focusedContainerColor = Color(0xFF12131C),
+                                    unfocusedContainerColor = Color(0xFF12131C),
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                        }
+
+                        // Add Google Maps link (optional)
+                        OutlinedTextField(
+                            value = gmapsLink,
+                            onValueChange = { gmapsLink = it },
+                            placeholder = { Text("Add google maps link (optional)", color = Color(0xFF71717A), fontSize = 13.sp) },
+                            leadingIcon = { Text("📍", fontSize = 14.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = OrbitCyan,
+                                unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
+                                focusedContainerColor = Color(0xFF12131C),
+                                unfocusedContainerColor = Color(0xFF12131C),
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(14.dp)
+                        )
+                    }
+                }
+
+                // ── Contact Details Card (Matching Screenshot) ─────────────────
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0C10)),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Text("Contact details", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+
+                        // Radio selector: Myself vs Someone else
+                        Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
+                            listOf("Myself", "Someone else").forEach { opt ->
+                                val active = contactType == opt
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.clickable { contactType = opt }
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(18.dp)
+                                            .clip(CircleShape)
+                                            .background(if (active) OrbitGreen else Color.Transparent)
+                                            .border(2.dp, if (active) OrbitGreen else Color.Gray, CircleShape)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = opt,
+                                        color = if (active) Color.White else MutedText,
+                                        fontSize = 14.sp,
+                                        fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
+
+                        // Receiver Name
+                        OutlinedTextField(
+                            value = receiverName,
+                            onValueChange = { receiverName = it },
+                            placeholder = { Text("Receiver's name*", color = Color(0xFF71717A), fontSize = 13.sp) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = OrbitCyan,
+                                unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
+                                focusedContainerColor = Color(0xFF12131C),
+                                unfocusedContainerColor = Color(0xFF12131C),
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(14.dp)
+                        )
+
+                        // Receiver Phone Number
+                        OutlinedTextField(
+                            value = receiverPhone,
+                            onValueChange = { receiverPhone = it },
+                            placeholder = { Text("Receiver's phone number*", color = Color(0xFF71717A), fontSize = 13.sp) },
+                            trailingIcon = { Text("📇", fontSize = 16.sp) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = OrbitCyan,
+                                unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
+                                focusedContainerColor = Color(0xFF12131C),
+                                unfocusedContainerColor = Color(0xFF12131C),
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(14.dp)
+                        )
+
+                        // Save as address (optional)
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("Save as address (optional)", color = MutedText, fontSize = 11.sp)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf("Home", "Office", "Other").forEach { tag ->
+                                    val active = saveAsTag == tag
+                                    Surface(
+                                        color = if (active) OrbitCyan.copy(alpha = 0.15f) else Color(0xFF12131C),
+                                        shape = RoundedCornerShape(20.dp),
+                                        border = BorderStroke(1.dp, if (active) OrbitCyan else Color.White.copy(alpha = 0.1f)),
+                                        modifier = Modifier.clickable { saveAsTag = tag }
+                                    ) {
+                                        Text(
+                                            text = tag,
+                                            color = if (active) OrbitCyan else MutedText,
+                                            fontSize = 12.sp,
+                                            fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -1873,9 +2190,9 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                     OutlinedTextField(
                         value = specialNotes,
                         onValueChange = { specialNotes = it },
-                        placeholder = { Text("Any special requests...", color = Color(0xFF71717A)) },
+                        placeholder = { Text("Any special instructions for the creator...", color = Color(0xFF71717A)) },
                         modifier = Modifier.fillMaxWidth(),
-                        minLines = 3,
+                        minLines = 2,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = OrbitCyan,
                             unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
@@ -1886,13 +2203,16 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                     )
                 }
 
-                // Loss Aversion CTA pair
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    GradientButton(
-                        text = "Book Now →",
+                // Prominent Next / Book Now Action Button
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)) {
+                    Button(
                         onClick = { step = 2 },
+                        colors = ButtonDefaults.buttonColors(containerColor = OrbitGreen),
+                        shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth().height(54.dp)
-                    )
+                    ) {
+                        Text("Next → Continue to Style Selection", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                    }
                     Text(
                         text = "or  I'll Risk Missing This Slot",
                         color = MutedText,
