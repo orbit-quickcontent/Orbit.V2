@@ -783,13 +783,19 @@ fun PartnerDashboardScreen(
             try {
                 if (isOnline) {
                     val token = "Bearer ${prefsManager.getAuthToken()}"
-                    val available = ApiClient.apiService.getAvailableBookings(token)
+                    val pid = prefsManager.getPartnerId() ?: ""
+                    if (pid.isBlank()) {
+                        android.util.Log.w("PartnerDash", "No partnerId in prefs — cannot fetch bookings")
+                        activeDispatch = null
+                        return@launch
+                    }
+                    val available = ApiClient.apiService.getAvailableBookings(token, pid)
                     activeDispatch = available.firstOrNull()
                 } else {
                     activeDispatch = null
                 }
             } catch (e: Exception) {
-                android.util.Log.e("PartnerDash", "Failed to refresh available bookings", e)
+                android.util.Log.e("PartnerDash", "Failed to refresh available bookings: ${e.message}", e)
                 activeDispatch = null
             } finally {
                 delay(300)
@@ -798,9 +804,17 @@ fun PartnerDashboardScreen(
         }
     }
 
-    // Fetch real available dispatches from API when online
+    // Fetch on online toggle
     LaunchedEffect(isOnline) {
         refreshRequests()
+    }
+
+    // Poll every 5 seconds while online — picks up new bookings without WebSocket
+    LaunchedEffect(isOnline) {
+        while (isOnline) {
+            delay(5000)
+            if (isOnline) refreshRequests()
+        }
     }
 
     val shootLocation = remember { LatLng(18.95823563155963, 72.81710824) }

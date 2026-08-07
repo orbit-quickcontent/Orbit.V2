@@ -24,17 +24,37 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Check if partner exists in Firestore
-    let partner = await firestoreDb.partners.findUnique({
-      where: { id: partnerId },
-    })
-
+    // Resolve partner — try by profile id first, then by userId
+    let partner = await firestoreDb.partners.findUnique({ where: { id: partnerId } })
     if (!partner) {
-      // Also try by userId in case the partnerId is a user ID
-      partner = await firestoreDb.partners.findUnique({
-        where: { userId: partnerId },
-      })
-      if (!partner) {
+      partner = await firestoreDb.partners.findUnique({ where: { userId: partnerId } })
+    }
+
+    // Auto-create partner profile if not found (handles new signups where
+    // /auth/google or /auth/register created a user but no partner profile yet)
+    if (!partner) {
+      try {
+        const partnerUser = await firestoreDb.partnerUsers.findUnique({ where: { id: partnerId } })
+        const profileId = `prt-${partnerId}`
+        partner = await firestoreDb.partners.create({
+          data: {
+            id: profileId,
+            userId: partnerId,
+            location: 'Mumbai, IN',
+            latitude: 19.076,
+            longitude: 72.877,
+            availability: true,
+            isVerified: false,
+            rating: 5.0,
+            completedProjects: 0,
+            deviceInfo: 'Android',
+            walletBalance: 0,
+            displayName: partnerUser?.name || 'Orbit Partner',
+          }
+        })
+        console.log(`[AvailableBookings] Auto-created partner profile for userId: ${partnerId}`)
+      } catch (createErr) {
+        console.warn('[AvailableBookings] Could not auto-create partner profile:', createErr)
         return NextResponse.json({ availableBookings: [] })
       }
     }

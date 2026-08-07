@@ -24,14 +24,21 @@ async function triggerDispatch(bookingId: string): Promise<void> {
   const booking = await firestoreDb.bookings.findUnique({ where: { id: bookingId } })
   if (!booking || booking.partnerId) return
 
+  // Try available partners first, then fall back to ALL partners
+  // (new partners may not have availability=true set yet)
   let onlinePartners = await firestoreDb.partners.findMany({ where: { availability: true } })
   if (onlinePartners.length === 0) {
     const all = await firestoreDb.partners.findMany()
     if (all.length > 0) {
-      await Promise.all(all.map(p => firestoreDb.partners.update({ where: { id: p.id }, data: { availability: true } })))
-      onlinePartners = await firestoreDb.partners.findMany({ where: { availability: true } })
+      // Mark all partners as available and dispatch to them
+      await Promise.all(all.map(p =>
+        firestoreDb.partners.update({ where: { id: p.id }, data: { availability: true } })
+      ))
+      onlinePartners = all
+      console.log(`[Dispatch] No available partners found, activated all ${all.length} partners`)
     }
   }
+  console.log(`[Dispatch] Dispatching booking ${bookingId} to ${onlinePartners.length} partner(s)`)
 
   let declinedBy: string[] = []
   try { declinedBy = booking.declinedBy ? (typeof booking.declinedBy === 'string' ? JSON.parse(booking.declinedBy) : booking.declinedBy) : [] } catch { declinedBy = [] }

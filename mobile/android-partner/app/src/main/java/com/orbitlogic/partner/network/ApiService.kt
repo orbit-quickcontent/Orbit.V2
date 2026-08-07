@@ -159,7 +159,10 @@ interface ApiService {
     suspend fun verifyOtp(@Body request: VerifyOtpRequest): VerifyOtpResponse
 
     @GET("bookings/available")
-    suspend fun getAvailableBookings(@Header("Authorization") token: String): List<BookingDto>
+    suspend fun getAvailableBookings(
+        @Header("Authorization") token: String,
+        @Query("partnerId") partnerId: String
+    ): List<BookingDto>
 
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): LoginResponse
