@@ -572,26 +572,52 @@ export function PartnerDashboard() {
   // ─── If partner is offline ──────────────────────────────────────────
   if (!user.isOnline) {
     return (
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        animate="show"
-        className="space-y-4 sm:space-y-5"
-      >
+      <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-4 sm:space-y-5">
+
+        {/* Goal Gradient — daily earnings progress */}
         <motion.div variants={staggerItem}>
-          <div className="orbit-card rounded-2xl p-6 sm:p-8 text-center">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-gray-500/10 flex items-center justify-center">
-              <Briefcase className="w-7 h-7 text-gray-400/50" />
+          <div className="orbit-card rounded-2xl p-5 border border-emerald-500/20">
+            <div className="flex justify-between items-center mb-3">
+              <div>
+                <p className="text-sm font-black text-white">Today's Progress</p>
+                <p className="text-xs text-slate-400">3 of 5 bookings completed</p>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-black text-emerald-400">₹1,800</p>
+                <p className="text-xs text-slate-500">₹700 to daily goal</p>
+              </div>
             </div>
-            <h3 className="text-base font-bold mb-2 text-foreground">You&apos;re Offline</h3>
-            <p className="text-xs text-muted-foreground/60 mb-4">
-              Go online to receive new booking requests from clients.
-            </p>
-            <p className="text-[10px] text-muted-foreground/40">
-              Tap the <span className="text-gray-400">Online/Offline</span> toggle in the header to go online.
-            </p>
+            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400"
+                initial={{ width: 0 }}
+                animate={{ width: "72%" }}
+                transition={{ duration: 1, ease: "easeOut" }}
+              />
+            </div>
+            <div className="flex justify-between mt-1.5 text-[10px] text-slate-600">
+              <span>₹0</span><span>Goal: ₹2,500</span>
+            </div>
           </div>
         </motion.div>
+
+        {/* Loss Aversion — go online urgency */}
+        <motion.div variants={staggerItem}>
+          <div className="bg-orange-950/40 border border-orange-500/30 rounded-2xl p-5 text-center">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-orange-500/10 flex items-center justify-center">
+              <span className="text-2xl">⚡</span>
+            </div>
+            <h3 className="text-base font-black text-white mb-1">High-demand area active now</h3>
+            <p className="text-sm text-orange-400 font-bold mb-1">Go online to avoid missing bookings</p>
+            <p className="text-xs text-slate-500 mb-4">3 clients are searching for creators in your area right now</p>
+            <div className="inline-flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-2">
+              <span className="text-xs text-slate-400">Toggle</span>
+              <span className="text-xs font-bold text-orange-400">Online/Offline</span>
+              <span className="text-xs text-slate-400">in the header to go online</span>
+            </div>
+          </div>
+        </motion.div>
+
       </motion.div>
     );
   }

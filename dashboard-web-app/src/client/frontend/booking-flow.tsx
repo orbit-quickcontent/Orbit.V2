@@ -355,22 +355,46 @@ export function BookingFlow() {
           </p>
         </motion.div>
 
-        <div className="flex items-center justify-center gap-2 mb-6 sm:mb-10">
-          {[1, 2, 3].map((s) => (
-            <div key={s} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                step >= s ? "bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white" : "bg-white/5 text-muted-foreground border border-orbit-border"
-              }`}>
-                {step > s ? <CheckCircle2 className="w-4 h-4" /> : s}
+        {/* ── Principle 2: Goal Gradient Progress Bar ───────────────────── */}
+        {(() => {
+          const stepLabels = ["Your Details", "Schedule", "Review & Pay"];
+          const stepProgress = [33, 67, 100];
+          return (
+            <div className="mb-6 bg-white/3 rounded-2xl p-4 border border-white/5">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-black text-cyan-400 tracking-wide">{stepLabels[step - 1]}</span>
+                <span className="text-xs text-slate-500">{stepProgress[step - 1]}% Complete</span>
               </div>
-              {s < 3 && <div className={`w-12 h-0.5 ${step > s ? "bg-gradient-to-r from-orbit-cyan to-orbit-purple" : "bg-orbit-border"}`} />}
+              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-purple-500"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${stepProgress[step - 1]}%` }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                />
+              </div>
+              <div className="flex justify-between mt-2">
+                {stepLabels.map((label, i) => (
+                  <span key={label} className={`text-[10px] font-medium ${i + 1 <= step ? "text-cyan-400" : "text-slate-600"}`}>
+                    {i + 1 < step ? "✓ " : ""}{label}
+                  </span>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
+          );
+        })()}
 
         <AnimatePresence mode="wait">
           {step === 1 && (
             <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="orbit-card rounded-2xl p-4 sm:p-6 md:p-8">
+              {/* Smart Defaults banner */}
+              <div className="mb-5 bg-cyan-950/30 border border-cyan-500/20 rounded-xl p-3 flex items-center gap-3">
+                <span className="text-lg">⚡</span>
+                <div>
+                  <p className="text-xs font-black text-cyan-400">Recommended for Instagram Reels</p>
+                  <p className="text-[10px] text-slate-500">30 min · 4K · Mic included · UPI pre-selected</p>
+                </div>
+              </div>
               <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-6 flex items-center gap-2"><Users className="w-5 h-5 text-orbit-cyan" />Your Details</h3>
               <div className="space-y-4">
                 {[
@@ -398,12 +422,22 @@ export function BookingFlow() {
 
           {step === 2 && (
             <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="orbit-card rounded-2xl p-4 sm:p-6 md:p-8 space-y-6">
-              {/* Top Banner Notice when Book Right Now is clicked */}
+
+              {/* Loss Aversion urgency banner */}
+              <div className="bg-red-950/40 border border-red-500/30 rounded-2xl p-4 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
+                  <span className="text-base">🔴</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white">2 creators nearby — slots filling fast</p>
+                  <p className="text-xs text-red-400 font-bold">Slot expires · Book now to lock it in</p>
+                </div>
+                <span className="text-[10px] font-black text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-2 py-1 shrink-0">LIVE</span>
+              </div>
+
               {bookingDate && (
-                <div className="bg-[#0A0C10] border border-white/10 rounded-2xl p-4 flex items-center gap-3.5 shadow-xl">
-                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-black font-black text-sm shrink-0">
-                    ✓
-                  </div>
+                <div className="bg-[#0A0C10] border border-white/10 rounded-2xl p-4 flex items-center gap-3.5">
+                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-black font-black text-sm shrink-0">✓</div>
                   <div>
                     <div className="text-sm font-bold text-white">Booked for right now!</div>
                     <div className="text-xs text-zinc-400">A partner will be dispatched immediately.</div>
@@ -677,6 +711,27 @@ export function BookingFlow() {
                     </div>
                   </div>
 
+                  {/* Contrast Effect — add-ons card (Principle 6) */}
+                  <div className="bg-[#0A0C10]/95 border border-cyan-500/20 rounded-2xl p-5 space-y-3">
+                    <p className="text-sm font-bold text-white">Upgrade Your Reel</p>
+                    <p className="text-xs text-slate-400">Upgrade your {formatCurrency(selectedPackage.price)} reel with studio quality for just a little more</p>
+                    {[
+                      { label: "Studio Mic", desc: "Crystal clear audio capture", price: 99, key: "mic" },
+                      { label: "Cinematic Lighting", desc: "Professional LED setup", price: 149, key: "light" },
+                    ].map(addon => (
+                      <label key={addon.key} className="flex items-center justify-between bg-[#0D0F1A] rounded-xl p-3.5 border border-white/5 cursor-pointer hover:border-cyan-500/20 transition">
+                        <div className="flex items-center gap-3">
+                          <input type="checkbox" className="w-4 h-4 accent-cyan-400 rounded" />
+                          <div>
+                            <p className="text-sm font-semibold text-white">{addon.label}</p>
+                            <p className="text-[10px] text-slate-500">{addon.desc}</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-black text-cyan-400">+₹{addon.price}</span>
+                      </label>
+                    ))}
+                  </div>
+
                   {/* Card 2: Choose Payment Method */}
                   <div className="bg-[#0A0C10]/95 border border-white/10 rounded-2xl p-6 space-y-4">
                     <div className="flex items-center gap-2 text-sm font-bold text-white mb-2">
@@ -717,33 +772,26 @@ export function BookingFlow() {
                     </div>
                   </div>
 
-                  {/* Bottom Action Bar */}
-                  <div className="mt-8 flex items-center justify-between gap-4 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setStep(2)}
-                      className="px-6 py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-bold text-sm border border-white/10 flex items-center gap-2 transition-all cursor-pointer"
-                    >
-                      <ArrowLeft className="w-4 h-4" /> Back
-                    </button>
-
+                  {/* Loss Aversion CTA (Principle 5) */}
+                  <div className="mt-6 space-y-2">
                     <button
                       type="button"
                       onClick={handlePayment}
                       disabled={isProcessing}
-                      className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-[#00D2FF] via-[#7000FF] to-[#A056FF] text-white font-extrabold text-sm flex items-center gap-2 shadow-[0_0_25px_rgba(0,210,255,0.35)] hover:shadow-[0_0_35px_rgba(0,210,255,0.55)] active:scale-[0.99] transition-all cursor-pointer"
+                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#00D2FF] via-[#7000FF] to-[#A056FF] text-white font-black text-sm flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(0,210,255,0.35)] hover:shadow-[0_0_35px_rgba(0,210,255,0.55)] transition-all"
                     >
                       {isProcessing ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Authorizing Payment...</span>
-                        </>
+                        <><Loader2 className="w-4 h-4 animate-spin" /><span>Authorizing...</span></>
                       ) : (
-                        <>
-                          <span>Authorize & Pay</span>
-                          <CheckCircle2 className="w-4 h-4" />
-                        </>
+                        <><span>Book Now — Secure My Slot</span><CheckCircle2 className="w-4 h-4" /></>
                       )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStep(2)}
+                      className="w-full py-3 text-slate-500 text-xs font-medium hover:text-slate-400 transition"
+                    >
+                      ← Back · I'll Risk Missing This Slot
                     </button>
                   </div>
                 </>

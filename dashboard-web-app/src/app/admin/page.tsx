@@ -376,12 +376,8 @@ export default function AdminDashboard() {
                               </span>
                               {stat.trend && (
                                 <svg className="w-16 h-8 text-orbit-cyan opacity-50" viewBox="0 0 100 50">
-                                  <polyline
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="3"
-                                    points={stat.trend.map((val, idx) => `${idx * 16},${50 - (val / 150) * 50}`).join(" ")}
-                                  />
+                                  <polyline fill="none" stroke="currentColor" strokeWidth="3"
+                                    points={stat.trend.map((val, idx) => `${idx * 16},${50 - (val / 150) * 50}`).join(" ")} />
                                 </svg>
                               )}
                             </div>
@@ -389,6 +385,25 @@ export default function AdminDashboard() {
                         </Card>
                       );
                     })}
+                  </div>
+
+                  {/* Admin Psychology: SLA positive + loss framing */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-emerald-950/30 border border-emerald-500/20 rounded-2xl p-4 text-center">
+                      <p className="text-3xl font-black text-emerald-400">89%</p>
+                      <p className="text-xs font-bold text-white mt-1">Bookings Delivered Within SLA</p>
+                      <p className="text-[10px] text-slate-500 mt-1">Positive framing — celebrate the win</p>
+                    </div>
+                    <div className="bg-red-950/30 border border-red-500/20 rounded-2xl p-4 text-center">
+                      <p className="text-3xl font-black text-red-400">11</p>
+                      <p className="text-xs font-bold text-white mt-1">Bookings at Risk of Delay</p>
+                      <p className="text-[10px] text-slate-500 mt-1">Loss framing — drives immediate action</p>
+                    </div>
+                    <div className="bg-purple-950/30 border border-purple-500/20 rounded-2xl p-4 text-center">
+                      <p className="text-3xl font-black text-purple-400">🔥 7</p>
+                      <p className="text-xs font-bold text-white mt-1">Partners on Delivery Streak</p>
+                      <p className="text-[10px] text-slate-500 mt-1">Gamification — drives retention</p>
+                    </div>
                   </div>
 
                   {/* Main Directories & Analytics grid */}
