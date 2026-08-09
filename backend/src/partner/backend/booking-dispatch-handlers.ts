@@ -11,7 +11,8 @@
 
 import { firestoreDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
-import { notifyDispatch } from '@/services/websocket.service'
+import { notifyDispatch, getOnlinePartnerIds } from '@/services/websocket.service'
+import { findNearestPartners } from '@/services/geo.service'
 
 export async function POST(
   _request: NextRequest,
@@ -82,7 +83,7 @@ export async function POST(
     }
 
     // Exclude declined partners in-memory
-    let activePartners = onlinePartners.filter(p => !declinedBy.includes(p.id))
+    const activePartners = onlinePartners.filter(p => !declinedBy.includes(p.id))
 
     if (activePartners.length === 0) {
       console.log(`[Dispatch] No online active partners found in Firestore for booking ${bookingId}. Dispatch queued for available partners.`);
@@ -93,32 +94,47 @@ export async function POST(
       }, { status: 200 });
     }
 
-    // Sort by proximity if booking has location data
-    let sortedPartners = activePartners
-    if (booking.location && activePartners.some(p => p.latitude != null && p.longitude != null)) {
-      sortedPartners = [...activePartners].sort((a, b) => {
-        const aHasCoords = a.latitude != null && a.longitude != null
-        const bHasCoords = b.latitude != null && b.longitude != null
-        if (aHasCoords && bHasCoords) return 0
-        if (aHasCoords) return -1
-        if (bHasCoords) return 1
-        return 0
-      })
-    }
+    // Parse booking coordinates for proximity sorting
+    const bookingLat: number | null =
+      booking.lat != null ? Number(booking.lat) :
+      booking.latitude != null ? Number(booking.latitude) : null;
+    const bookingLng: number | null =
+      booking.lng != null ? Number(booking.lng) :
+      booking.longitude != null ? Number(booking.longitude) : null;
 
-    // Take top 20
-    const partnersToDispatch = sortedPartners.slice(0, 20)
-    const newRound = (booking.dispatchRound || 0) + 1
+    // Get currently socket-connected partner IDs for online-presence check
+    // Pass null to skip WS check if WS server hasn't initialised yet
+    const wsOnlineIds = getOnlinePartnerIds();
+    const wsOnlineSet = wsOnlineIds.length > 0 ? new Set(wsOnlineIds) : null;
+
+    // Sort by Haversine distance, return nearest 5 (or all if < 5 available)
+    // maxStaleMinutes=60: generous window — falls back gracefully when partners
+    // haven't yet pushed live GPS (e.g. first dispatch after app install)
+    const partnersToDispatch = findNearestPartners(
+      activePartners,
+      bookingLat,
+      bookingLng,
+      5,
+      wsOnlineSet,
+      60
+    );
+
+    // If WS-presence filter eliminated everyone, fall back to all active partners (top 5)
+    const finalPartners = partnersToDispatch.length > 0
+      ? partnersToDispatch
+      : findNearestPartners(activePartners, bookingLat, bookingLng, 5, null, 60);
 
     // 4. Create WorkDispatch records for each partner
+    const newRound = (booking.dispatchRound || 0) + 1
     const dispatchRecords = await Promise.all(
-      partnersToDispatch.map((partner) =>
+      finalPartners.map((partner) =>
         firestoreDb.workDispatches.create({
           data: {
             bookingId,
             partnerId: partner.id,
             status: 'PENDING',
             round: newRound,
+            distanceKm: isFinite(partner.distanceKm) ? partner.distanceKm : null,
             dispatchedAt: new Date().toISOString(),
           },
         })
@@ -158,7 +174,7 @@ export async function POST(
     }
 
     // 7. Notify WebSocket service to push dispatch to partners (in-process)
-    const partnerIds = partnersToDispatch.map((p) => p.id)
+    const partnerIds = finalPartners.map((p) => p.id)
     notifyDispatch({ bookingId, partnerIds, booking: updatedBooking, round: newRound })
 
     // 8. Return result
@@ -166,6 +182,10 @@ export async function POST(
       dispatched: partnerIds.length,
       dispatchRecords,
       booking: updatedBooking,
+      nearestPartners: finalPartners.map(p => ({
+        partnerId: p.id,
+        distanceKm: isFinite(p.distanceKm) ? Math.round(p.distanceKm * 100) / 100 : null,
+      })),
     })
   } catch (error) {
     console.error('Error dispatching booking:', error)

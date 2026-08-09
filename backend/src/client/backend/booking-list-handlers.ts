@@ -15,12 +15,13 @@ import { logAudit } from '@/lib/auth-server'
 import { generatePresignedUrl } from '@/lib/security'
 import { verifyToken } from '@/lib/security-auth'
 import { notifyDispatch } from '@/services/websocket.service'
+import { findNearestPartners } from '@/services/geo.service'
 
 /**
  * Trigger the dispatch logic in-process without going through localhost HTTP.
  * Mirrors booking-dispatch-handlers.ts POST logic.
  */
-async function triggerDispatch(bookingId: string): Promise<void> {
+async function triggerDispatch(bookingId: string, bookingLat?: number | null, bookingLng?: number | null): Promise<void> {
   const booking = await firestoreDb.bookings.findUnique({ where: { id: bookingId } })
   if (!booking || booking.partnerId) return
 
@@ -43,11 +44,19 @@ async function triggerDispatch(bookingId: string): Promise<void> {
   let declinedBy: string[] = []
   try { declinedBy = booking.declinedBy ? (typeof booking.declinedBy === 'string' ? JSON.parse(booking.declinedBy) : booking.declinedBy) : [] } catch { declinedBy = [] }
 
-  const active = onlinePartners.filter(p => !declinedBy.includes(p.id)).slice(0, 20)
+  const allActive = onlinePartners.filter(p => !declinedBy.includes(p.id))
+  if (allActive.length === 0) return
+
+  // Resolve booking lat/lng — prefer passed args, fall back to stored booking fields
+  const lat = bookingLat ?? (booking.lat != null ? Number(booking.lat) : null);
+  const lng = bookingLng ?? (booking.lng != null ? Number(booking.lng) : null);
+
+  // Sort by Haversine distance and dispatch to nearest 5
+  const active = findNearestPartners(allActive, lat, lng, 5, null, 60);
   if (active.length === 0) return
 
   const newRound = (booking.dispatchRound || 0) + 1
-  await Promise.all(active.map(p => firestoreDb.workDispatches.create({ data: { bookingId, partnerId: p.id, status: 'PENDING', round: newRound, dispatchedAt: new Date().toISOString() } })))
+  await Promise.all(active.map(p => firestoreDb.workDispatches.create({ data: { bookingId, partnerId: p.id, status: 'PENDING', round: newRound, distanceKm: isFinite((p as any).distanceKm) ? (p as any).distanceKm : null, dispatchedAt: new Date().toISOString() } })))
   const updated = await firestoreDb.bookings.update({ where: { id: bookingId }, data: { dispatchRound: newRound, status: 'PARTNER_DISPATCHED' } })
 
   const pkg = await firestoreDb.packages.findUnique({ where: { id: updated.packageId } })
@@ -220,7 +229,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { userId, packageId, bookingDate, timeSlot, location, notes, razorpayPaymentId } = (validation as any).data
+    const { userId, packageId, bookingDate, timeSlot, location, notes, razorpayPaymentId, lat, lng } = (validation as any).data
 
     // 2. Ensure user exists — auto-create if missing (handles Google/Apple OAuth users
     //    whose records were not saved to clientUsers during login)
@@ -281,6 +290,9 @@ export async function POST(request: NextRequest) {
         timeSlot,
         location: location || null,
         notes: notes || null,
+        // GPS coordinates — stored for proximity-based partner dispatch
+        lat: lat != null ? Number(lat) : null,
+        lng: lng != null ? Number(lng) : null,
         status: 'PAID',
         paymentStatus: 'SUCCESS',
         paymentId: razorpayPaymentId || null,
@@ -292,7 +304,9 @@ export async function POST(request: NextRequest) {
     // Automatically trigger partner dispatch immediately upon creation (in-process, no HTTP)
     ;(async () => {
       try {
-        await triggerDispatch(booking.id)
+        const bookingLat = lat != null ? Number(lat) : null;
+        const bookingLng = lng != null ? Number(lng) : null;
+        await triggerDispatch(booking.id, bookingLat, bookingLng)
       } catch (dispatchErr) {
         console.error('Failed to trigger automatic dispatch:', dispatchErr)
       }

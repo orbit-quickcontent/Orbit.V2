@@ -1,12 +1,35 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 
 function addCorsHeaders(response: NextResponse) {
   response.headers.set("Access-Control-Allow-Origin", "*");
   response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
   return response;
+}
+
+function getAuthTokenPayload(request: NextRequest): { role?: string; id?: string } | null {
+  try {
+    const authHeader = request.headers.get("authorization");
+    const cookieToken =
+      request.cookies.get("auth_token")?.value ||
+      request.cookies.get("next-auth.session-token")?.value;
+    const rawToken = authHeader ? authHeader.replace("Bearer ", "").trim() : cookieToken;
+    if (!rawToken) return null;
+    const parts = rawToken.split(".");
+    if (parts.length < 2) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
 }
 
 export async function middleware(request: NextRequest) {
@@ -18,10 +41,7 @@ export async function middleware(request: NextRequest) {
   const host = request.headers.get("host") || "";
   const isLocal = host.includes("localhost") || host.includes("127.0.0.1") || host.includes("10.0.2.2") || process.env.NODE_ENV === "development";
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET || "orbit-super-secret-jwt-key",
-  });
+  const token = getAuthTokenPayload(request);
 
   const { pathname } = request.nextUrl;
 

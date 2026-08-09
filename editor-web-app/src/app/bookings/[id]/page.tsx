@@ -105,6 +105,7 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
     setIsUploading(true);
     setUploadProgress(0);
 
+    const storageKey = `edits/${bookingId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const API = process.env.NEXT_PUBLIC_API_URL || "/api";
     const uploadUrl = `${API}/upload/mock-s3?key=${encodeURIComponent(storageKey)}`;
 

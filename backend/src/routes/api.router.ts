@@ -27,6 +27,7 @@ import * as partnerBankHandlers from "../partner/backend/partner-bank-handlers";
 import * as partnerLocationHandlers from "../partner/backend/partner-location-handlers";
 import * as bookingDeclineHandlers from "../partner/backend/booking-decline-handlers";
 import * as bookingDispatchHandlers from "../partner/backend/booking-dispatch-handlers";
+import * as partnerLocationHandlers from "../partner/backend/partner-location-handlers";
 
 // 4. API custom routes
 import * as syncCompleteRoute from "../api/bookings/[id]/sync-complete/route";
@@ -92,6 +93,9 @@ router.post("/bookings/:id/sync-complete", requireAuth(["PARTNER", "ADMIN", "SUP
 router.post("/partner/location", requireAuth(["PARTNER"]), jsonParser, nextToExpress(partnerLocationHandlers.POST));
 router.get("/partners", requireAuth(), jsonParser, nextToExpress(partnerListHandlers.GET));
 router.post("/partners", requireAuth(["ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(partnerListHandlers.POST));
+// NOTE: /partners/me/* routes MUST be registered before /partners/:id to avoid
+// Express treating the literal string "me" as a dynamic :id param.
+router.patch("/partners/me/location", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(partnerLocationHandlers.PATCH));
 router.get("/partners/:id", requireAuth(), jsonParser, nextToExpress(partnerDetailHandlers.GET));
 router.patch("/partners/:id", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(partnerDetailHandlers.PATCH));
 

@@ -213,7 +213,7 @@ export function DashboardHome() {
               <div key={b.id} onClick={() => setCurrentView("tracking")}
                 className="bg-[#0D0D11] rounded-xl p-4 border border-white/5 hover:border-cyan-500/20 transition cursor-pointer flex items-center justify-between gap-3">
                 <div className="space-y-0.5 min-w-0">
-                  <p className="text-sm font-bold text-white truncate">{b.package?.name || "Shoot"}</p>
+                  <p className="text-sm font-bold text-white truncate">{b.packageName || "Shoot"}</p>
                   <p className="text-xs text-slate-500 truncate">{b.location || "Mumbai"}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">

@@ -265,7 +265,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
 
       try {
-        // 2. Sync user profile directly to backend API / Supabase Postgres
+        // 2. Sync user profile directly to Express backend API
         const userRes = await fetch("/api/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

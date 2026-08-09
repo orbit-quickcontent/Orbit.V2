@@ -240,8 +240,8 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // Real backend call — the ONLY thing that should produce the token + userId
-    // used everywhere else in the app (e.g. BookingFlowScreen). Falls back to a
-    // Supabase-only session if the backend is briefly unreachable.
+    // used everywhere else in the app (e.g. BookingFlowScreen). Falls back to an
+    // offline fallback session if the backend is briefly unreachable.
     suspend fun authenticateWithBackend(emailVal: String, nameVal: String): Pair<String, String>? {
         return try {
             val response = com.orbitlogic.client.network.ApiClient.apiService.googleAuth(

@@ -16,10 +16,8 @@ const PERSONAS = [
   { id: "visionary", name: "Visionary", emoji: "👩🏻‍💼", bg: "bg-zinc-800/50 border-zinc-700" },
 ];
 
-import { supabase } from "@/lib/supabase-client";
-
 export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
-  const { setUser } = useAppStore();
+  const { setUser, login } = useAppStore();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -35,55 +33,15 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     setErrorMsg(null);
 
     try {
-      // 1. Sign up / Sign in with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            phone: phone || "+919876543210",
-            persona: selectedPersona,
-          },
-        },
+      const avatarEmoji = PERSONAS.find((p) => p.id === selectedPersona)?.emoji || "👨🏻‍🦱";
+      await login("USER", {
+        email: email || "user@example.com",
+        name: fullName || "Orbit User",
+        phone: phone || "+919876543210",
       });
 
-      if (authError && !authError.message.includes("User already registered")) {
-        throw authError;
-      }
-
-      // If already registered, perform sign in
-      let userId = authData.user?.id;
-      if (!userId) {
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (signInError) throw signInError;
-        userId = signInData.user?.id;
-      }
-
-      const avatarEmoji = PERSONAS.find((p) => p.id === selectedPersona)?.emoji || "👨🏻‍🦱";
-
-      // 2. Upsert profile in Supabase public.profiles table
-      if (userId) {
-        const { error: profileErr } = await supabase.from("profiles").upsert({
-          id: userId,
-          full_name: fullName || "Orbit User",
-          name: fullName || "Orbit User",
-          email,
-          phone: phone || "+919876543210",
-          role: "client",
-          avatar_emoji: avatarEmoji,
-          persona: selectedPersona,
-          updated_at: new Date().toISOString(),
-        });
-        if (profileErr) console.warn("Supabase profile sync warning:", profileErr.message);
-      }
-
-      // 3. Sync local Zustand store
       setUser({
-        name: fullName,
+        name: fullName || "Orbit User",
         email: email || "user@example.com",
         phone: phone || "+919876543210",
         avatarEmoji,
@@ -94,7 +52,6 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Authentication failed";
       setErrorMsg(msg);
-      // Fallback local login for smooth demo testing
       setUser({
         name: fullName || "Orbit User",
         email: email || "user@example.com",
@@ -110,10 +67,11 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
 
   const handleOAuthLogin = async (provider: "google" | "apple") => {
     try {
-      await supabase.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo: window.location.origin },
+      await login("USER", {
+        email: `${provider}-user@orbitlogic.io`,
+        name: provider === "google" ? "Google User" : "Apple User",
       });
+      onComplete();
     } catch {
       onComplete();
     }

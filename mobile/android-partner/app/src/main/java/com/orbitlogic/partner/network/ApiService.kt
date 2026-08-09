@@ -74,6 +74,22 @@ data class UpdatePartnerRequest(
     val deviceInfo: String?
 )
 
+/** Payload for PATCH /partners/me/location — live GPS update */
+data class LocationUpdateRequest(
+    val lat: Double,
+    val lng: Double,
+    val heading: Double? = null,
+    val speed: Double? = null
+)
+
+data class LocationUpdateResponse(
+    val message: String,
+    val partnerId: String,
+    val lat: Double,
+    val lng: Double,
+    val timestamp: String
+)
+
 data class LinkBankRequest(
     val accountHolderName: String,
     val accountNumber: String,
@@ -144,7 +160,8 @@ data class LoginResponse(
     val token: String?,
     val accessToken: String?,
     val refreshToken: String?,
-    val user: UserDto?
+    val user: UserDto?,
+    val partnerId: String? = null
 )
 
 data class RegisterRequest(
@@ -255,4 +272,15 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: PresignedUrlRequest
     ): PresignedUrlResponse
+
+    /**
+     * Push the partner's live GPS coordinates to the backend over HTTP.
+     * The backend persists to Firestore and broadcasts a partner:location WS event.
+     * Use this as a reliable fallback alongside the WebSocket partner:updateLocation event.
+     */
+    @PATCH("api/partners/me/location")
+    suspend fun updatePartnerLocation(
+        @Header("Authorization") token: String,
+        @Body request: LocationUpdateRequest
+    ): LocationUpdateResponse
 }

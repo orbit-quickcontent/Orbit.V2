@@ -2,6 +2,8 @@ import express from 'express';
 import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import cors from 'cors';
+import { LocationService } from './location.service';
+import { firestoreDb } from '../lib/db';
 
 // ── Singleton io reference ─────────────────────────────────────────────────────
 let _io: SocketIOServer | null = null;
@@ -9,6 +11,14 @@ let _io: SocketIOServer | null = null;
 /** Returns the active Socket.IO server, or null before initWebSocketService() runs. */
 export function getIo(): SocketIOServer | null {
   return _io;
+}
+
+/**
+ * Returns an array of all currently socket-connected partner IDs.
+ * Used by dispatch handlers to filter for WS-presence before sending booking:dispatched.
+ */
+export function getOnlinePartnerIds(): string[] {
+  return Array.from(onlinePartners.keys());
 }
 
 // ── Online partner tracking ────────────────────────────────────────────────────
@@ -137,6 +147,57 @@ export function initWebSocketService() {
       console.log(`[WS] Client subscribed to booking: ${bookingId} (socket: ${socket.id})`);
       socket.join(`booking:${bookingId}`);
       socketSubscriptions.set(socket.id, bookingId);
+    });
+
+    /**
+     * partner:updateLocation — Real-time GPS push from partner mobile app.
+     *
+     * Payload: { partnerId: string, lat: number, lng: number, heading?: number, speed?: number }
+     *
+     * On receipt:
+     *  1. Updates the in-memory LocationService singleton (immediate, synchronous)
+     *  2. Persists lat/lng/lastLocationAt to Firestore partner_profiles (async, non-blocking)
+     *  3. Broadcasts partner:location to all connected clients so the dashboard map updates
+     */
+    socket.on('partner:updateLocation', (payload: {
+      partnerId: string;
+      lat: number;
+      lng: number;
+      heading?: number;
+      speed?: number;
+    }) => {
+      const { partnerId, lat, lng, heading, speed } = payload;
+      if (!partnerId || lat == null || lng == null) return;
+
+      // 1. In-memory update (synchronous)
+      const locationService = LocationService.getInstance();
+      locationService.updateLocation(partnerId, lat, lng, heading, speed);
+
+      // 2. Persist to Firestore (fire-and-forget — don't block the WS event loop)
+      const lastLocationAt = new Date().toISOString();
+      firestoreDb.partners.findFirst({ where: { userId: partnerId } })
+        .then((partner) => {
+          const profileId = partner ? partner.id : partnerId;
+          return firestoreDb.partners.update({
+            where: { id: profileId },
+            data: { latitude: lat, longitude: lng, lastLocationAt, availability: true },
+          });
+        })
+        .catch((err: any) => {
+          console.warn(`[WS] Failed to persist location for partner ${partnerId}:`, err?.message);
+        });
+
+      // 3. Broadcast to all connected clients (dashboard map)
+      if (_io) {
+        _io.emit('partner:location', {
+          partnerId,
+          lat,
+          lng,
+          heading: heading ?? null,
+          speed: speed ?? null,
+          timestamp: lastLocationAt,
+        });
+      }
     });
 
     socket.on('disconnect', () => {

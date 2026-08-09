@@ -588,7 +588,7 @@ export function TrackingDashboard() {
       clearInterval(pollTimer);
     };
   // Re-run when booking ID changes OR when status changes (e.g. DELIVERED arrives via store poll)
-  }, [currentBooking?.id, currentBooking?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentBooking?.id, currentBooking?.status]);  
 
   // ─── Sync progress animation — ONLY during SYNCING phase ──────
   useEffect(() => {

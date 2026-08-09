@@ -14,7 +14,6 @@ import java.util.concurrent.TimeUnit
  * OrbitAuthManager — Android (Partner App)
  *
  * Registers and authenticates partner users against the Orbit backend API.
- * Replaces the old SupabaseAuthManager.
  */
 class OrbitAuthManager(
     private val baseUrl: String = try {
@@ -97,6 +96,7 @@ class OrbitAuthManager(
             val token = respJson.optString("token").ifBlank { "" }
             val userId = respJson.optJSONObject("user")?.optString("id") ?: ""
             val partnerId = respJson.optJSONObject("partner")?.optString("id")
+                ?: respJson.optString("partnerId").takeIf { it.isNotBlank() }
 
             if (userId.isNotBlank()) AuthResult(token, userId, partnerId) else null
         } catch (e: Exception) {

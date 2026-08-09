@@ -279,8 +279,8 @@ fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
                     )
                 )
                 val token = response.token ?: response.accessToken ?: "master_token_123456"
-                val userId = response.user?.id ?: "master_partner_id"
-                return token to userId
+                val partnerId = response.partnerId ?: response.user?.id ?: "master_partner_id"
+                return token to partnerId
             }
 
             // Standard partner auth
@@ -292,8 +292,8 @@ fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
                 )
             )
             val realToken = response.token ?: response.accessToken
-            val realId = response.user?.id
-            if (realToken != null && realId != null) realToken to realId else null
+            val realPartnerId = response.partnerId ?: response.user?.id
+            if (realToken != null && realPartnerId != null) realToken to realPartnerId else null
         } catch (e: Exception) {
             android.util.Log.e("PartnerLogin", "Backend auth failed", e)
             null
@@ -856,9 +856,46 @@ fun PartnerDashboardScreen(
         }
     }
 
-    // ── Location permission + GPS loop ────────────────────────────────────
     val locationManager = remember {
         context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+    }
+
+    val socketManager = remember { SocketManager() }
+
+    // Connect WebSocket & listen for dispatches while online
+    LaunchedEffect(isOnline) {
+        if (isOnline) {
+            val token = prefsManager.getAuthToken() ?: ""
+            val pid = prefsManager.getPartnerId() ?: ""
+            if (pid.isNotBlank() && token.isNotBlank()) {
+                socketManager.connect(pid, token) { bookingId, location ->
+                    android.util.Log.d("PartnerDash", "Realtime dispatch received: $bookingId @ $location")
+                    refreshRequests()
+                }
+            }
+            while (isOnline) {
+                delay(15000)
+                if (isOnline && pid.isNotBlank()) {
+                    socketManager.sendLocationUpdate(pid, 19.0760, 72.8777)
+                    try {
+                        ApiClient.apiService.updatePartnerLocation(
+                            "Bearer $token",
+                            LocationUpdateRequest(lat = 19.0760, lng = 72.8777)
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.e("PartnerDash", "HTTP location update fallback error: ${e.message}")
+                    }
+                }
+            }
+        } else {
+            socketManager.disconnect()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            socketManager.disconnect()
+        }
     }
     LaunchedEffect(isOnline) {
         if (!isOnline) return@LaunchedEffect

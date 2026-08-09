@@ -10,7 +10,11 @@ class SocketManager {
     private var socket: Socket? = null
     private val socketUrl = "http://10.0.2.2:3003" // Android Emulator mapping to orbit-ws port 3003
 
-    fun connect(partnerId: String = "prt-arjun", token: String = "partner_token", onNewDispatch: (String, String) -> Unit) {
+    fun connect(partnerId: String, token: String, onNewDispatch: (String, String) -> Unit) {
+        if (partnerId.isBlank() || token.isBlank()) {
+            Log.e("SocketManager", "Partner ID or token is missing; cannot connect socket.")
+            return
+        }
         if (socket?.connected() == true) {
             setPartnerOnline(partnerId)
             return
@@ -55,13 +59,29 @@ class SocketManager {
         socket?.emit("partner:online", payload)
     }
 
-    fun sendLocationUpdate(lat: Double, lng: Double, bookingId: String) {
+    /**
+     * Push the partner's current GPS coordinates to the backend.
+     *
+     * Emits the `partner:updateLocation` event which the backend handles by:
+     *  1. Updating the in-memory LocationService
+     *  2. Persisting latitude/longitude/lastLocationAt to Firestore (fire-and-forget)
+     *  3. Broadcasting `partner:location` to dashboard clients for live map updates
+     *
+     * @param partnerId  The partner's profile ID (used by backend to look up Firestore doc)
+     * @param lat        Current GPS latitude
+     * @param lng        Current GPS longitude
+     * @param heading    Optional compass heading in degrees
+     * @param speed      Optional speed in m/s
+     */
+    fun sendLocationUpdate(partnerId: String, lat: Double, lng: Double, heading: Double? = null, speed: Double? = null) {
         val payload = JSONObject().apply {
-            put("latitude", lat)
-            put("longitude", lng)
-            put("bookingId", bookingId)
+            put("partnerId", partnerId)
+            put("lat", lat)
+            put("lng", lng)
+            heading?.let { put("heading", it) }
+            speed?.let { put("speed", it) }
         }
-        socket?.emit("partner:location", payload)
+        socket?.emit("partner:updateLocation", payload)
     }
 
     fun disconnect() {

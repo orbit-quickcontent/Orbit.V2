@@ -1,13 +1,9 @@
 import Foundation
 
 /**
- * OrbitAuthManager (formerly SupabaseAuthManager)
+ * OrbitAuthManager
  *
- * Authenticates users against the Orbit backend API over URLSession.
- * The Supabase Swift SDK has been removed — do NOT re-add `import Supabase`.
- *
- * IMPORTANT: After editing this file, remove the Supabase Swift Package from
- * Xcode → Project → Package Dependencies.
+ * Authenticates users against the Orbit Express REST backend API over URLSession.
  */
 public class OrbitAuthManager: ObservableObject {
     public static let shared = OrbitAuthManager()
@@ -113,6 +109,5 @@ public class OrbitAuthManager: ObservableObject {
     }
 }
 
-// MARK: – Backward-compat alias
-// Existing callers that reference SupabaseAuthManager.shared will still compile.
+// MARK: – Alias for backwards compatibility
 public typealias SupabaseAuthManager = OrbitAuthManager

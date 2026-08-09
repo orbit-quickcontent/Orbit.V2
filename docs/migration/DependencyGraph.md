@@ -16,7 +16,7 @@ graph TD
     subgraph Backend Infrastructure
         API[Express REST API - Port 3001]
         WS[Socket.io Service - Port 3003]
-        DB[(Supabase PostgreSQL)]
+        DB[(PostgreSQL DB)]
         FS[(Firebase Firestore)]
         S3[(AWS S3 / Storage)]
     end

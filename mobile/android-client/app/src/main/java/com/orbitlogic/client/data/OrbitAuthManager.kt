@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
  * OrbitAuthManager — Android (Client App)
  *
  * Authenticates users against the Orbit backend API (/api/auth/register, /api/auth/login,
- * /api/auth/google). Replaces the old SupabaseAuthManager.
+ * /api/auth/google).
  *
  * The base URL is set via BuildConfig.ORBIT_API_URL if available, otherwise defaults
  * to the production API. Override in local debug builds via a buildConfigField in build.gradle.

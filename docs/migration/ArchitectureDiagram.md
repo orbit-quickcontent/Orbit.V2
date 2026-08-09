@@ -22,7 +22,7 @@ graph LR
     subgraph Service Backend
         EX[Express REST API Server]
         WS[Socket.io Gateway]
-        PR[(Supabase Postgres DB)]
+        PR[(PostgreSQL DB)]
         FS[(Firestore Collections)]
         S3[(Storage Uploads)]
     end
