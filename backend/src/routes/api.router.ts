@@ -24,7 +24,7 @@ import * as partnerListHandlers from "../partner/backend/partner-list-handlers";
 import * as partnerDetailHandlers from "../partner/backend/partner-detail-handlers";
 import * as partnerWalletHandlers from "../partner/backend/partner-wallet-handlers";
 import * as partnerBankHandlers from "../partner/backend/partner-bank-handlers";
-import * as bookingAcceptHandlers from "../partner/backend/booking-accept-handlers";
+import * as partnerLocationHandlers from "../partner/backend/partner-location-handlers";
 import * as bookingDeclineHandlers from "../partner/backend/booking-decline-handlers";
 import * as bookingDispatchHandlers from "../partner/backend/booking-dispatch-handlers";
 
@@ -89,6 +89,7 @@ router.post("/bookings/:id/decline", requireAuth(["PARTNER", "ADMIN", "SUPER_ADM
 router.post("/bookings/:id/sync-complete", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(syncCompleteRoute.POST));
 
 // ── Partners & Wallet ────────────────────────────────────────────────────────
+router.post("/partner/location", requireAuth(["PARTNER"]), jsonParser, nextToExpress(partnerLocationHandlers.POST));
 router.get("/partners", requireAuth(), jsonParser, nextToExpress(partnerListHandlers.GET));
 router.post("/partners", requireAuth(["ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(partnerListHandlers.POST));
 router.get("/partners/:id", requireAuth(), jsonParser, nextToExpress(partnerDetailHandlers.GET));

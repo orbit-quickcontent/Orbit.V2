@@ -3,6 +3,7 @@ package com.orbitlogic.partner.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -771,11 +772,67 @@ fun PartnerDashboardScreen(
     val prefsManager = remember { PrefsManager(context) }
     val coroutineScope = rememberCoroutineScope()
 
+    // ── Core State ─────────────────────────────────────────────────────────
     var isOnline by remember { mutableStateOf(true) }
     var activeDispatch by remember { mutableStateOf<BookingDto?>(null) }
     var isAccepting by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
+    var nearbyBookingCount by remember { mutableIntStateOf(0) }
+    var partnerLat by remember { mutableDoubleStateOf(19.0760) }
+    var partnerLng by remember { mutableDoubleStateOf(72.8777) }
 
+    // ── Offer timeout countdown (15s like Uber) ────────────────────────────
+    var offerTimeLeft by remember { mutableIntStateOf(15) }
+    var offerExpired by remember { mutableStateOf(false) }
+    LaunchedEffect(activeDispatch) {
+        if (activeDispatch != null) {
+            offerTimeLeft = 15
+            offerExpired = false
+            while (offerTimeLeft > 0 && activeDispatch != null) {
+                delay(1000)
+                offerTimeLeft--
+            }
+            if (activeDispatch != null && offerTimeLeft == 0) {
+                offerExpired = true
+                delay(800)
+                activeDispatch = null // auto-decline on timeout
+            }
+        }
+    }
+
+    // ── Radar pulse animations ─────────────────────────────────────────────
+    val radarRotation = rememberInfiniteTransition(label = "radar")
+    val radarAngle by radarRotation.animateFloat(
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing)),
+        label = "radarAngle"
+    )
+    val pulse1 by radarRotation.animateFloat(
+        initialValue = 0.4f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "pulse1"
+    )
+    val pulse2 by radarRotation.animateFloat(
+        initialValue = 1f, targetValue = 0.4f,
+        animationSpec = infiniteRepeatable(tween(1800, 900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "pulse2"
+    )
+
+    // ── GPS ping function ─────────────────────────────────────────────────
+    fun sendLocationPing(lat: Double, lng: Double) {
+        coroutineScope.launch {
+            try {
+                val token = "Bearer ${prefsManager.getAuthToken()}" ?: return@launch
+                val response = ApiClient.apiService.updateLocation(
+                    token,
+                    LocationUpdateRequest(lat, lng)
+                )
+                nearbyBookingCount = response.nearbyBookings
+            } catch (_: Exception) { /* non-fatal */ }
+        }
+    }
+
+    // ── Booking fetch ─────────────────────────────────────────────────────
     fun refreshRequests() {
         if (isRefreshing) return
         isRefreshing = true
@@ -784,19 +841,14 @@ fun PartnerDashboardScreen(
                 if (isOnline) {
                     val token = "Bearer ${prefsManager.getAuthToken()}"
                     val pid = prefsManager.getPartnerId() ?: ""
-                    if (pid.isBlank()) {
-                        android.util.Log.w("PartnerDash", "No partnerId in prefs — cannot fetch bookings")
-                        activeDispatch = null
-                        return@launch
-                    }
+                    if (pid.isBlank()) { activeDispatch = null; return@launch }
                     val available = ApiClient.apiService.getAvailableBookings(token, pid)
-                    activeDispatch = available.firstOrNull()
+                    if (activeDispatch == null) activeDispatch = available.firstOrNull()
                 } else {
                     activeDispatch = null
                 }
             } catch (e: Exception) {
-                android.util.Log.e("PartnerDash", "Failed to refresh available bookings: ${e.message}", e)
-                activeDispatch = null
+                android.util.Log.e("PartnerDash", "fetch error: ${e.message}")
             } finally {
                 delay(300)
                 isRefreshing = false
@@ -804,320 +856,395 @@ fun PartnerDashboardScreen(
         }
     }
 
-    // Fetch on online toggle
+    // ── Location permission + GPS loop ────────────────────────────────────
+    val locationManager = remember {
+        context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+    }
     LaunchedEffect(isOnline) {
-        refreshRequests()
+        if (!isOnline) return@LaunchedEffect
+        // Try to get real GPS
+        try {
+            val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            if (hasPermission) {
+                val loc = locationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+                    ?: locationManager.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+                if (loc != null) { partnerLat = loc.latitude; partnerLng = loc.longitude }
+            }
+        } catch (_: Exception) {}
     }
 
-    // Poll every 5 seconds while online — picks up new bookings without WebSocket
+    // ── GPS ping every 5s while online ────────────────────────────────────
     LaunchedEffect(isOnline) {
+        while (isOnline) {
+            sendLocationPing(partnerLat, partnerLng)
+            delay(5000)
+        }
+    }
+
+    // ── Booking poll every 5s while online ────────────────────────────────
+    LaunchedEffect(isOnline) {
+        refreshRequests()
         while (isOnline) {
             delay(5000)
             if (isOnline) refreshRequests()
         }
     }
 
-    val shootLocation = remember { LatLng(18.95823563155963, 72.81710824) }
+    val shootLocation = remember { LatLng(partnerLat, partnerLng) }
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(shootLocation, 15f)
+        position = CameraPosition.fromLatLngZoom(shootLocation, 14f)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(SpaceNavy)
-    ) {
+    // ── Header ─────────────────────────────────────────────────────────────
+    Column(modifier = Modifier.fillMaxSize().background(SpaceNavy)) {
         PartnerHeader(
             isOnline = isOnline,
             onToggleOnline = { isOnline = it },
             onRefreshClick = { refreshRequests() }
         )
 
-        // Pull to refresh animated top bar
-        AnimatedVisibility(
-            visible = isRefreshing,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
-        ) {
-            Surface(
-                color = OrbitPurple.copy(alpha = 0.15f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(14.dp),
-                        color = OrbitPurple,
-                        strokeWidth = 2.dp
-                    )
+        // Refreshing strip
+        AnimatedVisibility(visible = isRefreshing, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+            Surface(color = OrbitPurple.copy(alpha = 0.15f), modifier = Modifier.fillMaxWidth()) {
+                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(12.dp), color = OrbitPurple, strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Checking backend for real shoot requests...",
-                        color = OrbitPurple,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Scanning for nearby clients...", color = OrbitPurple, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            // ── Goal Gradient — daily earnings progress (Principle 2) ──────────
-            val dailyGoal = 2500
-            val earned = 1800 // TODO: replace with real wallet balance from API
-            val bookingsDone = 3
-            val bookingsGoal = 5
-            val earningsProgress = (earned.toFloat() / dailyGoal).coerceIn(0f, 1f)
-            val animatedEarningsProgress by animateFloatAsState(
-                targetValue = earningsProgress,
-                animationSpec = tween(800, easing = FastOutSlowInEasing),
-                label = "earningsProgress"
-            )
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF050D0A)),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, OrbitGreen.copy(alpha = 0.3f)),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-            ) {
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
+
+            // ── Daily earnings progress ───────────────────────────────────
+            val earned = 1800; val dailyGoal = 2500
+            val earningsProgress by animateFloatAsState(earned.toFloat() / dailyGoal, tween(800), label = "earn")
+            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF050D0A)), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, OrbitGreen.copy(alpha = 0.3f)), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column {
-                            Text("Today's Progress", color = White, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                            Text("$bookingsDone of $bookingsGoal bookings completed", color = MutedText, fontSize = 12.sp)
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text("₹$earned", color = OrbitGreen, fontWeight = FontWeight.Black, fontSize = 18.sp)
-                            Text("₹${dailyGoal - earned} to goal", color = MutedText, fontSize = 11.sp)
-                        }
+                        Column { Text("Today's Progress", color = White, fontWeight = FontWeight.Black, fontSize = 14.sp); Text("3 of 5 bookings completed", color = MutedText, fontSize = 12.sp) }
+                        Column(horizontalAlignment = Alignment.End) { Text("₹$earned", color = OrbitGreen, fontWeight = FontWeight.Black, fontSize = 18.sp); Text("₹${dailyGoal - earned} to goal", color = MutedText, fontSize = 11.sp) }
                     }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(Color.White.copy(alpha = 0.07f))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(animatedEarningsProgress)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(Brush.horizontalGradient(listOf(OrbitGreen, OrbitCyan)))
-                        )
+                    Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(alpha = 0.07f))) {
+                        Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(earningsProgress).clip(RoundedCornerShape(3.dp)).background(Brush.horizontalGradient(listOf(OrbitGreen, OrbitCyan))))
                     }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("₹0", color = MutedText, fontSize = 10.sp)
-                        Text("Goal: ₹$dailyGoal", color = MutedText, fontSize = 10.sp)
-                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("₹0", color = MutedText, fontSize = 10.sp); Text("Goal: ₹$dailyGoal", color = MutedText, fontSize = 10.sp) }
                 }
             }
 
-            // ── Loss Aversion — demand alert (Principle 5) ────────────────────
+            // ── Offline urgency card ──────────────────────────────────────
             if (!isOnline) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF140A00)),
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, Color(0xFFFF9500).copy(alpha = 0.5f)),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFFFF9500).copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("⚡", fontSize = 15.sp)
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("High-demand area active now", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Text("Go online to avoid missing bookings", color = Color(0xFFFF9500), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Button(
-                            onClick = { isOnline = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500)),
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                            modifier = Modifier.height(36.dp)
-                        ) {
-                            Text("Go Online", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.sp)
-                        }
+                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF140A00)), shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, Color(0xFFFF9500).copy(alpha = 0.5f)), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                    Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Box(modifier = Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFFF9500).copy(alpha = 0.15f)), contentAlignment = Alignment.Center) { Text("⚡", fontSize = 15.sp) }
+                        Column(modifier = Modifier.weight(1f)) { Text("High-demand area active now", color = White, fontWeight = FontWeight.Bold, fontSize = 13.sp); Text("Go online to avoid missing bookings", color = Color(0xFFFF9500), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                        Button(onClick = { isOnline = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500)), shape = RoundedCornerShape(10.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp), modifier = Modifier.height(36.dp)) { Text("Go Online", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.sp) }
                     }
                 }
+                return@Column
             }
 
-            // Incoming Real Dispatch Request Alert Card
-            if (isOnline && activeDispatch != null) {
-                val currentBooking = activeDispatch!!
-                GlassCard(borderColor = OrbitPurple, modifier = Modifier.padding(bottom = 20.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("⚡ NEW SHOOT DISPATCH ALERT", color = OrbitPurple, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.sp)
-                        Surface(color = Destructive.copy(alpha = 0.2f), shape = RoundedCornerShape(12.dp)) {
-                            Text("LIVE", color = Destructive, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(currentBooking.location ?: "Shooting Location", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = White)
-                    Text("Payout Fee: ₹700.00 • Guaranteed Earnings", color = OrbitGreen, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
-                    Text("Slot: ${currentBooking.timeSlot} • Date: ${currentBooking.bookingDate}", color = MutedText, fontSize = 12.sp)
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
-                        shape = RoundedCornerShape(14.dp),
-                        border = BorderStroke(1.dp, Color(0xFF1E2132)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(140.dp)
-                            .padding(bottom = 12.dp)
-                    ) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            SafeMapView(
-                                modifier = Modifier.fillMaxSize(),
-                                cameraPositionState = cameraPositionState,
-                                location = shootLocation,
-                                title = "Dispatch Location"
-                            )
-                        }
-                    }
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    try {
-                                        val token = "Bearer ${prefsManager.getAuthToken()}"
-                                        val pid = prefsManager.getPartnerId() ?: ""
-                                        ApiClient.apiService.declineBooking(token, currentBooking.id, DeclineBookingRequest(pid))
-                                    } catch (_: Exception) {}
-                                    activeDispatch = null
+            // ════════════════════════════════════════════════════════════════
+            // ── UBER-STYLE SCANNING STATE (online, no active dispatch) ──────
+            // ════════════════════════════════════════════════════════════════
+            AnimateContent(targetState = activeDispatch == null) { noDispatch ->
+                if (noDispatch) {
+                    // ── Radar scanning card ───────────────────────────────
+                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF080A12)), shape = RoundedCornerShape(24.dp), border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.2f)), modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+                        Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            // Status pill
+                            Surface(color = OrbitGreen.copy(alpha = 0.12f), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, OrbitGreen.copy(alpha = 0.4f))) {
+                                Row(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(OrbitGreen))
+                                    Text("ONLINE • SCANNING FOR CLIENTS", color = OrbitGreen, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                                 }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
-                            modifier = Modifier.weight(1f).height(44.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("Decline", color = White, fontSize = 13.sp)
-                        }
+                            }
 
-                        Button(
-                            onClick = {
-                                if (!isAccepting) {
-                                    isAccepting = true
-                                    coroutineScope.launch {
-                                        try {
-                                            val token = "Bearer ${prefsManager.getAuthToken()}"
-                                            val pid = prefsManager.getPartnerId() ?: ""
-                                            ApiClient.apiService.acceptBooking(token, currentBooking.id, AcceptBookingRequest(pid))
-                                            onAcceptDispatch(currentBooking.id)
-                                            onNavigateToWork()
-                                        } catch (e: Exception) {
-                                            android.util.Log.e("PartnerDash", "Failed to accept booking", e)
-                                        } finally {
-                                            isAccepting = false
-                                        }
+                            Spacer(modifier = Modifier.height(28.dp))
+
+                            // ── Radar animation ───────────────────────────
+                            Box(modifier = Modifier.size(200.dp), contentAlignment = Alignment.Center) {
+                                // Outer ring pulses
+                                Box(modifier = Modifier.size(200.dp).clip(CircleShape).background(OrbitCyan.copy(alpha = 0.04f * pulse1)))
+                                Box(modifier = Modifier.size(160.dp).clip(CircleShape).background(OrbitCyan.copy(alpha = 0.06f * pulse2)))
+                                Box(modifier = Modifier.size(120.dp).clip(CircleShape).background(OrbitCyan.copy(alpha = 0.08f)))
+                                Box(modifier = Modifier.size(80.dp).clip(CircleShape).background(OrbitCyan.copy(alpha = 0.12f)))
+
+                                // Radar sweep arc
+                                androidx.compose.ui.graphics.drawscope.DrawScope
+                                androidx.compose.foundation.Canvas(modifier = Modifier.size(200.dp).rotate(radarAngle)) {
+                                    val sweepColors = androidx.compose.ui.graphics.Brush.sweepGradient(
+                                        colors = listOf(
+                                            androidx.compose.ui.graphics.Color.Transparent,
+                                            OrbitCyan.copy(alpha = 0f),
+                                            OrbitCyan.copy(alpha = 0.35f),
+                                            OrbitCyan.copy(alpha = 0f),
+                                        )
+                                    )
+                                    drawCircle(brush = sweepColors, radius = size.minDimension / 2)
+                                }
+
+                                // Concentric rings
+                                listOf(200.dp, 160.dp, 120.dp, 80.dp).forEach { size ->
+                                    Box(modifier = Modifier.size(size).clip(CircleShape).border(1.dp, OrbitCyan.copy(alpha = 0.15f), CircleShape))
+                                }
+
+                                // Center dot — partner location
+                                Box(modifier = Modifier.size(14.dp).clip(CircleShape).background(OrbitCyan), contentAlignment = Alignment.Center) {
+                                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color.White))
+                                }
+
+                                // Simulated client blip (pulsing dot offset)
+                                if (nearbyBookingCount > 0) {
+                                    Box(modifier = Modifier.offset(x = 45.dp, y = (-35).dp)) {
+                                        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(OrbitPurple.copy(alpha = pulse1)))
+                                        Box(modifier = Modifier.size(16.dp).clip(CircleShape).border(1.dp, OrbitPurple.copy(alpha = 0.5f * pulse2), CircleShape))
                                     }
                                 }
-                            },
-                            enabled = !isAccepting,
-                            colors = ButtonDefaults.buttonColors(containerColor = OrbitGreen),
-                            modifier = Modifier.weight(1.2f).height(44.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(if (isAccepting) "Accepting..." else "Accept Shoot ✓", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
-                    }
-                }
-            }
+                            }
 
-            // Available Work Section Header with Refresh Button
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(OrbitCyan.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("💼", fontSize = 16.sp)
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text("Available Work", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = White)
-                        Text("New bookings waiting for you", fontSize = 12.sp, color = MutedText)
-                    }
-                }
+                            Spacer(modifier = Modifier.height(20.dp))
 
-                Surface(
-                    color = OrbitCyan.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.3f)),
-                    modifier = Modifier.clickable { refreshRequests() }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (isRefreshing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(12.dp),
-                                color = OrbitCyan,
-                                strokeWidth = 2.dp
+                            Text(
+                                if (nearbyBookingCount > 0) "CLIENT DETECTED NEARBY" else "SCANNING AREA",
+                                color = if (nearbyBookingCount > 0) OrbitPurple else OrbitCyan,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 2.sp
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                if (nearbyBookingCount > 0) "$nearbyBookingCount booking${if (nearbyBookingCount > 1) "s" else ""} in your area" else "Looking for clients within 10 km...",
+                                color = MutedText,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // GPS coordinates display
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("LAT", color = MutedText, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                                    Text("${String.format("%.4f", partnerLat)}°", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Box(modifier = Modifier.width(1.dp).height(30.dp).background(Color.White.copy(alpha = 0.1f)))
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("LNG", color = MutedText, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                                    Text("${String.format("%.4f", partnerLng)}°", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Box(modifier = Modifier.width(1.dp).height(30.dp).background(Color.White.copy(alpha = 0.1f)))
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("RADIUS", color = MutedText, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                                    Text("10 km", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
-                        Text(
-                            if (isRefreshing) "Refreshing..." else "🔄 Refresh",
-                            color = OrbitCyan,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                    }
+
+                    // Available Work section header
+                    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Box(modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(OrbitCyan.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) { Text("💼", fontSize = 16.sp) }
+                            Column { Text("Available Work", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = White); Text("New bookings nearby", fontSize = 11.sp, color = MutedText) }
+                        }
+                        Surface(color = OrbitCyan.copy(alpha = 0.12f), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.3f)), modifier = Modifier.clickable { refreshRequests() }) {
+                            Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                if (isRefreshing) { CircularProgressIndicator(modifier = Modifier.size(11.dp), color = OrbitCyan, strokeWidth = 2.dp); Spacer(modifier = Modifier.width(5.dp)) }
+                                Text(if (isRefreshing) "Scanning..." else "🔄 Refresh", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    // No bookings empty state
+                    GlassCard {
+                        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(modifier = Modifier.size(56.dp).clip(CircleShape).background(SpaceNavy), contentAlignment = Alignment.Center) { Text("🎯", fontSize = 22.sp) }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("Scanning for clients...", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = White)
+                            Text("New requests appear here instantly", fontSize = 12.sp, color = MutedText, modifier = Modifier.padding(top = 4.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(onClick = { refreshRequests() }, colors = ButtonDefaults.buttonColors(containerColor = OrbitCyan.copy(alpha = 0.15f)), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.4f))) {
+                                Text("Check Now", color = OrbitCyan, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
             }
 
-            // Empty State Card with Refresh Action
-            GlassCard {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+            // ════════════════════════════════════════════════════════════════
+            // ── UBER-STYLE BOOKING OFFER BOTTOM SHEET ───────────────────────
+            // ════════════════════════════════════════════════════════════════
+            activeDispatch?.let { booking ->
+                val dist = booking.distanceKm ?: 1.8
+                val eta = booking.etaMinutes ?: (Math.ceil(dist / 25 * 60).toInt())
+                val timeProgress = offerTimeLeft / 15f
+
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF08090F)),
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(2.dp, Brush.horizontalGradient(listOf(OrbitPurple, OrbitCyan))),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(SpaceNavy),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("💼", fontSize = 24.sp)
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+
+                        // ── Header row ────────────────────────────────────
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(if (offerExpired) Color.Red else OrbitPurple))
+                                Text(if (offerExpired) "OFFER EXPIRED" else "NEW SHOOT REQUEST", color = if (offerExpired) Color.Red else OrbitPurple, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                            }
+                            Surface(color = (if (offerExpired) Color.Red else Destructive).copy(alpha = 0.2f), shape = RoundedCornerShape(10.dp)) {
+                                Text("LIVE", color = if (offerExpired) Color.Red else Destructive, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                            }
+                        }
+
+                        // ── Countdown timer bar (Uber-style) ──────────────
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Respond within", color = MutedText, fontSize = 11.sp)
+                                Text(
+                                    "${offerTimeLeft}s",
+                                    color = when {
+                                        offerTimeLeft > 10 -> OrbitGreen
+                                        offerTimeLeft > 5 -> Color(0xFFFF9500)
+                                        else -> Color.Red
+                                    },
+                                    fontSize = 14.sp, fontWeight = FontWeight.Black
+                                )
+                            }
+                            Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(alpha = 0.07f))) {
+                                Box(modifier = Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(timeProgress)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(Brush.horizontalGradient(
+                                        listOf(
+                                            when { offerTimeLeft > 10 -> OrbitGreen; offerTimeLeft > 5 -> Color(0xFFFF9500); else -> Color.Red },
+                                            when { offerTimeLeft > 10 -> OrbitCyan; offerTimeLeft > 5 -> Color(0xFFFFCC00); else -> Color(0xFFFF4444) }
+                                        )
+                                    ))
+                                )
+                            }
+                        }
+
+                        // ── Client + location info ────────────────────────
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            // Avatar
+                            Box(modifier = Modifier.size(52.dp).clip(CircleShape).background(OrbitPurple.copy(alpha = 0.15f)).border(1.dp, OrbitPurple.copy(alpha = 0.4f), CircleShape), contentAlignment = Alignment.Center) {
+                                Text("🎬", fontSize = 22.sp)
+                            }
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(booking.clientName ?: "Client", color = White, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                                Text(booking.location ?: "Mumbai", color = MutedText, fontSize = 12.sp)
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text("⭐", fontSize = 10.sp)
+                                    Text("4.9 • Verified Client", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        // ── Distance + ETA + Payout chips ────────────────
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(
+                                Triple("📍", "${String.format("%.1f", dist)} km away", OrbitCyan),
+                                Triple("⏱", "$eta min ETA", Color(0xFFFF9500)),
+                                Triple("₹", "₹${booking.packagePrice?.toInt() ?: 700} Payout", OrbitGreen)
+                            ).forEach { (icon, label, color) ->
+                                Surface(modifier = Modifier.weight(1f), color = color.copy(alpha = 0.08f), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, color.copy(alpha = 0.25f))) {
+                                    Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(icon, fontSize = 14.sp)
+                                        Text(label, color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── Mini map ──────────────────────────────────────
+                        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)), shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, Color(0xFF1E2132)), modifier = Modifier.fillMaxWidth().height(130.dp)) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                SafeMapView(modifier = Modifier.fillMaxSize(), cameraPositionState = cameraPositionState, location = shootLocation, title = "Shoot Location")
+                            }
+                        }
+
+                        // ── Shoot details ─────────────────────────────────
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(
+                                "Package" to (booking.packageName ?: "Personalized Reel"),
+                                "Date" to booking.bookingDate,
+                                "Time" to booking.timeSlot,
+                                "Notes" to (booking.notes?.takeIf { it.isNotBlank() } ?: "No special requirements")
+                            ).forEach { (label, value) ->
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(label, color = MutedText, fontSize = 12.sp)
+                                    Text(value, color = White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                        }
+
+                        // ── Accept / Decline buttons ──────────────────────
+                        if (!offerExpired) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Button(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            try {
+                                                val token = "Bearer ${prefsManager.getAuthToken()}"
+                                                val pid = prefsManager.getPartnerId() ?: ""
+                                                ApiClient.apiService.declineBooking(token, booking.id, DeclineBookingRequest(pid))
+                                            } catch (_: Exception) {}
+                                            activeDispatch = null
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A2E)),
+                                    modifier = Modifier.weight(1f).height(50.dp),
+                                    shape = RoundedCornerShape(14.dp),
+                                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+                                ) { Text("Decline", color = MutedText, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+
+                                Button(
+                                    onClick = {
+                                        if (!isAccepting) {
+                                            isAccepting = true
+                                            coroutineScope.launch {
+                                                try {
+                                                    val token = "Bearer ${prefsManager.getAuthToken()}"
+                                                    val pid = prefsManager.getPartnerId() ?: ""
+                                                    ApiClient.apiService.acceptBooking(token, booking.id, AcceptBookingRequest(pid))
+                                                    onAcceptDispatch(booking.id)
+                                                    onNavigateToWork()
+                                                } catch (e: Exception) {
+                                                    android.util.Log.e("PartnerDash", "accept failed: ${e.message}")
+                                                } finally { isAccepting = false }
+                                            }
+                                        }
+                                    },
+                                    enabled = !isAccepting,
+                                    colors = ButtonDefaults.buttonColors(containerColor = OrbitGreen),
+                                    modifier = Modifier.weight(1.5f).height(50.dp),
+                                    shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    if (isAccepting) { CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.Black, strokeWidth = 2.dp); Spacer(modifier = Modifier.width(8.dp)) }
+                                    Text(if (isAccepting) "Accepting..." else "Accept Shoot ✓", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                                }
+                            }
+                        } else {
+                            Surface(color = Color.Red.copy(alpha = 0.1f), shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.3f)), modifier = Modifier.fillMaxWidth()) {
+                                Text("Offer expired — offered to next partner", color = Color.Red, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(14.dp))
+                            }
+                        }
                     }
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Text("No Available Work", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = White)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun <T> AnimateContent(targetState: T, content: @Composable (T) -> Unit) {
+    AnimatedContent(targetState = targetState, transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) }, label = "animContent") { state -> content(state) }
+}
                     Text(
                         "New bookings will appear here when clients book sessions.",
                         fontSize = 13.sp,
@@ -1137,12 +1264,6 @@ fun PartnerDashboardScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Keep the app open to receive real-time notifications.", fontSize = 11.sp, color = MutedText, textAlign = TextAlign.Center)
-                }
-            }
-        }
-    }
-}
-
 // ─── Screen 3: Work History ──────────────────────────────────────────────────
 
 @Composable

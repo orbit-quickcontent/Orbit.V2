@@ -31,8 +31,26 @@ data class BookingDto(
     val location: String?,
     val notes: String?,
     val syncPercentage: Int,
-    val createdAt: String
+    val createdAt: String,
+    // Real-time fields from dispatch
+    val clientLatitude: Double? = null,
+    val clientLongitude: Double? = null,
+    val clientName: String? = null,
+    val clientPhone: String? = null,
+    val packageName: String? = null,
+    val packagePrice: Double? = null,
+    val distanceKm: Double? = null,
+    val etaMinutes: Int? = null
 )
+
+// Location update request — sent every 5s while partner is online
+data class LocationUpdateRequest(
+    val latitude: Double,
+    val longitude: Double,
+    val speed: Float = 0f,
+    val heading: Float = 0f
+)
+data class LocationUpdateResponse(val success: Boolean, val nearbyBookings: Int = 0)
 
 data class PartnerProfileDto(
     val id: String,
@@ -163,6 +181,12 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Query("partnerId") partnerId: String
     ): List<BookingDto>
+
+    @POST("partner/location")
+    suspend fun updateLocation(
+        @Header("Authorization") token: String,
+        @Body request: LocationUpdateRequest
+    ): LocationUpdateResponse
 
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): LoginResponse
