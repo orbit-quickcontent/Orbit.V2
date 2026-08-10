@@ -27,7 +27,7 @@ import * as partnerBankHandlers from "../partner/backend/partner-bank-handlers";
 import * as partnerLocationHandlers from "../partner/backend/partner-location-handlers";
 import * as bookingDeclineHandlers from "../partner/backend/booking-decline-handlers";
 import * as bookingDispatchHandlers from "../partner/backend/booking-dispatch-handlers";
-import * as partnerLocationHandlers from "../partner/backend/partner-location-handlers";
+import * as bookingAcceptHandlers from "../partner/backend/booking-accept-handlers";
 
 // 4. API custom routes
 import * as syncCompleteRoute from "../api/bookings/[id]/sync-complete/route";

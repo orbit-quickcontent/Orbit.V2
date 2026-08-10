@@ -34,7 +34,7 @@ export async function PATCH(request: NextRequest) {
       const token = authHeader.split(' ')[1];
       const payload = verifyToken(token);
       if (payload) {
-        sessionUser = { id: payload.sub || payload.id, email: payload.email, name: payload.name ?? '', role: payload.role };
+        sessionUser = { id: (payload as any).sub || payload.id, email: payload.email, name: payload.name ?? '', role: payload.role };
       }
     }
 
@@ -155,3 +155,6 @@ export async function PATCH(request: NextRequest) {
     );
   }
 }
+
+export const POST = PATCH;
+
