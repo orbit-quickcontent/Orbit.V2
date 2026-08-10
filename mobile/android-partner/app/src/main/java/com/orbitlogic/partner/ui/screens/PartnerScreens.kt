@@ -1282,26 +1282,9 @@ fun PartnerDashboardScreen(
 fun <T> AnimateContent(targetState: T, content: @Composable (T) -> Unit) {
     AnimatedContent(targetState = targetState, transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) }, label = "animContent") { state -> content(state) }
 }
-                    Text(
-                        "New bookings will appear here when clients book sessions.",
-                        fontSize = 13.sp,
-                        color = OrbitCyan.copy(alpha = 0.8f),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
-                    )
 
-                    OutlinedButton(
-                        onClick = { refreshRequests() },
-                        border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.4f)),
-                        colors = ButtonDefaults.outlinedButtonColors(containerColor = OrbitCyanBg.copy(alpha = 0.3f)),
-                        shape = RoundedCornerShape(24.dp)
-                    ) {
-                        Text("🔄 Tap to Refresh Requests", color = OrbitCyan, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Keep the app open to receive real-time notifications.", fontSize = 11.sp, color = MutedText, textAlign = TextAlign.Center)
 // ─── Screen 3: Work History ──────────────────────────────────────────────────
+
 
 @Composable
 fun PartnerWorkHistoryScreen() {
