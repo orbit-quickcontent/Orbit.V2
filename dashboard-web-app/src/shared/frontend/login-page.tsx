@@ -448,6 +448,27 @@ export default function LoginPage() {
             >
               {/* Profile Card */}
               <div className="orbit-card rounded-3xl p-5 sm:p-7 border border-white/[0.08]">
+                {/* 🔑 Partner Verification Code Quick Access */}
+                {selectedRole === "PARTNER" && (
+                  <div className="mb-5 bg-[#A832FF]/10 border border-[#A832FF]/30 p-3.5 rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-[#A832FF]/20 flex items-center justify-center text-[#00B5FF]">
+                        🔑
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-white">Have a Partner Trainer Code?</p>
+                        <p className="text-[10px] text-muted-foreground">Log in with your 6-digit offline code (123456 / ORBIT2024)</p>
+                      </div>
+                    </div>
+                    <a
+                      href="/partner-verify"
+                      className="px-3 py-1.5 rounded-xl bg-[#00B5FF] text-black text-xs font-extrabold hover:bg-[#00B5FF]/90 transition-all shrink-0 shadow-[0_0_10px_rgba(0,181,255,0.4)]"
+                    >
+                      Enter Code →
+                    </a>
+                  </div>
+                )}
+
                 {/* ─── Social Login ─── */}
                 <div className="grid grid-cols-2 gap-3 mb-6">
                   {/* Google Login */}
