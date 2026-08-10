@@ -14,6 +14,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final TextEditingController _emailController =
       TextEditingController(text: 'rahul@orbit.com');
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
+  bool _isAppleLoading = false;
 
   Future<void> _handleLogin() async {
     setState(() => _isLoading = true);
@@ -22,11 +24,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (data != null && data['success'] == true) {
-      final user = data['user'];
-      final token = data['token'];
+      final user = data['user'] ?? {};
+      final token = data['token'] ?? data['accessToken'] ?? '';
+      final pid = user['partnerId'] ?? data['partnerId'] ?? user['id'] ?? 'prt-default';
       ref.read(partnerProvider.notifier).setPartnerCredentials(
-            user['partnerId'] ?? user['id'],
-            user['email'],
+            pid,
+            user['email'] ?? _emailController.text.trim(),
             token,
           );
       if (mounted) {
@@ -35,7 +38,51 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login failed. Please try again.')),
+          const SnackBar(content: Text('Login failed. Please verify server connection.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleGoogleLogin() async {
+    setState(() => _isGoogleLoading = true);
+    final email = _emailController.text.trim().isNotEmpty
+        ? _emailController.text.trim()
+        : 'partner.google@orbit.com';
+
+    final success = await ref
+        .read(partnerProvider.notifier)
+        .loginGoogle(email, name: 'Partner Google User');
+    setState(() => _isGoogleLoading = false);
+
+    if (success) {
+      if (mounted) context.go('/home');
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google Sign-In failed. Please try again.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleAppleLogin() async {
+    setState(() => _isAppleLoading = true);
+    final email = _emailController.text.trim().isNotEmpty
+        ? _emailController.text.trim()
+        : 'partner.apple@orbit.com';
+
+    final success = await ref
+        .read(partnerProvider.notifier)
+        .loginApple(email, name: 'Partner Apple User');
+    setState(() => _isAppleLoading = false);
+
+    if (success) {
+      if (mounted) context.go('/home');
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Apple Sign-In failed. Please try again.')),
         );
       }
     }
@@ -46,12 +93,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const SizedBox(height: 32),
               const Icon(
                 Icons.videocam_rounded,
                 size: 80,
@@ -77,7 +125,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   fontSize: 14,
                 ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 40),
               TextField(
                 controller: _emailController,
                 style: const TextStyle(color: Colors.white),
@@ -93,7 +141,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _isLoading ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
@@ -104,15 +152,92 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
                 child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
                     : const Text(
                         'GO ONLINE & START DISPATCH',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                       ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: const [
+                  Expanded(child: Divider(color: Color(0xFF334155))),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12.0),
+                    child: Text(
+                      'OR CONTINUE WITH',
+                      style: TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: Color(0xFF334155))),
+                ],
+              ),
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: _isGoogleLoading ? null : _handleGoogleLogin,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: Color(0xFF334155)),
+                  backgroundColor: const Color(0xFF1E293B),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: _isGoogleLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.g_mobiledata_rounded, color: Colors.redAccent, size: 28),
+                label: const Text(
+                  'Continue with Google',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _isAppleLoading ? null : _handleAppleLogin,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: Color(0xFF334155)),
+                  backgroundColor: const Color(0xFF1E293B),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: _isAppleLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.apple, color: Colors.white, size: 22),
+                label: const Text(
+                  'Sign in with Apple',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
               ),
             ],
           ),

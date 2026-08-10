@@ -35,7 +35,7 @@ class PartnerRepository {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        authToken = data['token'];
+        authToken = data['token'] ?? data['accessToken'];
         return data;
       } else {
         if (kDebugMode) print('[API_LOGIN_ERR] Status Code: ${response.statusCode}, Body: ${response.body}');
@@ -43,6 +43,78 @@ class PartnerRepository {
       }
     } catch (e) {
       if (kDebugMode) print('[API_LOGIN_EXCEPTION] $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> loginGoogle({
+    required String email,
+    String? name,
+    String? photoURL,
+    String? idToken,
+    String role = 'PARTNER',
+  }) async {
+    try {
+      final url = Uri.parse('$baseUrl/auth/google');
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': email,
+              'name': name ?? 'Google Partner',
+              'photoURL': photoURL,
+              'idToken': idToken,
+              'role': role,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        authToken = data['token'] ?? data['accessToken'];
+        return data;
+      } else {
+        if (kDebugMode) print('[API_GOOGLE_LOGIN_ERR] Status: ${response.statusCode}, Body: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      if (kDebugMode) print('[API_GOOGLE_LOGIN_EXCEPTION] $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> loginApple({
+    required String email,
+    String? name,
+    String? identityToken,
+    String role = 'PARTNER',
+  }) async {
+    try {
+      final url = Uri.parse('$baseUrl/auth/apple');
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': email,
+              'name': name ?? 'Apple Partner',
+              'identityToken': identityToken,
+              'role': role,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        authToken = data['token'] ?? data['accessToken'];
+        return data;
+      } else {
+        if (kDebugMode) print('[API_APPLE_LOGIN_ERR] Status: ${response.statusCode}, Body: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      if (kDebugMode) print('[API_APPLE_LOGIN_EXCEPTION] $e');
       return null;
     }
   }

@@ -77,6 +77,32 @@ class PartnerNotifier extends StateNotifier<PartnerState> {
     ref.read(socketServiceProvider).connectPartner(partnerId);
   }
 
+  Future<bool> loginGoogle(String email, {String? name, String? photoURL}) async {
+    final repo = ref.read(partnerRepositoryProvider);
+    final data = await repo.loginGoogle(email: email, name: name, photoURL: photoURL);
+    if (data != null && data['success'] == true) {
+      final user = data['user'] ?? {};
+      final token = data['token'] ?? data['accessToken'] ?? '';
+      final pid = user['partnerId'] ?? data['partnerId'] ?? user['id'] ?? 'prt-google';
+      setPartnerCredentials(pid, email, token);
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> loginApple(String email, {String? name}) async {
+    final repo = ref.read(partnerRepositoryProvider);
+    final data = await repo.loginApple(email: email, name: name);
+    if (data != null && data['success'] == true) {
+      final user = data['user'] ?? {};
+      final token = data['token'] ?? data['accessToken'] ?? '';
+      final pid = user['partnerId'] ?? data['partnerId'] ?? user['id'] ?? 'prt-apple';
+      setPartnerCredentials(pid, email, token);
+      return true;
+    }
+    return false;
+  }
+
   void toggleOnlineStatus(bool online) {
     final newStatus = online ? PartnerStatus.online : PartnerStatus.offline;
     state = state.copyWith(status: newStatus);
@@ -88,7 +114,6 @@ class PartnerNotifier extends StateNotifier<PartnerState> {
     if (online) {
       locService.start5SecondTracking((location) {
         state = state.copyWith(currentLocation: location);
-        // Every 5 seconds: send REST update & emit socket event as per prompt requirement
         repo.sendLocationUpdateRest(location);
         socket.sendLocationUpdate(location);
       });
