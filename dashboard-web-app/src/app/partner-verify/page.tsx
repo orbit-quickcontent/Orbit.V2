@@ -62,7 +62,7 @@ export default function PartnerVerifyCodePage() {
           email: normalizedEmail,
           name: data.partner?.name || normalizedEmail.split("@")[0],
           isVerified: true,
-          authProvider: "partner_code"
+          authProvider: "email"
         });
 
         await login("PARTNER", { email: normalizedEmail, name: data.partner?.name || "Verified Partner" });
@@ -87,7 +87,7 @@ export default function PartnerVerifyCodePage() {
             email: normalizedEmail,
             name: "Orbit Master Partner",
             isVerified: true,
-            authProvider: "partner_code"
+            authProvider: "email"
           });
           await login("PARTNER", { email: normalizedEmail, name: "Orbit Master Partner" });
 
