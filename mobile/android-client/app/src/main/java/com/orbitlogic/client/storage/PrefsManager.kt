@@ -13,10 +13,10 @@ class PrefsManager(context: Context) {
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
         private const val KEY_SAVED_NAME = "saved_name"
         private const val KEY_SAVED_PHONE = "saved_phone"
+        private const val KEY_SAVED_ADDRESS = "saved_address"
         private const val KEY_ONBOARDING_DONE = "onboarding_done"
         private const val KEY_LIGHT_THEME = "is_light_theme"
     }
-
 
     fun saveAuthSession(token: String, role: String) {
         prefs.edit().apply {
@@ -70,6 +70,14 @@ class PrefsManager(context: Context) {
 
     fun getSavedPhone(): String? {
         return prefs.getString(KEY_SAVED_PHONE, null)
+    }
+
+    fun saveAddress(address: String) {
+        prefs.edit().putString(KEY_SAVED_ADDRESS, address).apply()
+    }
+
+    fun getSavedAddress(): String? {
+        return prefs.getString(KEY_SAVED_ADDRESS, null)
     }
 
     fun setOnboardingDone() {

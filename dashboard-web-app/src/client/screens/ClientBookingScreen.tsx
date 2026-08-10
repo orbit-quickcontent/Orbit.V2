@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { BookingCard } from '../components/BookingCard';
 import { CountdownTimer } from '../components/CountdownTimer';
+import { useAppStore } from '@/lib/store';
 
 export interface ClientBookingScreenProps {
   initialStatus?: string;
@@ -9,6 +10,10 @@ export interface ClientBookingScreenProps {
 export const ClientBookingScreen: React.FC<ClientBookingScreenProps> = ({
   initialStatus = 'PENDING_PARTNER_ACCEPTANCE',
 }) => {
+  const { user } = useAppStore();
+  const clientDisplayName = user.name || 'Client Creator';
+  const clientLocation = user.location || (user as any).address || 'Studio 4B, 100 Innovation Way';
+  const clientPhone = user.phone ? `+91 ${user.phone}` : '';
   const [status, setStatus] = useState<string>(initialStatus);
   const [partnerInfo, setPartnerInfo] = useState<{ name: string; phone: string; rating: number } | null>(null);
 
@@ -110,9 +115,9 @@ export const ClientBookingScreen: React.FC<ClientBookingScreenProps> = ({
           <div className="md:col-span-2 space-y-6">
             <BookingCard
               id="ORB-88329"
-              clientName="Tech Review Highlights Shoot"
+              clientName={`${clientDisplayName} — Reel Shoot`}
               status={status}
-              location="Studio 4B, 100 Innovation Way"
+              location={clientLocation}
               payout={150.0}
             />
 

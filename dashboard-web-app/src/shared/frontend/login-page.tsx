@@ -62,6 +62,7 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [avatarMode, setAvatarMode] = useState<AvatarMode>("avatar");
   const [selectedAvatarPreset, setSelectedAvatarPreset] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -129,6 +130,8 @@ export default function LoginPage() {
       name: name.trim(),
       email: email.trim(),
       phone: phone.trim() ? phone.trim() : "",
+      location: address.trim() ? address.trim() : "Location Pending",
+      address: address.trim(),
       avatar: avatarValue ?? AVATAR_COLORS[0],
       avatarType: avatarMode === "photo" ? ("photo" as const) : ("avatar" as const),
       avatarEmoji: selectedPreset?.emoji ?? null,
@@ -222,26 +225,12 @@ export default function LoginPage() {
         setAvatarMode("photo");
       }
 
-      const userPayload = {
-        name: gName,
-        email: gEmail,
-        avatar: gPhoto || AVATAR_COLORS[0],
-        avatarType: gPhoto ? ("photo" as const) : ("avatar" as const),
-        avatarPhotoUrl: gPhoto,
-        authProvider: "google" as const,
-        isVerified: true,
-      };
-
-      setUser(userPayload);
+      setUser({ name: gName, email: gEmail, authProvider: "google" as const, isVerified: true });
       setIsSocialLogin(true);
       
       toast.dismiss(loadingToast);
-
-      const targetRole = selectedRole || "USER";
-      await login(targetRole, { email: gEmail, name: gName, phone: phone || "" });
-
-      toast.success("Signed in with Google!", { 
-        description: `Welcome aboard ${gName}!` 
+      toast.info("Google Account Connected!", { 
+        description: "Please confirm your Full Name, Phone Number, and Address (Optional) to proceed." 
       });
     } catch (err: any) {
       console.error("Firebase Google Login Error:", err);
@@ -263,16 +252,14 @@ export default function LoginPage() {
         setEmail(gEmail);
         setUser({ name: gName, email: gEmail, authProvider: "google" as const, isVerified: true });
         setIsSocialLogin(true);
-        const targetRole = selectedRole || "USER";
-        await login(targetRole, { email: gEmail, name: gName, phone: phone || "" });
-        toast.success("Signed in with Google (Demo Mode)", {
-          description: `Welcome aboard ${gName}!`
+        toast.info("Google Account Connected (Demo Mode)", {
+          description: "Please confirm your Full Name, Phone Number, and Address (Optional) to proceed."
         });
       }
     } finally {
       setIsAuthenticating(false);
     }
-  }, [setUser, isAuthenticating, selectedRole, login, phone]);
+  }, [setUser, isAuthenticating]);
 
   // Apple OAuth
   const handleAppleLogin = useCallback(async () => {
@@ -644,9 +631,20 @@ export default function LoginPage() {
                         placeholder="9876543210"
                         type="tel"
                         maxLength={10}
-                        className="bg-transparent text-white font-semibold text-sm px-4 outline-none w-full"
-                      />
                     </div>
+                  </div>
+
+                  {/* Delivery / Studio Address (Optional) */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold tracking-widest text-[#10B981] uppercase flex items-center gap-1.5">
+                      <span>📍</span> DELIVERY / STUDIO ADDRESS <span className="text-[10px] text-[#10B981] font-normal lowercase">(optional)</span>
+                    </label>
+                    <Input
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Enter street address or city (Optional)"
+                      className="bg-[#0F1115] border-[#222630] text-white text-sm font-semibold rounded-2xl h-12 focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981] transition-all"
+                    />
                   </div>
                 </div>
 
