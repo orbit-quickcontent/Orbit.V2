@@ -255,9 +255,19 @@ export function initWebSocketService() {
   });
 
   const WS_PORT = Number(process.env.WS_PORT) || 3003;
+
+  server.on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      console.warn(`[WS Warning] Port ${WS_PORT} is already in use; reusing active WebSocket listener.`);
+    } else {
+      console.error('[WS Error]', err);
+    }
+  });
+
   server.listen(WS_PORT, () => {
     console.log(`[WS] WebSocket server running on port ${WS_PORT}`);
   });
 
   return { server, io };
 }
+
