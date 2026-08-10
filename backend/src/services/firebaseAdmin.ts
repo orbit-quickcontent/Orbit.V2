@@ -1,52 +1,59 @@
-import * as admin from 'firebase-admin';
-
-let firebaseAdminApp: admin.app.App;
-
+let admin: any;
 try {
-  if (!admin.apps.length) {
-    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-
-    if (serviceAccountJson) {
-      try {
-        const serviceAccount = JSON.parse(serviceAccountJson);
-        firebaseAdminApp = admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount),
-          projectId: process.env.FIREBASE_PROJECT_ID || 'orbit-99e42',
-        });
-        console.log('✅ Firebase Admin SDK initialized with Service Account Key');
-      } catch (e) {
-        console.warn('⚠️ Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY JSON; falling back to default credentials');
-        firebaseAdminApp = admin.initializeApp({
-          projectId: process.env.FIREBASE_PROJECT_ID || 'orbit-99e42',
-        });
-      }
-    } else {
-      firebaseAdminApp = admin.initializeApp({
-        projectId: process.env.FIREBASE_PROJECT_ID || 'orbit-99e42',
-      });
-      console.log('✅ Firebase Admin SDK initialized with Default Project Credentials (orbit-99e42)');
-    }
-  } else {
-    firebaseAdminApp = admin.app();
-  }
-} catch (error) {
-  console.error('❌ Error initializing Firebase Admin SDK:', error);
-  firebaseAdminApp = admin.app();
+  admin = require("firebase-admin");
+} catch (e) {
+  admin = null;
 }
 
-export const adminAuth = admin.auth(firebaseAdminApp);
-export const adminFirestore = admin.firestore(firebaseAdminApp);
-export const adminMessaging = admin.messaging(firebaseAdminApp);
+let firebaseAdminApp: any = null;
+
+if (admin) {
+  try {
+    if (!admin.apps || admin.apps.length === 0) {
+      const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+      if (serviceAccountJson) {
+        try {
+          const serviceAccount = JSON.parse(serviceAccountJson);
+          firebaseAdminApp = admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            projectId: process.env.FIREBASE_PROJECT_ID || "orbit-99e42",
+          });
+          console.log("✅ Firebase Admin SDK initialized with Service Account Key");
+        } catch (e) {
+          console.warn("⚠️ Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY JSON; falling back to default credentials");
+          firebaseAdminApp = admin.initializeApp({
+            projectId: process.env.FIREBASE_PROJECT_ID || "orbit-99e42",
+          });
+        }
+      } else {
+        firebaseAdminApp = admin.initializeApp({
+          projectId: process.env.FIREBASE_PROJECT_ID || "orbit-99e42",
+        });
+        console.log("✅ Firebase Admin SDK initialized with Default Project Credentials (orbit-99e42)");
+      }
+    } else {
+      firebaseAdminApp = admin.app();
+    }
+  } catch (error) {
+    console.error("❌ Error initializing Firebase Admin SDK:", error);
+  }
+}
+
+export const adminAuth = admin && firebaseAdminApp ? admin.auth(firebaseAdminApp) : null;
+export const adminFirestore = admin && firebaseAdminApp ? admin.firestore(firebaseAdminApp) : null;
+export const adminMessaging = admin && firebaseAdminApp ? admin.messaging(firebaseAdminApp) : null;
 
 /**
  * Verifies a Firebase ID token sent from client mobile or web apps.
  */
-export async function verifyFirebaseIdToken(idToken: string): Promise<admin.auth.DecodedIdToken | null> {
+export async function verifyFirebaseIdToken(idToken: string): Promise<any | null> {
+  if (!adminAuth) return null;
   try {
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     return decodedToken;
   } catch (error) {
-    console.error('❌ [FirebaseAdmin] ID Token verification failed:', error);
+    console.error("❌ [FirebaseAdmin] ID Token verification failed:", error);
     return null;
   }
 }
@@ -60,10 +67,10 @@ export async function sendFcmNotification(
   body: string,
   data?: Record<string, string>
 ): Promise<boolean> {
-  if (!fcmToken) return false;
+  if (!fcmToken || !adminMessaging) return false;
 
   try {
-    const message: admin.messaging.Message = {
+    const message: any = {
       token: fcmToken,
       notification: {
         title,
@@ -71,16 +78,16 @@ export async function sendFcmNotification(
       },
       data: data || {},
       android: {
-        priority: 'high',
+        priority: "high",
         notification: {
-          sound: 'default',
-          channelId: 'orbit_dispatch_alerts',
+          sound: "default",
+          channelId: "orbit_dispatch_alerts",
         },
       },
       apns: {
         payload: {
           aps: {
-            sound: 'default',
+            sound: "default",
             badge: 1,
           },
         },
@@ -91,7 +98,7 @@ export async function sendFcmNotification(
     console.log(`[FCM] Successfully sent notification: ${response}`);
     return true;
   } catch (error) {
-    console.error('[FCM] Error sending push notification:', error);
+    console.error("[FCM] Error sending push notification:", error);
     return false;
   }
 }
