@@ -631,6 +631,8 @@ export default function LoginPage() {
                         placeholder="9876543210"
                         type="tel"
                         maxLength={10}
+                        className="bg-transparent text-white font-semibold text-sm px-4 outline-none w-full"
+                      />
                     </div>
                   </div>
 
