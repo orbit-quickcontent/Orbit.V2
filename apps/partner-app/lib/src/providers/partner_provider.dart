@@ -69,9 +69,11 @@ class PartnerNotifier extends StateNotifier<PartnerState> {
 
   void setPartnerCredentials(String partnerId, String email, String token) {
     state = state.copyWith(partnerId: partnerId, email: email);
-    ref.read(partnerRepositoryProvider).authToken = token;
+    final repo = ref.read(partnerRepositoryProvider);
+    repo.authToken = token;
+    final socketBaseUrl = repo.baseUrl.replaceAll('/api', '');
     ref.read(socketServiceProvider).init(
-          baseUrl: 'http://localhost:5000',
+          baseUrl: socketBaseUrl,
           authToken: token,
         );
     ref.read(socketServiceProvider).connectPartner(partnerId);
