@@ -45,12 +45,23 @@ data class BookingDto(
 
 // Location update request — sent every 5s while partner is online
 data class LocationUpdateRequest(
-    val latitude: Double,
-    val longitude: Double,
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val lat: Double = latitude,
+    val lng: Double = longitude,
     val speed: Float = 0f,
     val heading: Float = 0f
 )
-data class LocationUpdateResponse(val success: Boolean, val nearbyBookings: Int = 0)
+
+data class LocationUpdateResponse(
+    val success: Boolean = true,
+    val message: String? = null,
+    val partnerId: String? = null,
+    val lat: Double? = null,
+    val lng: Double? = null,
+    val timestamp: String? = null,
+    val nearbyBookings: Int = 0
+)
 
 data class PartnerProfileDto(
     val id: String,
@@ -74,21 +85,6 @@ data class UpdatePartnerRequest(
     val deviceInfo: String?
 )
 
-/** Payload for PATCH /partners/me/location — live GPS update */
-data class LocationUpdateRequest(
-    val lat: Double,
-    val lng: Double,
-    val heading: Double? = null,
-    val speed: Double? = null
-)
-
-data class LocationUpdateResponse(
-    val message: String,
-    val partnerId: String,
-    val lat: Double,
-    val lng: Double,
-    val timestamp: String
-)
 
 data class LinkBankRequest(
     val accountHolderName: String,
