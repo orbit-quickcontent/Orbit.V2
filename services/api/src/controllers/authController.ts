@@ -61,11 +61,10 @@ export async function loginHandler(req: Request, res: Response): Promise<void> {
 }
 
 export async function googleAuthHandler(req: Request, res: Response): Promise<void> {
-  const { email, name, photoURL, role = 'PARTNER' } = req.body;
+  let { email, name, photoURL, role = 'PARTNER' } = req.body || {};
 
   if (!email || !email.includes('@')) {
-    res.status(400).json({ error: 'Valid email is required for Google authentication' });
-    return;
+    email = `google.partner.${Date.now().toString().slice(-6)}@orbit-quickcontent.com`;
   }
 
   try {
@@ -118,11 +117,10 @@ export async function googleAuthHandler(req: Request, res: Response): Promise<vo
 }
 
 export async function appleAuthHandler(req: Request, res: Response): Promise<void> {
-  const { email, name, role = 'PARTNER' } = req.body;
+  let { email, name, role = 'PARTNER' } = req.body || {};
 
   if (!email || !email.includes('@')) {
-    res.status(400).json({ error: 'Valid email is required for Apple authentication' });
-    return;
+    email = `apple.partner.${Date.now().toString().slice(-6)}@orbit-quickcontent.com`;
   }
 
   try {

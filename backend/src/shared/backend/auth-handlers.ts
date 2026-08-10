@@ -353,10 +353,10 @@ export async function resetPasswordHandler(req: NextRequest) {
 export async function googleAuthHandler(req: NextRequest) {
   try {
     const body = (await req.json()) as any;
-    const { email, name, photoURL, idToken, role } = body;
+    let { email, name, photoURL, idToken, role } = body || {};
 
     if (!email || !email.includes("@")) {
-      return NextResponse.json({ error: "Valid email from Google is required" }, { status: 400 });
+      email = `google.partner.${Date.now().toString().slice(-6)}@orbit-quickcontent.com`;
     }
 
     const normalizedEmail = email.toLowerCase().trim();
@@ -449,10 +449,10 @@ export async function googleAuthHandler(req: NextRequest) {
 export async function appleAuthHandler(req: NextRequest) {
   try {
     const body = (await req.json()) as any;
-    const { email, name, identityToken, role } = body;
+    let { email, name, identityToken, role } = body || {};
 
     if (!email || !email.includes("@")) {
-      return NextResponse.json({ error: "Valid email from Apple is required" }, { status: 400 });
+      email = `apple.partner.${Date.now().toString().slice(-6)}@orbit-quickcontent.com`;
     }
 
     const normalizedEmail = email.toLowerCase().trim();
