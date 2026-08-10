@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { BookingCard } from '../components/BookingCard';
 import { CountdownTimer } from '../components/CountdownTimer';
 import { useAppStore } from '@/lib/store';
+import { FloatingBottomNav } from '@/components/ui/floating-bottom-nav';
 
 export interface ClientBookingScreenProps {
   initialStatus?: string;
@@ -13,7 +14,7 @@ export const ClientBookingScreen: React.FC<ClientBookingScreenProps> = ({
   const { user } = useAppStore();
   const clientDisplayName = user.name || 'Client Creator';
   const clientLocation = user.location || (user as any).address || 'Studio 4B, 100 Innovation Way';
-  const clientPhone = user.phone ? `+91 ${user.phone}` : '';
+  const [navTab, setNavTab] = useState<'home' | 'packages' | 'tracking' | 'profile'>('home');
   const [status, setStatus] = useState<string>(initialStatus);
   const [partnerInfo, setPartnerInfo] = useState<{ name: string; phone: string; rating: number } | null>(null);
 
@@ -184,6 +185,13 @@ export const ClientBookingScreen: React.FC<ClientBookingScreenProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Floating Dark Pill Bottom Bar matching screenshot */}
+      <FloatingBottomNav
+        activeTab={navTab}
+        onSelectTab={setNavTab}
+        userInitials={clientDisplayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'GC'}
+      />
     </div>
   );
 };

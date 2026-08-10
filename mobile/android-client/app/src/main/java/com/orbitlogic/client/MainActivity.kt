@@ -391,33 +391,33 @@ fun ClientBottomNavigationBar(
         bottomEnd = endCornerRadius
     )
 
-    // Theme-adaptive colours
-    val navBg = if (isLight) Color.White.copy(alpha = 0.92f) else Color(0xFF0A0C10).copy(alpha = 0.92f)
-    val navBorder = if (isLight) LightBorder else Color.White.copy(alpha = 0.12f)
-    val pillBg = if (isLight) LightPrimaryTint else Color(0xFF161824).copy(alpha = 0.95f)
-    val pillBorder = if (isLight) LightPrimary.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.18f)
-    val activeColor = if (isLight) LightPrimary else Color(0xFF00F0FF)
-    val inactiveColor = if (isLight) LightTextTertiary else Color(0xFF8E92A0)
+    // Exact dark pill theme matching user reference UI
+    val navBg = Color(0xFF0F1015)
+    val navBorder = Color(0xFF22242E)
+    val pillBg = Color(0xFF222530)
+    val pillBorder = Color(0xFF333748)
+    val activeColor = Color.White
+    val inactiveColor = Color(0xFF8E92A0)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center
     ) {
         Surface(
             color = navBg,
-            shape = RoundedCornerShape(32.dp),
+            shape = RoundedCornerShape(36.dp),
             border = BorderStroke(1.dp, navBorder),
-            shadowElevation = if (isLight) 8.dp else 16.dp,
+            shadowElevation = 18.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
+                .height(68.dp)
         ) {
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(6.dp)
+                    .padding(5.dp)
             ) {
                 val tabWidth = maxWidth / tabs.size
                 val baseIndicatorOffset = tabWidth * animatedIndex
@@ -425,29 +425,35 @@ fun ClientBottomNavigationBar(
                 val overflowX = (dynamicWidth - tabWidth) / 2f
                 val finalOffset = (baseIndicatorOffset - overflowX).coerceIn(0.dp, maxWidth - dynamicWidth)
 
-                // Active pill indicator
+                // Active pill indicator matching screenshot
                 Box(
                     modifier = Modifier
                         .offset(x = finalOffset)
                         .width(dynamicWidth)
                         .fillMaxHeight()
-                        .clip(dynamicPillShape)
+                        .clip(RoundedCornerShape(28.dp))
                         .background(pillBg)
-                        .border(width = 1.dp, color = pillBorder, shape = dynamicPillShape)
+                        .border(width = 1.dp, color = pillBorder, shape = RoundedCornerShape(28.dp))
                 ) {
-                    // Top accent bar
-                    val topLineWidth = (32.dp * stretchFactor).coerceIn(32.dp, 56.dp)
+                    // White Glowing Top Indicator Bar
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .width(topLineWidth)
+                            .width(36.dp)
                             .height(3.dp)
                             .clip(RoundedCornerShape(2.dp))
+                            .background(Color.White)
+                    )
+                    // Radial glow below top indicator bar
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .width(48.dp)
+                            .height(14.dp)
                             .background(
-                                if (isLight)
-                                    Brush.horizontalGradient(listOf(LightPrimary, LightPurple))
-                                else
-                                    Brush.horizontalGradient(listOf(Color(0xFF00F0FF), Color(0xFFA056FF)))
+                                Brush.verticalGradient(
+                                    listOf(Color.White.copy(alpha = 0.35f), Color.Transparent)
+                                )
                             )
                     )
                 }
@@ -518,19 +524,18 @@ fun RowScope.BottomNavItem(
     inactiveColor: Color,
     onClick: () -> Unit
 ) {
-    val isLight = LocalOrbitIsLight.current
     val tabScale by animateFloatAsState(
         targetValue = if (isSelected) 1.05f else 1.0f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "tabScale"
     )
     val iconColor by animateColorAsState(
-        targetValue = if (isSelected) activeColor else inactiveColor,
+        targetValue = if (isSelected) Color.White else inactiveColor,
         animationSpec = tween(durationMillis = 200),
         label = "iconColor"
     )
     val textColor by animateColorAsState(
-        targetValue = if (isSelected) activeColor else inactiveColor,
+        targetValue = if (isSelected) Color.White else inactiveColor,
         animationSpec = tween(durationMillis = 200),
         label = "textColor"
     )
@@ -540,7 +545,7 @@ fun RowScope.BottomNavItem(
             .weight(1f)
             .fillMaxHeight()
             .scale(tabScale)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(24.dp))
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -553,31 +558,26 @@ fun RowScope.BottomNavItem(
                 "packages" -> PackageVectorIcon(color = iconColor)
                 "tracking" -> TrackVectorIcon(color = iconColor)
                 "profile" -> {
-                    val avatarBg by animateColorAsState(
-                        targetValue = if (isSelected) activeColor else inactiveColor.copy(alpha = 0.2f),
-                        label = "avatarBg"
-                    )
                     Box(
                         modifier = Modifier
                             .size(22.dp)
                             .clip(CircleShape)
-                            .background(avatarBg.copy(alpha = 0.25f))
-                            .border(1.5.dp, avatarBg, CircleShape),
+                            .background(Color.White),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "TU",
-                            fontSize = 9.sp,
+                            text = "GC",
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Black,
-                            color = avatarBg
+                            color = Color(0xFF0F1015)
                         )
                     }
                 }
             }
             Text(
                 text = label,
-                fontSize = 10.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                fontSize = 11.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                 color = textColor,
                 modifier = Modifier.padding(top = 3.dp)
             )

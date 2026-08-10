@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/partner_model.dart';
 import '../providers/partner_provider.dart';
 import '../widgets/booking_offer_sheet.dart';
+import '../widgets/floating_bottom_bar.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -191,6 +192,11 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: FloatingBottomBar(
+        selectedIndex: 0,
+        onTabSelected: (index) {},
+        userInitials: displayName.split(' ').map((e) => e.isNotEmpty ? e[0] : '').join('').toUpperCase().padRight(2, 'C').substring(0, 2),
       ),
     );
   }
