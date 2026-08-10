@@ -119,6 +119,37 @@ class PartnerRepository {
     }
   }
 
+  Future<bool> updateProfile({
+    required String name,
+    required String phone,
+    String? address,
+  }) async {
+    if (authToken == null) return false;
+
+    try {
+      final url = Uri.parse('$baseUrl/users');
+      final response = await http
+          .post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $authToken',
+            },
+            body: jsonEncode({
+              'name': name,
+              'phone': phone,
+              'address': address,
+            }),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      return response.statusCode == 200;
+    } catch (e) {
+      if (kDebugMode) print('[API_UPDATE_PROFILE_ERR] $e');
+      return false;
+    }
+  }
+
   Future<bool> sendLocationUpdateRest(LocationModel location) async {
     if (authToken == null) return false;
 

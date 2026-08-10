@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'src/screens/login_screen.dart';
 import 'src/screens/home_screen.dart';
 import 'src/screens/trip_screen.dart';
+import 'src/screens/profile_setup_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,13 @@ final _router = GoRouter(
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/setup-profile',
+      builder: (context, state) {
+        final nameArg = state.extra as String?;
+        return ProfileSetupScreen(initialName: nameArg);
+      },
     ),
     GoRoute(
       path: '/home',

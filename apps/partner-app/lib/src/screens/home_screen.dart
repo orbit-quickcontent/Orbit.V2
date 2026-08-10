@@ -12,6 +12,9 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(partnerProvider);
     final isOnline = state.status == PartnerStatus.online || state.status == PartnerStatus.busy;
+    final displayName = state.name != null && state.name!.isNotEmpty
+        ? state.name!
+        : (state.email?.split('@')[0] ?? 'Partner');
 
     // Show booking offer modal when active offer arrives
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -34,14 +37,29 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
         elevation: 0,
-        title: Row(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.radar_rounded, color: Color(0xFF6366F1)),
-            const SizedBox(width: 8),
-            const Text(
-              'ORBIT Partner GPS',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                const Icon(Icons.radar_rounded, color: Color(0xFF6366F1), size: 20),
+                const SizedBox(width: 6),
+                Text(
+                  displayName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
             ),
+            if (state.phone != null && state.phone!.isNotEmpty)
+              Text(
+                state.phone!,
+                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+              ),
           ],
         ),
         actions: [
@@ -93,7 +111,7 @@ class HomeScreen extends ConsumerWidget {
                 markerId: const MarkerId('current_partner_pos'),
                 position: LatLng(currentLat, currentLng),
                 infoWindow: InfoWindow(
-                  title: state.email ?? 'Your Location',
+                  title: displayName,
                   snippet: 'Status: ${state.status.toShortString()}',
                 ),
                 icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
@@ -129,54 +147,45 @@ class HomeScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isOnline ? 'Broadcasting Location' : 'You are Offline',
+                            displayName,
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Text(
                             isOnline
-                                ? 'GPS ping every 5s • Redis GEO active'
-                                : 'Tap switch to go online for bookings',
-                            style: const TextStyle(
-                              color: Color(0xFF94A3B8),
+                                ? 'Broadcasting Location (5s Interval)'
+                                : 'You are currently offline',
+                            style: TextStyle(
+                              color: isOnline ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
                               fontSize: 12,
                             ),
                           ),
+                          if (state.address != null && state.address!.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              '📍 ${state.address!}',
+                              style: const TextStyle(
+                                color: Color(0xFFCBD5E1),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
-                      Switch(
+                      Switch.adaptive(
                         value: isOnline,
                         activeColor: const Color(0xFF6366F1),
+                        activeTrackColor: const Color(0xFF6366F1).withOpacity(0.4),
                         onChanged: (val) {
                           ref.read(partnerProvider.notifier).toggleOnlineStatus(val);
                         },
                       ),
                     ],
                   ),
-                  if (state.currentLocation != null) ...[
-                    const Divider(color: Color(0xFF334155), height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Lat: ${state.currentLocation!.latitude.toStringAsFixed(4)}',
-                          style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12),
-                        ),
-                        Text(
-                          'Lng: ${state.currentLocation!.longitude.toStringAsFixed(4)}',
-                          style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12),
-                        ),
-                        Text(
-                          'Speed: ${state.currentLocation!.speed.toStringAsFixed(1)} km/h',
-                          style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ],
                 ],
               ),
             ),

@@ -25,6 +25,9 @@ class PartnerState {
   final String? activeBookingId;
   final String? partnerId;
   final String? email;
+  final String? name;
+  final String? phone;
+  final String? address;
 
   PartnerState({
     this.status = PartnerStatus.offline,
@@ -33,6 +36,9 @@ class PartnerState {
     this.activeBookingId,
     this.partnerId,
     this.email,
+    this.name,
+    this.phone,
+    this.address,
   });
 
   PartnerState copyWith({
@@ -42,6 +48,9 @@ class PartnerState {
     String? activeBookingId,
     String? partnerId,
     String? email,
+    String? name,
+    String? phone,
+    String? address,
   }) {
     return PartnerState(
       status: status ?? this.status,
@@ -50,6 +59,9 @@ class PartnerState {
       activeBookingId: activeBookingId ?? this.activeBookingId,
       partnerId: partnerId ?? this.partnerId,
       email: email ?? this.email,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      address: address ?? this.address,
     );
   }
 }
@@ -67,8 +79,14 @@ class PartnerNotifier extends StateNotifier<PartnerState> {
     });
   }
 
-  void setPartnerCredentials(String partnerId, String email, String token) {
-    state = state.copyWith(partnerId: partnerId, email: email);
+  void setPartnerCredentials(String partnerId, String email, String token, {String? name, String? phone, String? address}) {
+    state = state.copyWith(
+      partnerId: partnerId,
+      email: email,
+      name: name ?? state.name,
+      phone: phone ?? state.phone,
+      address: address ?? state.address,
+    );
     final repo = ref.read(partnerRepositoryProvider);
     repo.authToken = token;
     final socketBaseUrl = repo.baseUrl.replaceAll('/api', '');
@@ -79,30 +97,45 @@ class PartnerNotifier extends StateNotifier<PartnerState> {
     ref.read(socketServiceProvider).connectPartner(partnerId);
   }
 
-  Future<bool> loginGoogle(String email, {String? name, String? photoURL}) async {
+  void updateProfile({required String name, required String phone, String? address}) {
+    state = state.copyWith(
+      name: name,
+      phone: phone,
+      address: address,
+    );
+    ref.read(partnerRepositoryProvider).updateProfile(
+      name: name,
+      phone: phone,
+      address: address,
+    );
+  }
+
+  Future<Map<String, dynamic>?> loginGoogle(String email, {String? name, String? photoURL}) async {
     final repo = ref.read(partnerRepositoryProvider);
     final data = await repo.loginGoogle(email: email, name: name, photoURL: photoURL);
     if (data != null && data['success'] == true) {
       final user = data['user'] ?? {};
       final token = data['token'] ?? data['accessToken'] ?? '';
       final pid = user['partnerId'] ?? data['partnerId'] ?? user['id'] ?? 'prt-google';
-      setPartnerCredentials(pid, email, token);
-      return true;
+      final fetchedName = user['name'] ?? name ?? email.split('@')[0];
+      setPartnerCredentials(pid, email, token, name: fetchedName);
+      return data;
     }
-    return false;
+    return null;
   }
 
-  Future<bool> loginApple(String email, {String? name}) async {
+  Future<Map<String, dynamic>?> loginApple(String email, {String? name}) async {
     final repo = ref.read(partnerRepositoryProvider);
     final data = await repo.loginApple(email: email, name: name);
     if (data != null && data['success'] == true) {
       final user = data['user'] ?? {};
       final token = data['token'] ?? data['accessToken'] ?? '';
       final pid = user['partnerId'] ?? data['partnerId'] ?? user['id'] ?? 'prt-apple';
-      setPartnerCredentials(pid, email, token);
-      return true;
+      final fetchedName = user['name'] ?? name ?? email.split('@')[0];
+      setPartnerCredentials(pid, email, token, name: fetchedName);
+      return data;
     }
-    return false;
+    return null;
   }
 
   void toggleOnlineStatus(bool online) {

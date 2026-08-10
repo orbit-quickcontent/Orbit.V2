@@ -27,13 +27,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final user = data['user'] ?? {};
       final token = data['token'] ?? data['accessToken'] ?? '';
       final pid = user['partnerId'] ?? data['partnerId'] ?? user['id'] ?? 'prt-default';
+      final name = user['name'] ?? _emailController.text.trim().split('@')[0];
       ref.read(partnerProvider.notifier).setPartnerCredentials(
             pid,
             user['email'] ?? _emailController.text.trim(),
             token,
+            name: name,
           );
       if (mounted) {
-        context.go('/home');
+        context.go('/setup-profile', extra: name);
       }
     } else {
       if (mounted) {
@@ -50,13 +52,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ? _emailController.text.trim()
         : 'partner.google@orbit.com';
 
-    final success = await ref
+    final data = await ref
         .read(partnerProvider.notifier)
         .loginGoogle(email, name: 'Partner Google User');
     setState(() => _isGoogleLoading = false);
 
-    if (success) {
-      if (mounted) context.go('/home');
+    if (data != null && data['success'] == true) {
+      final user = data['user'] ?? {};
+      final googleName = user['name'] ?? 'Partner Google User';
+      if (mounted) {
+        context.go('/setup-profile', extra: googleName);
+      }
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -72,13 +78,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ? _emailController.text.trim()
         : 'partner.apple@orbit.com';
 
-    final success = await ref
+    final data = await ref
         .read(partnerProvider.notifier)
         .loginApple(email, name: 'Partner Apple User');
     setState(() => _isAppleLoading = false);
 
-    if (success) {
-      if (mounted) context.go('/home');
+    if (data != null && data['success'] == true) {
+      final user = data['user'] ?? {};
+      final appleName = user['name'] ?? 'Partner Apple User';
+      if (mounted) {
+        context.go('/setup-profile', extra: appleName);
+      }
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
