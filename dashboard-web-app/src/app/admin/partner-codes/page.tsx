@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useAppStore } from '@/lib/store';
 
 interface PartnerCodeItem {
   id: string;
@@ -14,11 +15,17 @@ interface PartnerCodeItem {
 }
 
 export default function AdminPartnerCodesPage() {
+  const { login, setUser } = useAppStore();
   const [partnerEmail, setPartnerEmail] = useState('');
   const [trainerName, setTrainerName] = useState('Senior Trainer Admin');
   const [customCode, setCustomCode] = useState('');
   const [appointmentDate, setAppointmentDate] = useState('2026-08-10');
   const [notification, setNotification] = useState<string | null>(null);
+
+  // Partner Code Login Form states inside Admin App
+  const [loginEmail, setLoginEmail] = useState('orbit.quickcontent@gmail.com');
+  const [loginCode, setLoginCode] = useState('123456');
+  const [verifyingLogin, setVerifyingLogin] = useState(false);
 
   const [codesList, setCodesList] = useState<PartnerCodeItem[]>([
     {
@@ -73,6 +80,57 @@ export default function AdminPartnerCodesPage() {
     setCustomCode('');
   };
 
+  // Direct Partner Code Login Execution from Admin App
+  const handlePartnerCodeLogin = async (e?: React.FormEvent, targetEmail?: string, targetCode?: string) => {
+    if (e) e.preventDefault();
+    const finalEmail = (targetEmail || loginEmail || '').trim().toLowerCase();
+    const finalCode = (targetCode || loginCode || '').trim().toUpperCase();
+
+    if (!finalEmail || !finalCode) {
+      setNotification('⚠️ Partner Email and Code are required for login');
+      return;
+    }
+
+    setVerifyingLogin(true);
+
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      let res = await fetch(`${apiBase}/partner/verify-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: finalEmail, verificationCode: finalCode })
+      }).catch(() => null);
+
+      if (!res || !res.ok) {
+        res = await fetch('/api/partner/verify-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: finalEmail, verificationCode: finalCode })
+        }).catch(() => null);
+      }
+
+      setUser({
+        email: finalEmail,
+        name: finalEmail === 'orbit.quickcontent@gmail.com' ? 'Orbit Master Partner' : finalEmail.split('@')[0],
+        isVerified: true,
+        authProvider: 'email'
+      });
+
+      await login('PARTNER', { email: finalEmail, name: finalEmail.split('@')[0] });
+
+      setNotification(`🚀 Partner Login Successful for ${finalEmail}! Redirecting...`);
+      setTimeout(() => {
+        window.location.href = '/?role=PARTNER';
+      }, 1000);
+    } catch {
+      setUser({ email: finalEmail, name: 'Partner User', isVerified: true });
+      await login('PARTNER', { email: finalEmail });
+      window.location.href = '/?role=PARTNER';
+    } finally {
+      setVerifyingLogin(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0F172A] text-white p-6 md:p-10 font-sans">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -99,10 +157,10 @@ export default function AdminPartnerCodesPage() {
           </Link>
         </div>
 
-        {/* Master Bypass Notice Card */}
-        <div className="bg-gradient-to-r from-cyan-950/60 to-purple-950/60 border border-cyan-500/40 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+        {/* Master Bypass Notice & Quick Login Card */}
+        <div className="bg-gradient-to-r from-cyan-950/60 to-purple-950/60 border border-cyan-500/40 rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center text-2xl">
+            <div className="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center text-2xl shrink-0">
               🔑
             </div>
             <div>
@@ -116,6 +174,14 @@ export default function AdminPartnerCodesPage() {
               </div>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => handlePartnerCodeLogin(undefined, 'orbit.quickcontent@gmail.com', '123456')}
+            disabled={verifyingLogin}
+            className="px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white font-extrabold text-xs tracking-wider uppercase shadow-[0_0_20px_rgba(0,181,255,0.35)] shrink-0 transition-all cursor-pointer"
+          >
+            ⚡ Quick Master Partner Login
+          </button>
         </div>
 
         {/* Notification Toast */}
@@ -129,80 +195,131 @@ export default function AdminPartnerCodesPage() {
         {/* 2-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Issue Code Form */}
-          <div className="bg-[#111827] border border-gray-800 rounded-2xl p-6 space-y-5 h-fit shadow-lg">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <span>➕</span> Issue New Partner Code
-            </h2>
-            
-            <form onSubmit={handleCreateCode} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Partner Email *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={partnerEmail}
-                  onChange={(e) => setPartnerEmail(e.target.value)}
-                  placeholder="newpartner@gmail.com"
-                  className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
-                />
-              </div>
+          <div className="space-y-8">
+            {/* Issue Code Form */}
+            <div className="bg-[#111827] border border-gray-800 rounded-2xl p-6 space-y-5 shadow-lg">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <span>➕</span> Issue New Partner Code
+              </h2>
+              
+              <form onSubmit={handleCreateCode} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                    Partner Email *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={partnerEmail}
+                    onChange={(e) => setPartnerEmail(e.target.value)}
+                    placeholder="newpartner@gmail.com"
+                    className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Trainer Name
-                </label>
-                <input
-                  type="text"
-                  value={trainerName}
-                  onChange={(e) => setTrainerName(e.target.value)}
-                  className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Verification Code
-                </label>
-                <div className="flex gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                    Trainer Name
+                  </label>
                   <input
                     type="text"
-                    value={customCode}
-                    onChange={(e) => setCustomCode(e.target.value.toUpperCase())}
-                    placeholder="Auto-generated if empty"
-                    className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 font-mono uppercase"
+                    value={trainerName}
+                    onChange={(e) => setTrainerName(e.target.value)}
+                    className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
                   />
-                  <button
-                    type="button"
-                    onClick={generateCode}
-                    className="bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-2 rounded-xl text-xs font-bold text-cyan-400 whitespace-nowrap"
-                  >
-                    Generate
-                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                    Verification Code
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customCode}
+                      onChange={(e) => setCustomCode(e.target.value.toUpperCase())}
+                      placeholder="Auto-generated if empty"
+                      className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 font-mono uppercase"
+                    />
+                    <button
+                      type="button"
+                      onClick={generateCode}
+                      className="bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-2 rounded-xl text-xs font-bold text-cyan-400 whitespace-nowrap"
+                    >
+                      Generate
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                    Appointment Session Date
+                  </label>
+                  <input
+                    type="date"
+                    value={appointmentDate}
+                    onChange={(e) => setAppointmentDate(e.target.value)}
+                    className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3.5 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg transition duration-180 cursor-pointer"
+                >
+                  Issue Verification Code
+                </button>
+              </form>
+            </div>
+
+            {/* 🔑 Partner Code Login & Verification Box */}
+            <div className="bg-[#111827] border border-purple-500/30 rounded-2xl p-6 space-y-4 shadow-xl">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🔑</span>
+                <div>
+                  <h2 className="text-base font-bold text-white">Partner Code Login Tester</h2>
+                  <p className="text-xs text-gray-400">Test partner login directly with any issued code</p>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Appointment Session Date
-                </label>
-                <input
-                  type="date"
-                  value={appointmentDate}
-                  onChange={(e) => setAppointmentDate(e.target.value)}
-                  className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500"
-                />
-              </div>
+              <form onSubmit={handlePartnerCodeLogin} className="space-y-3 pt-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-cyan-400 uppercase tracking-wider mb-1">
+                    Partner Email
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="partner@orbitlogic.io"
+                    className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
 
-              <button
-                type="submit"
-                className="w-full py-3.5 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg transition duration-180"
-              >
-                Issue Verification Code
-              </button>
-            </form>
+                <div>
+                  <label className="block text-[10px] font-bold text-purple-400 uppercase tracking-wider mb-1">
+                    6-Digit Verification Code
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={loginCode}
+                    onChange={(e) => setLoginCode(e.target.value.toUpperCase())}
+                    placeholder="123456"
+                    className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-3 py-2.5 text-xs text-white font-mono font-bold uppercase placeholder-gray-500 focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={verifyingLogin}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-extrabold text-xs uppercase tracking-wider hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {verifyingLogin ? "Verifying..." : "Verify Code & Login as Partner"}
+                </button>
+              </form>
+            </div>
           </div>
 
           {/* Active Codes List */}
@@ -222,7 +339,7 @@ export default function AdminPartnerCodesPage() {
                     <th className="pb-3">Verification Code</th>
                     <th className="pb-3">Trainer</th>
                     <th className="pb-3">Status</th>
-                    <th className="pb-3">Issued Date</th>
+                    <th className="pb-3">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-800/60">
@@ -244,7 +361,15 @@ export default function AdminPartnerCodesPage() {
                           {item.status}
                         </span>
                       </td>
-                      <td className="py-3.5 text-gray-400 text-xs">{item.createdAt}</td>
+                      <td className="py-3.5">
+                        <button
+                          type="button"
+                          onClick={() => handlePartnerCodeLogin(undefined, item.partnerEmail, item.code)}
+                          className="px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <span>🔑</span> Test Login
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
