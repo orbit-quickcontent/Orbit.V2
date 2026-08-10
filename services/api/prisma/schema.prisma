@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PartnerStatus {
+  OFFLINE
+  ONLINE
+  BUSY
+  ON_TRIP
+}
+
+enum BookingStatus {
+  PENDING
+  ASSIGNED
+  ACCEPTED
+  EN_ROUTE
+  SHOOTING
+  EDITING
+  DELIVERED
+  CANCELLED
+}
+
+model Partner {
+  id          String        @id @default(uuid())
+  name        String
+  phone       String        @unique
+  email       String        @unique
+  vehicleType String?
+  status      PartnerStatus @default(OFFLINE)
+  rating      Float         @default(5.0)
+  latitude    Float         @default(0.0)
+  longitude   Float         @default(0.0)
+  lastSeenAt  DateTime      @default(now())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  bookings          Booking[]
+  locationHistories LocationHistory[]
+
+  @@index([status])
+  @@index([latitude, longitude])
+  @@index([lastSeenAt])
+}
+
+model Booking {
+  id             String        @id @default(uuid())
+  clientId       String
+  partnerId      String?
+  pickupLat      Float
+  pickupLng      Float
+  destinationLat Float
+  destinationLng Float
+  status         BookingStatus @default(PENDING)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  partner Partner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+
+  @@index([clientId])
+  @@index([partnerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model LocationHistory {
+  id         String   @id @default(uuid())
+  partnerId  String
+  latitude   Float
+  longitude  Float
+  speed      Float    @default(0.0)
+  heading    Float    @default(0.0)
+  recordedAt DateTime @default(now())
+
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId, recordedAt])
+}
