@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'src/screens/login_screen.dart';
 import 'src/screens/home_screen.dart';
 import 'src/screens/trip_screen.dart';
+import 'src/screens/PartnerRequestScreen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +25,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/trip',
       builder: (context, state) => const TripScreen(),
+    ),
+    GoRoute(
+      path: '/requests',
+      builder: (context, state) => const PartnerRequestScreen(),
     ),
   ],
 );
