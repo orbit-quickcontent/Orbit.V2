@@ -50,19 +50,23 @@ const allowedOrigins = [
   "capacitor://localhost",
   "http://localhost",
   "http://localhost:3000",
+  "http://localhost:3001",
+  "http://localhost:3002",
+  "http://localhost:3003",
   "http://localhost:5000",
+  "http://10.0.2.2:5000",
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === "development") {
+      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === "development" || origin.startsWith("http://localhost")) {
         return callback(null, true);
       }
       return callback(new Error("CORS policy violation"));
     },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Idempotency-Key", "api-key", "accept"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Idempotency-Key", "X-Idempotency-Key", "x-idempotency-key", "api-key", "accept"],
     credentials: true,
   })
 );

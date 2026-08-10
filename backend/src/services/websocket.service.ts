@@ -97,16 +97,12 @@ export function initWebSocketService() {
   const server = new HttpServer(app);
   const io = new SocketIOServer(server, {
     cors: {
-      origin: [
-        'https://orbit-quickcontent.com',
-        'https://www.orbit-quickcontent.com',
-        'https://app.orbit-quickcontent.com',
-        'https://api.orbit-quickcontent.com',
-        process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-        'capacitor://localhost',
-        'http://localhost',
-        'http://localhost:3000'
-      ],
+      origin: (origin, callback) => {
+        if (!origin || process.env.NODE_ENV !== 'production' || origin.startsWith('http://localhost') || origin.startsWith('http://10.0.2.2')) {
+          return callback(null, true);
+        }
+        return callback(null, true);
+      },
       methods: ['GET', 'POST'],
       credentials: true
     },

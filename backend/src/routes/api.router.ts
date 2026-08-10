@@ -70,6 +70,7 @@ router.post("/auth/apple", jsonParser, nextToExpress(authHandlers.appleAuthHandl
 router.post("/auth/refresh", jsonParser, nextToExpress(authHandlers.refreshTokenHandler));
 router.post("/auth/logout", requireAuth(), jsonParser, nextToExpress(authHandlers.logoutHandler));
 router.get("/auth/me", requireAuth(), jsonParser, nextToExpress(authHandlers.meHandler));
+router.post("/partner/verify-code", jsonParser, nextToExpress(authHandlers.verifyPartnerCodeHandler));
 
 // ── User Management ───────────────────────────────────────────────────────────
 router.get("/users", requireAuth(["ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(userHandlers.GET));
