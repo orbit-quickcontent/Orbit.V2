@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import Link from "next/link";
 import {
   LayoutDashboard,
   Building2,
@@ -30,7 +31,8 @@ import {
   HardDrive,
   UserCheck,
   RefreshCw,
-  Plus
+  Plus,
+  KeyRound
 } from "lucide-react";
 
 // Mock SaaS Analytics charts data
@@ -190,6 +192,7 @@ export default function AdminDashboard() {
             { id: "overview", label: "Overview", icon: LayoutDashboard },
             { id: "organizations", label: "Organizations", icon: Building2 },
             { id: "users", label: "Users & Roles", icon: Users },
+            { id: "partner-codes", label: "Partner Codes", icon: KeyRound, isLink: true, href: "/admin/partner-codes" },
             { id: "projects", label: "Projects", icon: Film },
             { id: "tasks", label: "Tasks", icon: CheckSquare },
             { id: "payments", label: "Payments", icon: CreditCard },
@@ -199,6 +202,18 @@ export default function AdminDashboard() {
           ].map((item) => {
             const Icon = item.icon;
             const isActive = activeModule === item.id;
+            if (item.isLink && item.href) {
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-muted-foreground hover:bg-white/5 hover:text-white transition-all"
+                >
+                  <Icon className="w-4 h-4 text-orbit-cyan" />
+                  {item.label}
+                </Link>
+              );
+            }
             return (
               <button
                 key={item.id}
