@@ -1077,6 +1077,23 @@ fun PartnerDashboardScreen(
                                     Text("10 km", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // ── Scan Now CTA Button inside Hero Radar Card ──
+                            Button(
+                                onClick = { refreshRequests() },
+                                colors = ButtonDefaults.buttonColors(containerColor = OrbitCyan.copy(alpha = 0.15f)),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.4f)),
+                                modifier = Modifier.fillMaxWidth(0.7f).height(40.dp)
+                            ) {
+                                if (isRefreshing) {
+                                    CircularProgressIndicator(modifier = Modifier.size(14.dp), color = OrbitCyan, strokeWidth = 2.dp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
+                                Text(if (isRefreshing) "Scanning..." else "Check Now", color = OrbitCyan, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
 
@@ -1090,20 +1107,6 @@ fun PartnerDashboardScreen(
                             Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                                 if (isRefreshing) { CircularProgressIndicator(modifier = Modifier.size(11.dp), color = OrbitCyan, strokeWidth = 2.dp); Spacer(modifier = Modifier.width(5.dp)) }
                                 Text(if (isRefreshing) "Scanning..." else "🔄 Refresh", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-
-                    // No bookings empty state
-                    GlassCard {
-                        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(modifier = Modifier.size(56.dp).clip(CircleShape).background(SpaceNavy), contentAlignment = Alignment.Center) { Text("🎯", fontSize = 22.sp) }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text("Scanning for clients...", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = White)
-                            Text("New requests appear here instantly", fontSize = 12.sp, color = MutedText, modifier = Modifier.padding(top = 4.dp))
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = { refreshRequests() }, colors = ButtonDefaults.buttonColors(containerColor = OrbitCyan.copy(alpha = 0.15f)), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.4f))) {
-                                Text("Check Now", color = OrbitCyan, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
