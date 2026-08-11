@@ -8,7 +8,7 @@ import java.net.URISyntaxException
 
 class SocketManager {
     private var socket: Socket? = null
-    private val socketUrl = "http://10.0.2.2:3003" // Android Emulator mapping to orbit-ws port 3003
+    private val socketUrl = "https://orbit-v2-mnmc-one.vercel.app"
 
     fun connect(token: String, bookingId: String? = null, onBookingUpdate: (String, String) -> Unit) {
         if (socket?.connected() == true) {
