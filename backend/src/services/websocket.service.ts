@@ -112,6 +112,30 @@ export function notifyClient(payload: {
   _io.to(`booking:${bookingId}`).emit(event, data);
 }
 
+/**
+ * Broadcast an event to every connected socket (all partners + clients).
+ * Used for booking:cancelled so all partners remove it from their available list.
+ * No-ops if WS not yet initialised.
+ */
+export function notifyAll(payload: { event: string; data: any }) {
+  if (!_io) return;
+  const { event, data } = payload;
+  console.log(`[WS] Broadcast: ${event}`);
+  _io.emit(event, data);
+}
+
+/**
+ * Broadcast an event to every connected socket (all partners + clients).
+ * Used for booking:cancelled so all partners remove it from their available list.
+ * No-ops if WS not yet initialised.
+ */
+export function notifyAll(payload: { event: string; data: any }) {
+  if (!_io) return;
+  const { event, data } = payload;
+  console.log(`[WS] Broadcast: ${event}`);
+  _io.emit(event, data);
+}
+
 // ── Main init ──────────────────────────────────────────────────────────────────
 export function initWebSocketService() {
   const app = express();

@@ -15,7 +15,7 @@ import { generatePresignedUrl } from '@/lib/security'
 import { decryptAccountNumber } from '@/services/security.service'
 import { executePayout } from '@/services/payout.service'
 import { logBankAudit } from '@/services/audit.service'
-import { notifyDispatch, notifyClient } from '@/services/websocket.service'
+import { notifyDispatch, notifyClient, notifyAll } from '@/services/websocket.service'
 
 interface UpdateBookingBody {
   status?: string
@@ -211,6 +211,9 @@ export async function PATCH(
           const partnerIds = partnersToDispatch.map((p) => p.id)
           notifyDispatch({ bookingId: id, partnerIds, round: newRound, booking: null })
         }
+
+      // Broadcast cancellation to all partners so they remove it from available lists
+      notifyAll({ event: 'booking:cancelled', data: { bookingId: id, cancelledBy: 'PARTNER' } })
       } catch (reDispatchError) {
         console.error('Error during auto re-dispatch after cancellation:', reDispatchError)
       }
