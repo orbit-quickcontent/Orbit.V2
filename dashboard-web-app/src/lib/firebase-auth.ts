@@ -5,6 +5,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail as firebaseSendPasswordResetEmail,
+  sendEmailVerification,
   signOut,
   onAuthStateChanged,
   User,
@@ -19,6 +20,19 @@ googleProvider.addScope("profile");
 export const appleProvider = new OAuthProvider("apple.com");
 appleProvider.addScope("email");
 appleProvider.addScope("name");
+
+export function isRealEmail(email: string): boolean {
+  const trimmed = email.trim().toLowerCase();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(trimmed)) return false;
+
+  const disposableDomains = new Set([
+    "mailinator.com", "tempmail.com", "10minutemail.com", "trashmail.com",
+    "guerrillamail.com", "dispostable.com", "yopmail.com", "getnada.com", "sharklasers.com"
+  ]);
+  const domain = trimmed.split("@")[1] || "";
+  return domain.length > 0 && !disposableDomains.has(domain);
+}
 
 /**
  * Perform Google Sign-In via popup window.
@@ -71,7 +85,15 @@ export async function signInWithEmail(email: string, password: string): Promise<
  * Perform Email & Password Registration.
  */
 export async function signUpWithEmail(email: string, password: string): Promise<{ user: User; idToken: string }> {
+  if (!isRealEmail(email)) {
+    throw new Error("Please enter a valid, real email address.");
+  }
   const credential = await createUserWithEmailAndPassword(auth, email, password);
+  if (credential.user) {
+    await sendEmailVerification(credential.user).catch((err) => {
+      console.warn("⚠️ Failed to send verification email:", err);
+    });
+  }
   const idToken = await credential.user.getIdToken();
   return { user: credential.user, idToken };
 }

@@ -574,32 +574,6 @@ export function PartnerDashboard() {
     return (
       <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-4 sm:space-y-5">
 
-        {/* Goal Gradient — daily earnings progress */}
-        <motion.div variants={staggerItem}>
-          <div className="orbit-card rounded-2xl p-5 border border-emerald-500/20">
-            <div className="flex justify-between items-center mb-3">
-              <div>
-                <p className="text-sm font-black text-white">Today's Progress</p>
-                <p className="text-xs text-slate-400">3 of 5 bookings completed</p>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-black text-emerald-400">₹1,800</p>
-                <p className="text-xs text-slate-500">₹700 to daily goal</p>
-              </div>
-            </div>
-            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400"
-                initial={{ width: 0 }}
-                animate={{ width: "72%" }}
-                transition={{ duration: 1, ease: "easeOut" }}
-              />
-            </div>
-            <div className="flex justify-between mt-1.5 text-[10px] text-slate-600">
-              <span>₹0</span><span>Goal: ₹2,500</span>
-            </div>
-          </div>
-        </motion.div>
 
         {/* Loss Aversion — go online urgency */}
         <motion.div variants={staggerItem}>

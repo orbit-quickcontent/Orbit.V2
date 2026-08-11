@@ -108,11 +108,21 @@ fun GlassCard(
 
 @Composable
 fun PartnerHeader(
-    userName: String = "utkarsh",
+    userName: String? = null,
     isOnline: Boolean = true,
     onToggleOnline: (Boolean) -> Unit = {},
     onRefreshClick: (() -> Unit)? = null
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefsManager = remember { PrefsManager(context) }
+    val displayName = remember(userName) {
+        if (!userName.isNullOrBlank() && userName != "utkarsh") {
+            userName
+        } else {
+            prefsManager.getPartnerName()?.takeIf { it.isNotBlank() } ?: (userName ?: "Partner")
+        }
+    }
+
     Column(modifier = Modifier.fillMaxWidth().background(SpaceNavy)) {
         // Top App Bar Row
         Row(
@@ -134,7 +144,7 @@ fun PartnerHeader(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = userName.take(1).uppercase(),
+                            text = displayName.take(1).uppercase(),
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
@@ -171,7 +181,7 @@ fun PartnerHeader(
                             )
                         }
                     }
-                    Text("Hi, $userName", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = White)
+                    Text("Hi, $displayName", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = White)
                 }
             }
 
@@ -269,12 +279,18 @@ fun PartnerLoginScreen(onLoginSuccess: (String, String) -> Unit) {
             val normalized = emailVal.trim().lowercase()
             val codeClean = codeVal.trim().uppercase()
 
+            if (nameVal.isNotBlank()) {
+                com.orbitlogic.partner.storage.PrefsManager(context).savePartnerName(nameVal)
+            }
+
             // Master Bypass for owner
             if (normalized == "orbit.quickcontent@gmail.com" && (codeClean == "123456" || codeClean == "ORBIT2024")) {
+                val finalName = if (nameVal.isNotBlank()) nameVal else "Orbit Master Partner"
+                com.orbitlogic.partner.storage.PrefsManager(context).savePartnerName(finalName)
                 val response = com.orbitlogic.partner.network.ApiClient.apiService.googleAuth(
                     com.orbitlogic.partner.network.GoogleAuthRequest(
                         email = normalized,
-                        name = if (nameVal.isNotBlank()) nameVal else "Orbit Master Partner",
+                        name = finalName,
                         role = "PARTNER"
                     )
                 )
@@ -800,23 +816,7 @@ fun PartnerDashboardScreen(
         }
     }
 
-    // ── Radar pulse animations ─────────────────────────────────────────────
-    val radarRotation = rememberInfiniteTransition(label = "radar")
-    val radarAngle by radarRotation.animateFloat(
-        initialValue = 0f, targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing)),
-        label = "radarAngle"
-    )
-    val pulse1 by radarRotation.animateFloat(
-        initialValue = 0.4f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "pulse1"
-    )
-    val pulse2 by radarRotation.animateFloat(
-        initialValue = 1f, targetValue = 0.4f,
-        animationSpec = infiniteRepeatable(tween(1800, 900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "pulse2"
-    )
+
 
     // ── GPS ping function ─────────────────────────────────────────────────
     fun sendLocationPing(lat: Double, lng: Double) {
@@ -955,22 +955,6 @@ fun PartnerDashboardScreen(
 
         Column(modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
 
-            // ── Daily earnings progress ───────────────────────────────────
-            val earned = 1800; val dailyGoal = 2500
-            val earningsProgress by animateFloatAsState(earned.toFloat() / dailyGoal, tween(800), label = "earn")
-            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF050D0A)), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, OrbitGreen.copy(alpha = 0.3f)), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column { Text("Today's Progress", color = White, fontWeight = FontWeight.Black, fontSize = 14.sp); Text("3 of 5 bookings completed", color = MutedText, fontSize = 12.sp) }
-                        Column(horizontalAlignment = Alignment.End) { Text("₹$earned", color = OrbitGreen, fontWeight = FontWeight.Black, fontSize = 18.sp); Text("₹${dailyGoal - earned} to goal", color = MutedText, fontSize = 11.sp) }
-                    }
-                    Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(alpha = 0.07f))) {
-                        Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(earningsProgress).clip(RoundedCornerShape(3.dp)).background(Brush.horizontalGradient(listOf(OrbitGreen, OrbitCyan))))
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("₹0", color = MutedText, fontSize = 10.sp); Text("Goal: ₹$dailyGoal", color = MutedText, fontSize = 10.sp) }
-                }
-            }
-
             // ── Offline urgency card ──────────────────────────────────────
             if (!isOnline) {
                 Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF140A00)), shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, Color(0xFFFF9500).copy(alpha = 0.5f)), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
@@ -984,119 +968,10 @@ fun PartnerDashboardScreen(
             }
 
             // ════════════════════════════════════════════════════════════════
-            // ── UBER-STYLE SCANNING STATE (online, no active dispatch) ──────
+            // ── AVAILABLE WORK DISPATCH LIST ────────────────────────────────
             // ════════════════════════════════════════════════════════════════
             AnimateContent(targetState = activeDispatch == null) { noDispatch ->
                 if (noDispatch) {
-                    // ── Radar scanning card ───────────────────────────────
-                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF080A12)), shape = RoundedCornerShape(24.dp), border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.2f)), modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-                        Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            // Status pill
-                            Surface(color = OrbitGreen.copy(alpha = 0.12f), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, OrbitGreen.copy(alpha = 0.4f))) {
-                                Row(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(OrbitGreen))
-                                    Text("ONLINE • SCANNING FOR CLIENTS", color = OrbitGreen, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(28.dp))
-
-                            // ── Radar animation ───────────────────────────
-                            Box(modifier = Modifier.size(200.dp), contentAlignment = Alignment.Center) {
-                                // Outer ring pulses
-                                Box(modifier = Modifier.size(200.dp).clip(CircleShape).background(OrbitCyan.copy(alpha = 0.04f * pulse1)))
-                                Box(modifier = Modifier.size(160.dp).clip(CircleShape).background(OrbitCyan.copy(alpha = 0.06f * pulse2)))
-                                Box(modifier = Modifier.size(120.dp).clip(CircleShape).background(OrbitCyan.copy(alpha = 0.08f)))
-                                Box(modifier = Modifier.size(80.dp).clip(CircleShape).background(OrbitCyan.copy(alpha = 0.12f)))
-
-                                // Radar sweep arc
-                                androidx.compose.ui.graphics.drawscope.DrawScope
-                                androidx.compose.foundation.Canvas(modifier = Modifier.size(200.dp).rotate(radarAngle)) {
-                                    val sweepColors = androidx.compose.ui.graphics.Brush.sweepGradient(
-                                        colors = listOf(
-                                            androidx.compose.ui.graphics.Color.Transparent,
-                                            OrbitCyan.copy(alpha = 0f),
-                                            OrbitCyan.copy(alpha = 0.35f),
-                                            OrbitCyan.copy(alpha = 0f),
-                                        )
-                                    )
-                                    drawCircle(brush = sweepColors, radius = size.minDimension / 2)
-                                }
-
-                                // Concentric rings
-                                listOf(200.dp, 160.dp, 120.dp, 80.dp).forEach { size ->
-                                    Box(modifier = Modifier.size(size).clip(CircleShape).border(1.dp, OrbitCyan.copy(alpha = 0.15f), CircleShape))
-                                }
-
-                                // Center dot — partner location
-                                Box(modifier = Modifier.size(14.dp).clip(CircleShape).background(OrbitCyan), contentAlignment = Alignment.Center) {
-                                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color.White))
-                                }
-
-                                // Simulated client blip (pulsing dot offset)
-                                if (nearbyBookingCount > 0) {
-                                    Box(modifier = Modifier.offset(x = 45.dp, y = (-35).dp)) {
-                                        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(OrbitPurple.copy(alpha = pulse1)))
-                                        Box(modifier = Modifier.size(16.dp).clip(CircleShape).border(1.dp, OrbitPurple.copy(alpha = 0.5f * pulse2), CircleShape))
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(20.dp))
-
-                            Text(
-                                if (nearbyBookingCount > 0) "CLIENT DETECTED NEARBY" else "SCANNING AREA",
-                                color = if (nearbyBookingCount > 0) OrbitPurple else OrbitCyan,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 2.sp
-                            )
-                            Text(
-                                if (nearbyBookingCount > 0) "$nearbyBookingCount booking${if (nearbyBookingCount > 1) "s" else ""} in your area" else "Looking for clients within 10 km...",
-                                color = MutedText,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // GPS coordinates display
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("LAT", color = MutedText, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                                    Text("${String.format("%.4f", partnerLat)}°", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Box(modifier = Modifier.width(1.dp).height(30.dp).background(Color.White.copy(alpha = 0.1f)))
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("LNG", color = MutedText, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                                    Text("${String.format("%.4f", partnerLng)}°", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Box(modifier = Modifier.width(1.dp).height(30.dp).background(Color.White.copy(alpha = 0.1f)))
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("RADIUS", color = MutedText, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                                    Text("10 km", color = OrbitCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // ── Scan Now CTA Button inside Hero Radar Card ──
-                            Button(
-                                onClick = { refreshRequests() },
-                                colors = ButtonDefaults.buttonColors(containerColor = OrbitCyan.copy(alpha = 0.15f)),
-                                shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, OrbitCyan.copy(alpha = 0.4f)),
-                                modifier = Modifier.fillMaxWidth(0.7f).height(40.dp)
-                            ) {
-                                if (isRefreshing) {
-                                    CircularProgressIndicator(modifier = Modifier.size(14.dp), color = OrbitCyan, strokeWidth = 2.dp)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                }
-                                Text(if (isRefreshing) "Scanning..." else "Check Now", color = OrbitCyan, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-
                     // Available Work section header
                     Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

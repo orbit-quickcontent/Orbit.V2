@@ -26,6 +26,11 @@ export async function loginHandler(req: NextRequest) {
       user = await firestoreDb.clientUsers.findUnique({ where: { email: normalizedEmail } });
     }
 
+    if (!user) {
+      console.warn(`[Auth Warning] Failed login for ${normalizedEmail}: User not found`);
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    }
+
     // Reject login if user has no passwordHash (e.g. registered via OAuth/OTP)
     if (!user.passwordHash) {
       console.warn(`[Auth Warning] Failed login for ${normalizedEmail}: Account registered via OAuth/OTP`);
@@ -148,9 +153,14 @@ export async function registerHandler(req: NextRequest) {
     const normalizedEmail = email.toLowerCase().trim();
     const userRole = normalizeRole(role);
 
-    // Check if user already exists
-    const existing = await firestoreDb.users.findUnique({ where: { email: normalizedEmail } });
-    if (existing) {
+    // Check if user already exists in any user table
+    const [existingUser, existingPartner, existingClient] = await Promise.all([
+      firestoreDb.users.findUnique({ where: { email: normalizedEmail } }),
+      firestoreDb.partnerUsers.findUnique({ where: { email: normalizedEmail } }),
+      firestoreDb.clientUsers.findUnique({ where: { email: normalizedEmail } })
+    ]);
+
+    if (existingUser || existingPartner || existingClient) {
       return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
     }
 

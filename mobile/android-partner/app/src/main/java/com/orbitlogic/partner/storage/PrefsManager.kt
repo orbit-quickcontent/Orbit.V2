@@ -9,16 +9,30 @@ class PrefsManager(context: Context) {
     companion object {
         private const val KEY_TOKEN = "auth_token"
         private const val KEY_PARTNER_ID = "partner_id"
+        private const val KEY_PARTNER_NAME = "partner_name"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
     }
 
-    fun saveAuthSession(token: String, partnerId: String?) {
+    fun saveAuthSession(token: String, partnerId: String?, partnerName: String? = null) {
         prefs.edit().apply {
             putString(KEY_TOKEN, token)
             putString(KEY_PARTNER_ID, partnerId)
+            if (!partnerName.isNullOrBlank()) {
+                putString(KEY_PARTNER_NAME, partnerName)
+            }
             putBoolean(KEY_IS_LOGGED_IN, true)
             apply()
         }
+    }
+
+    fun savePartnerName(name: String) {
+        if (name.isNotBlank()) {
+            prefs.edit().putString(KEY_PARTNER_NAME, name).apply()
+        }
+    }
+
+    fun getPartnerName(): String? {
+        return prefs.getString(KEY_PARTNER_NAME, null)
     }
 
     fun getAuthToken(): String? {
@@ -37,6 +51,7 @@ class PrefsManager(context: Context) {
         prefs.edit().apply {
             remove(KEY_TOKEN)
             remove(KEY_PARTNER_ID)
+            remove(KEY_PARTNER_NAME)
             putBoolean(KEY_IS_LOGGED_IN, false)
             apply()
         }

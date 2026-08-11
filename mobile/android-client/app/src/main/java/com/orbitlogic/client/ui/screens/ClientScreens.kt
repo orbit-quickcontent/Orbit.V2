@@ -130,14 +130,25 @@ fun OrbitHeader(title: String, subtitle: String? = null) {
 
 @Composable
 fun ClientTopAppBar(
-    userName: String = "g",
+    userName: String = "User",
     greeting: String = "Good morning",
-    avatarLetter: String = "G",
+    avatarLetter: String = "U",
     onSearchClick: () -> Unit = {},
     onNotifClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {}
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefsManager = remember { com.orbitlogic.client.storage.PrefsManager(context) }
+    val displayName = remember(userName) {
+        if (userName.isNotBlank() && userName != "g" && userName != "User") {
+            userName
+        } else {
+            prefsManager.getSavedName()?.takeIf { it.isNotBlank() } ?: "User"
+        }
+    }
+    val finalAvatarLetter = displayName.take(1).uppercase()
+
     val isLight = com.orbitlogic.client.ui.theme.LocalOrbitIsLight.current
     val headerBg = if (isLight) com.orbitlogic.client.ui.theme.LightSurface else Color.Black
     val headerText = if (isLight) com.orbitlogic.client.ui.theme.LightTextPrimary else Color.White
@@ -170,11 +181,11 @@ fun ClientTopAppBar(
                     .clickable { onProfileClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = avatarLetter, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(text = finalAvatarLetter, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
             Column {
                 Text(text = greeting, color = headerSub, fontSize = 12.sp, fontWeight = FontWeight.Normal)
-                Text(text = "Hi, $userName", color = headerText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Hi, $displayName", color = headerText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -662,10 +673,12 @@ fun DashboardHomeScreen(
             .fillMaxSize()
             .background(if (isLight) com.orbitlogic.client.ui.theme.LightBg else Color.Black)
     ) {
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val savedName = remember(context) { com.orbitlogic.client.storage.PrefsManager(context).getSavedName() }
         ClientTopAppBar(
-            userName = "g",
+            userName = savedName ?: "User",
             greeting = "Good morning",
-            avatarLetter = "G",
+            avatarLetter = (savedName ?: "U").take(1).uppercase(),
             onProfileClick = onNavigateToProfile,
             onSearchClick = onSearchClick,
             onNotifClick = onNotifClick,
