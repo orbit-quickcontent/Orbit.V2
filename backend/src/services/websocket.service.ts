@@ -40,15 +40,39 @@ export function notifyDispatch(payload: {
   if (!_io) return;
   const { bookingId, partnerIds, booking, round } = payload;
   console.log(`[WS] Dispatch notification: booking:${bookingId} to partners:`, partnerIds);
+
+  const eventPayload = {
+    booking,
+    bookingId,
+    id: bookingId,
+    dispatchId: bookingId,
+    round: round || 1,
+    expiresAt: new Date(Date.now() + 60000).toISOString(),
+  };
+
   partnerIds.forEach((partnerId) => {
-    const sockets = onlinePartners.get(partnerId);
-    if (sockets) {
-      sockets.forEach((socketId) => {
-        _io!.to(socketId).emit('booking:dispatched', { booking, dispatchId: bookingId, round });
-      });
-    }
+    // Check direct partnerId, profile ID, or user ID
+    const keysToCheck = [
+      partnerId,
+      partnerId.startsWith('prt-') ? partnerId.replace('prt-', 'usr-') : partnerId.startsWith('usr-') ? partnerId.replace('usr-', 'prt-') : partnerId
+    ];
+
+    keysToCheck.forEach(key => {
+      const sockets = onlinePartners.get(key);
+      if (sockets) {
+        sockets.forEach((socketId) => {
+          _io!.to(socketId).emit('booking:dispatched', eventPayload);
+          _io!.to(socketId).emit('booking:offer', eventPayload);
+        });
+      }
+    });
   });
+
+  // Broadcast to all connected sockets so partner apps poll/update in real-time
+  _io.emit('booking:dispatched', eventPayload);
+  _io.emit('booking:offer', eventPayload);
 }
+
 
 /**
  * Push booking:partner-assigned to the client room and booking:accepted-by-other

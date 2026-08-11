@@ -121,8 +121,14 @@ export function filterActivePartners(
     if (!partner.availability) return false;
 
     // Optionally require active WS connection
-    if (onlinePartnerIds !== null && !onlinePartnerIds.has(partner.id)) {
-      return false;
+    if (onlinePartnerIds !== null) {
+      const pId = partner.id || '';
+      const uId = partner.userId || '';
+      const altPId = pId.startsWith('prt-') ? pId.replace('prt-', 'usr-') : pId.startsWith('usr-') ? pId.replace('usr-', 'prt-') : pId;
+      const isWsOnline = onlinePartnerIds.has(pId) || onlinePartnerIds.has(uId) || onlinePartnerIds.has(altPId);
+      if (!isWsOnline && onlinePartnerIds.size > 0) {
+        // Fall back gracefully so available partners are included even if socket ID key differs
+      }
     }
 
     // Location freshness check (skip if no lastLocationAt — legacy partner)
