@@ -1,0 +1,13 @@
+{
+  "name": "orbit-project",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Orbit Real-Time Dispatch and Mobile System",
+  "scripts": {
+    "build": "cd backend && npm install && npx prisma generate",
+    "start": "cd backend && npm start"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
