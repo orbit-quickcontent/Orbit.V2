@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper: Get user document from root users collection
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Helper: Check if user is a Super Admin (global scope)
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserData().role == 'super_admin';
+    }
+
+    // Helper: Check if user belongs to a specific organization member list
+    function isOrgMember(orgId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+    }
+
+    // Helper: Get user role in an organization member doc
+    function getOrgMemberRole(orgId) {
+      return get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role;
+    }
+
+    // Helper: Check specific roles in an organization member list
+    function hasOrgRole(orgId, roles) {
+      return isOrgMember(orgId) && getOrgMemberRole(orgId) in roles;
+    }
+
+    // ─── ORGANIZATIONS COLLECTION ─────────────────────────────────────────────
+    match /organizations/{orgId} {
+      allow read: if isAuthenticated() && (isSuperAdmin() || isOrgMember(orgId));
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && (isSuperAdmin() || hasOrgRole(orgId, ['owner', 'admin']));
+      
+      // Members subcollection rules
+      match /members/{memberId} {
+        allow read: if isAuthenticated() && (isSuperAdmin() || isOrgMember(orgId));
+        allow write: if isAuthenticated() && (isSuperAdmin() || hasOrgRole(orgId, ['owner', 'admin', 'manager']));
+      }
+      
+      // Invoices subcollection
+      match /invoices/{invoiceId} {
+        allow read: if isAuthenticated() && (isSuperAdmin() || isOrgMember(orgId) || hasOrgRole(orgId, ['client']));
+        allow write: if isAuthenticated() && (isSuperAdmin() || hasOrgRole(orgId, ['owner', 'admin', 'manager']));
+      }
+    }
+
+    // ─── GLOBAL COLLECTIONS ───────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
+    }
+
+    match /projects/{projectId} {
+      allow read: if isAuthenticated() && (isSuperAdmin() || isOrgMember(resource.data.organizationId));
+      allow write: if isAuthenticated() && (isSuperAdmin() || hasOrgRole(request.resource.data.organizationId, ['owner', 'admin', 'manager', 'employee', 'partner']));
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated() && (isSuperAdmin() || isOrgMember(resource.data.organizationId));
+      allow write: if isAuthenticated() && (isSuperAdmin() || hasOrgRole(request.resource.data.organizationId, ['owner', 'admin']));
+    }
+
+    match /chatRooms/{roomId} {
+      allow read: if isAuthenticated() && (request.auth.uid in resource.data.participantIds || isSuperAdmin());
+      allow write: if isAuthenticated();
+    }
+
+    match /messages/{messageId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isAuthenticated() && (isSuperAdmin() || hasOrgRole(resource.data.organizationId, ['owner', 'admin']));
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Immutable audit trails
+    }
+
+    match /apiKeys/{keyId} {
+      allow read, write: if isAuthenticated() && (isSuperAdmin() || hasOrgRole(resource.data.organizationId, ['owner', 'admin']));
+    }
+  }
+}

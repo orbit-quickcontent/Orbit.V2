@@ -27,11 +27,3 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
-
-# Flutter & Dart
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-local.properties
-**/local.properties
-

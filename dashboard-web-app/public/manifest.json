@@ -1,0 +1,29 @@
+{
+  "name": "Orbit — Professional Cinema. Delivered in 60 Minutes.",
+  "short_name": "Orbit",
+  "description": "Desktop-grade professional video edits within 60-120 minutes. The Orbit Edge: Fluidity & Precision.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "en-IN",
+  "categories": ["business", "entertainment", "lifestyle"],
+  "icons": [
+    {
+      "src": "/orbit-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/orbit-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
