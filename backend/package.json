@@ -5,8 +5,9 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node -r tsconfig-paths/register --transpile-only src/server.ts",
-    "build": "tsc",
+    "build": "prisma generate",
     "start": "ts-node -r tsconfig-paths/register --transpile-only src/server.ts",
+    "render-build": "npm install && prisma generate",
     "test": "vitest run",
     "lint": "tsc --noEmit",
     "db:generate": "prisma generate"
