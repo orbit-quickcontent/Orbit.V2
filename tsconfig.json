@@ -1,28 +1,22 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": false,
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
     "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
-    "paths": {
-      "*": [
-        "node_modules/*",
-        "dashboard-web-app/node_modules/*",
-        "backend/node_modules/*"
-      ]
-    }
+    "paths": { "@/*": ["./src/*"] }
   },
-  "include": [
-    "backend/**/*",
-    "dashboard-web-app/**/*",
-    "editor-web-app/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "**/node_modules"
-  ]
+  "include": ["src"]
 }
