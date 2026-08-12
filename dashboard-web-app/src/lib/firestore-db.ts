@@ -17,9 +17,16 @@ export const firestoreDb = {
       const { data: res } = await supabase.from('users').insert(data).select().single();
       return res;
     },
-    update: async ({ where, data }: { where: { id: string }; data: any }) => {
-      const { data: res } = await supabase.from('users').update(data).eq('id', where.id).select().single();
+    update: async ({ where, data }: { where: { id?: string; email?: string }; data: any }) => {
+      const { data: res } = await supabase.from('users').update(data).match(where as any).select().single();
       return res;
+    },
+    upsert: async ({ where, update, create }: { where: { email?: string; id?: string }; update: any; create: any }) => {
+      const existing = await firestoreDb.clientUsers.findUnique({ where });
+      if (existing) {
+        return firestoreDb.clientUsers.update({ where, data: update });
+      }
+      return firestoreDb.clientUsers.create({ data: create });
     },
     findMany: async () => {
       const { data } = await supabase.from('users').select('*');
@@ -37,8 +44,11 @@ export const firestoreDb = {
     create: async ({ data }: { data: any }) => {
       return firestoreDb.clientUsers.create({ data: { ...data, role: 'PARTNER' } });
     },
-    update: async ({ where, data }: { where: { id: string }; data: any }) => {
+    update: async ({ where, data }: { where: { id?: string; email?: string }; data: any }) => {
       return firestoreDb.clientUsers.update({ where, data });
+    },
+    upsert: async ({ where, update, create }: { where: { email?: string; id?: string }; update: any; create: any }) => {
+      return firestoreDb.clientUsers.upsert({ where, update, create: { ...create, role: 'PARTNER' } });
     },
     findMany: async () => {
       return firestoreDb.clientUsers.findMany();
@@ -70,9 +80,16 @@ export const firestoreDb = {
       const { data: res } = await supabase.from('packages').insert(data).select().single();
       return res;
     },
-    update: async ({ where, data }: { where: { id: string }; data: any }) => {
-      const { data: res } = await supabase.from('packages').update(data).eq('id', where.id).select().single();
+    update: async ({ where, data }: { where: { id?: string; tier?: string }; data: any }) => {
+      const { data: res } = await supabase.from('packages').update(data).match(where as any).select().single();
       return res;
+    },
+    upsert: async ({ where, update, create }: { where: { id?: string; tier?: string }; update: any; create: any }) => {
+      const existing = await firestoreDb.packages.findUnique({ where });
+      if (existing) {
+        return firestoreDb.packages.update({ where, data: update });
+      }
+      return firestoreDb.packages.create({ data: create });
     }
   },
 
@@ -108,9 +125,16 @@ export const firestoreDb = {
       const { data: res } = await supabase.from('partner_profiles').insert(data).select().single();
       return res;
     },
-    update: async ({ where, data }: { where: { id: string }; data: any }) => {
-      const { data: res } = await supabase.from('partner_profiles').update(data).eq('id', where.id).select().single();
+    update: async ({ where, data }: { where: { id?: string; userId?: string }; data: any }) => {
+      const { data: res } = await supabase.from('partner_profiles').update(data).match(where as any).select().single();
       return res;
+    },
+    upsert: async ({ where, update, create }: { where: { id?: string; userId?: string }; update: any; create: any }) => {
+      const existing = await firestoreDb.partners.findUnique({ where });
+      if (existing) {
+        return firestoreDb.partners.update({ where, data: update });
+      }
+      return firestoreDb.partners.create({ data: create });
     }
   }
 };
