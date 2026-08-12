@@ -28,4 +28,6 @@ Thumbs.db
 .idea/
 *.swp
 *.tsbuildinfo
+.dart_tool/
+
 

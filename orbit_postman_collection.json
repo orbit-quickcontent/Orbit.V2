@@ -1,166 +1,100 @@
 {
   "info": {
-    "name": "ORBIT Real-Time Partner Tracking & Dispatch System",
-    "description": "Postman Collection for ORBIT Express API, Partner Location tracking, Redis GEO queries, and Dispatch workflow.",
+    "name": "ORBIT Partner Dispatch API & Socket Suite",
+    "description": "Production-Grade Uber/Ola-Style Nearby Partner Dispatch Collection for ORBIT Platform",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
+    { "key": "jwtToken", "value": "PASTE_GENERATED_CLIENT_JWT_TOKEN_HERE", "type": "string" },
+    { "key": "bookingId", "value": "orb_demo_123456", "type": "string" }
+  ],
   "item": [
     {
-      "name": "Auth",
-      "item": [
-        {
-          "name": "Partner Login (Get JWT)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"rahul@orbit.com\",\n  \"role\": \"PARTNER\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "login"]
-            }
-          }
-        }
-      ]
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+      }
     },
     {
-      "name": "Partner Location",
-      "item": [
-        {
-          "name": "Update Partner Location (REST)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{partnerToken}}", "type": "string" }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"latitude\": 19.0760,\n  \"longitude\": 72.8777,\n  \"speed\": 32,\n  \"heading\": 140\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/partner/location",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "partner", "location"]
-            }
-          }
-        },
-        {
-          "name": "Get Nearby Partners (Redis GEO & ETA Sorted)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/partners/nearby?lat=19.0728&lng=72.8826&radius=5",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "partners", "nearby"],
-              "query": [
-                { "key": "lat", "value": "19.0728" },
-                { "key": "lng", "value": "72.8826" },
-                { "key": "radius", "value": "5" }
-              ]
-            }
-          }
-        }
-      ]
+      "name": "Operational Metrics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/metrics", "host": ["{{baseUrl}}"], "path": ["metrics"] }
+      }
     },
     {
-      "name": "Bookings & Dispatch",
-      "item": [
-        {
-          "name": "Create Booking & Initiate 15s Sequential Dispatch",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"pickupLat\": 19.0728,\n  \"pickupLng\": 72.8826,\n  \"destinationLat\": 19.1197,\n  \"destinationLng\": 72.9050\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/bookings",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "bookings"]
-            }
-          }
+      "name": "Create Booking & Dispatch Partner (Async)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{jwtToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"lat\": 19.0760,\n  \"lng\": 72.8777,\n  \"address\": \"Bandra West, Mumbai, Maharashtra\",\n  \"price\": 499\n}"
         },
-        {
-          "name": "Accept Booking Offer",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{partnerToken}}", "type": "string" }
-              ]
-            },
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/accept",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "bookings", "{{bookingId}}", "accept"]
-            }
-          }
+        "url": { "raw": "{{baseUrl}}/api/bookings", "host": ["{{baseUrl}}"], "path": ["api", "bookings"] }
+      }
+    },
+    {
+      "name": "Create Booking & Dispatch Partner (Sync)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{jwtToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"lat\": 19.0760,\n  \"lng\": 72.8777,\n  \"address\": \"Bandra West, Mumbai, Maharashtra\",\n  \"price\": 499\n}"
         },
-        {
-          "name": "Reject Booking Offer",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{partnerToken}}", "type": "string" }
-              ]
-            },
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/reject",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "bookings", "{{bookingId}}", "reject"]
-            }
-          }
+        "url": { "raw": "{{baseUrl}}/api/bookings?sync=true", "host": ["{{baseUrl}}"], "path": ["api", "bookings"], "query": [{ "key": "sync", "value": "true" }] }
+      }
+    },
+    {
+      "name": "Get Booking Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwtToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/api/bookings/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "{{bookingId}}"] }
+      }
+    },
+    {
+      "name": "Update Booking Status",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{jwtToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"EN_ROUTE\"\n}"
         },
-        {
-          "name": "Update Booking Status (EN_ROUTE -> SHOOTING -> DELIVERED)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{partnerToken}}", "type": "string" }
-              ]
-            },
-            "method": "PATCH",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"EN_ROUTE\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/status",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "bookings", "{{bookingId}}", "status"]
-            }
-          }
-        }
-      ]
+        "url": { "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/status", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "{{bookingId}}", "status"] }
+      }
+    },
+    {
+      "name": "Cancel Booking",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{jwtToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Client change of plans\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "{{bookingId}}", "cancel"] }
+      }
     }
-  ],
-  "variable": [
-    { "key": "baseUrl", "value": "http://localhost:5000" },
-    { "key": "partnerToken", "value": "" },
-    { "key": "bookingId", "value": "" }
   ]
 }

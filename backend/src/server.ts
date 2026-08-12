@@ -75,7 +75,17 @@ app.use(
 // 6. Request Logger Middleware (Pino JSON logger + Request ID)
 app.use(requestLogger);
 
-// 7. Health check endpoint
+// 7. Health check endpoints (Root GET/HEAD for Cloud Render/Railway probes + /health)
+app.all("/", (_req, res) => {
+  res.status(200).json({
+    name: "ORBIT Standalone Backend API",
+    status: "healthy",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime()),
+  });
+});
+
 app.get("/health", (_req, res) => {
   res.status(200).json({
     status: "healthy",
