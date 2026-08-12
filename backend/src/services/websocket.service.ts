@@ -113,12 +113,14 @@ export function notifyClient(payload: {
 }
 
 // ── Main init ──────────────────────────────────────────────────────────────────
-export function initWebSocketService() {
-  const app = express();
-  app.use(cors());
-  app.use(express.json());
+export function initWebSocketService(existingServer?: HttpServer) {
+  const app = existingServer ? undefined : express();
+  if (app) {
+    app.use(cors());
+    app.use(express.json());
+  }
 
-  const server = new HttpServer(app);
+  const server = existingServer || new HttpServer(app);
   const io = new SocketIOServer(server, {
     cors: {
       origin: (origin, callback) => {
@@ -244,49 +246,53 @@ export function initWebSocketService() {
     return false;
   };
 
-  app.post('/internal/dispatch', (req, res) => {
-    if (!checkSecret(req, res)) return;
-    const { bookingId, partnerIds, booking, round } = req.body;
-    notifyDispatch({ bookingId, partnerIds, booking, round });
-    res.json({ success: true });
-  });
+  if (app) {
+    app.post('/internal/dispatch', (req, res) => {
+      if (!checkSecret(req, res)) return;
+      const { bookingId, partnerIds, booking, round } = req.body;
+      notifyDispatch({ bookingId, partnerIds, booking, round });
+      res.json({ success: true });
+    });
 
-  app.post('/internal/accept', (req, res) => {
-    if (!checkSecret(req, res)) return;
-    const { bookingId, partnerId, partnerName, booking } = req.body;
-    notifyAccept({ bookingId, partnerId, partnerName, booking });
-    res.json({ success: true });
-  });
+    app.post('/internal/accept', (req, res) => {
+      if (!checkSecret(req, res)) return;
+      const { bookingId, partnerId, partnerName, booking } = req.body;
+      notifyAccept({ bookingId, partnerId, partnerName, booking });
+      res.json({ success: true });
+    });
 
-  app.post('/internal/notify-client', (req, res) => {
-    if (!checkSecret(req, res)) return;
-    const { bookingId, event, payload } = req.body;
-    if (!bookingId || !event) {
-      return res.status(400).json({ error: 'Missing bookingId or event' });
-    }
-    notifyClient({ bookingId, event, data: payload });
-    res.json({ success: true });
-  });
+    app.post('/internal/notify-client', (req, res) => {
+      if (!checkSecret(req, res)) return;
+      const { bookingId, event, payload } = req.body;
+      if (!bookingId || !event) {
+        return res.status(400).json({ error: 'Missing bookingId or event' });
+      }
+      notifyClient({ bookingId, event, data: payload });
+      res.json({ success: true });
+    });
 
-  app.get('/internal/partners/:partnerId/status', (req, res) => {
-    const { partnerId } = req.params;
-    const isOnline = onlinePartners.has(partnerId);
-    res.json({ partnerId, isOnline });
-  });
+    app.get('/internal/partners/:partnerId/status', (req, res) => {
+      const { partnerId } = req.params;
+      const isOnline = onlinePartners.has(partnerId);
+      res.json({ partnerId, isOnline });
+    });
+  }
 
-  const WS_PORT = Number(process.env.WS_PORT) || 3003;
+  if (!existingServer) {
+    const WS_PORT = Number(process.env.WS_PORT) || 3003;
 
-  server.on('error', (err: any) => {
-    if (err.code === 'EADDRINUSE') {
-      console.warn(`[WS Warning] Port ${WS_PORT} is already in use; reusing active WebSocket listener.`);
-    } else {
-      console.error('[WS Error]', err);
-    }
-  });
+    server.on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        console.warn(`[WS Warning] Port ${WS_PORT} is already in use; reusing active WebSocket listener.`);
+      } else {
+        console.error('[WS Error]', err);
+      }
+    });
 
-  server.listen(WS_PORT, () => {
-    console.log(`[WS] WebSocket server running on port ${WS_PORT}`);
-  });
+    server.listen(WS_PORT, () => {
+      console.log(`[WS] Standalone WebSocket server running on port ${WS_PORT}`);
+    });
+  }
 
   return { server, io };
 }

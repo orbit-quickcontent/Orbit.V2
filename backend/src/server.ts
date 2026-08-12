@@ -1,4 +1,5 @@
 import express from "express";
+import { createServer as createHttpServer } from "http";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
@@ -106,10 +107,13 @@ app.use("/upload", express.static(path.join(__dirname, "../../dashboard-web-app/
 // 9. Mount main unified API routes
 app.use("/api", apiRouter);
 
-// 10. Start WebSocket server on port 3003
-initWebSocketService();
+// 10. Create unified HTTP server
+const httpServer = createHttpServer(app);
 
-// 11. Start HTTP REST server on port 5000
-app.listen(Number(PORT), "0.0.0.0", () => {
-  logger.info(`[API] Standalone REST API server running on http://0.0.0.0:${PORT}`);
+// 11. Attach WebSocket service to unified HTTP server
+initWebSocketService(httpServer);
+
+// 12. Start unified REST API & WebSocket server on PORT
+httpServer.listen(Number(PORT), "0.0.0.0", () => {
+  logger.info(`[API + WS] Unified REST & WebSocket server running on http://0.0.0.0:${PORT}`);
 });
