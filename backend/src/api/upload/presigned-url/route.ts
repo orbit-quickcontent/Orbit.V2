@@ -1,41 +1,25 @@
-/**
- * Backend API | S3 Pre-signed URL Generator (Mock)
- *
- * Generates mock pre-signed upload URLs for partners to upload raw video footage
- * directly to a mock local cloud storage endpoint.
- *
- * Endpoint: POST /api/upload/presigned-url
- */
-
 import { NextRequest, NextResponse } from "next/server";
-import { getPresignedUploadUrl } from "@/lib/storage";
+import { createUploadUrl } from "../../../services/storage.service";
 
 export async function POST(request: NextRequest) {
   try {
-    const { filename, contentType, bookingId } = (await request.json()) as any;
+    const { filename, contentType, bookingId } = (await request.json()) as {
+      filename?: string;
+      contentType?: string;
+      bookingId?: string;
+    };
 
     if (!filename || !bookingId) {
-      return NextResponse.json(
-        { error: "filename and bookingId are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "filename and bookingId are required" }, { status: 400 });
     }
 
-    // Generate target key: bookings/[bookingId]/[filename]
-    const key = `bookings/${bookingId}/${filename}`;
+    const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const key = `bookings/${bookingId}/raw/${Date.now()}-${safeFilename}`;
+    const uploadUrl = await createUploadUrl(key, contentType || "video/mp4");
 
-    // Generate production-grade S3 upload URL or local receiver URL fallback
-    const uploadUrl = await getPresignedUploadUrl(key, contentType || "video/mp4");
-
-    return NextResponse.json({
-      url: uploadUrl,
-      key,
-    });
+    return NextResponse.json({ url: uploadUrl, key, expiresInSeconds: 900 });
   } catch (error: any) {
-    console.error("Error generating presigned URL:", error);
-    return NextResponse.json(
-      { error: "Failed to generate presigned URL", details: error.message },
-      { status: 500 }
-    );
+    console.error("Error generating upload URL:", error);
+    return NextResponse.json({ error: "Failed to generate upload URL" }, { status: 500 });
   }
 }
