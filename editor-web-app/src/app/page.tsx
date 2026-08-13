@@ -1,127 +1,58 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 
 export default function EditorLogin() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setLoading(true);
     setError("");
-
-    // Simulate login for editor_1
-    setTimeout(() => {
-      const emailLower = email.toLowerCase();
-      const isAllowed = 
-        (emailLower === "orbit.quickcontent@gmail.com" && password === "MAU.editor.amg") ||
-        (emailLower.includes("editor") && password !== "") || 
-        (emailLower === "admin@orbit.com" && password !== "") ||
-        (emailLower === "micke14y@gmail.com") ||
-        (emailLower === "");
-
-      if (isAllowed) {
-        // Save mock editorId to localStorage for session
-        localStorage.setItem("orbit_editor_id", "editor_1");
-        const displayName = email.toLowerCase() === "orbit.quickcontent@gmail.com" 
-          ? "Orbit QuickContent Editor" 
-          : "Alex Mercer";
-        localStorage.setItem("orbit_editor_name", displayName);
-        router.push("/dashboard");
-      } else {
-        setError("Invalid credentials. Please verify your email and password.");
-        setIsLoading(false);
-      }
-    }, 1000);
+    try {
+      const api = process.env.NEXT_PUBLIC_API_URL || "/api";
+      const response = await fetch(`${api}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Authentication failed");
+      const user = data.user || {};
+      if (user.role !== "EDITOR" && user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") throw new Error("This account is not authorized for the Editor Studio");
+      const token = data.accessToken || data.token;
+      if (!token) throw new Error("Access token missing");
+      localStorage.setItem("orbit_editor_token", token);
+      localStorage.setItem("orbit_editor_id", user.id || "");
+      localStorage.setItem("orbit_editor_name", user.name || user.displayName || "ORBIT Editor");
+      router.push("/dashboard");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to sign in");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-black relative overflow-hidden px-4">
-      {/* Background radial glow */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-orbit-cyan/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-orbit-purple/5 blur-[120px] pointer-events-none" />
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
-        {/* Brand logo / header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold tracking-tight text-gradient-orbit mb-2">
-            ORBIT
-          </h1>
-          <p className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-            EDITOR STUDIO
-          </p>
+    <main className="min-h-screen bg-[#05060A] text-white flex items-center justify-center px-4">
+      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.04] p-8 shadow-2xl backdrop-blur-xl">
+        <div className="mb-8 text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-cyan-300">ORBIT</p>
+          <h1 className="mt-2 text-3xl font-black">Editor Studio</h1>
+          <p className="mt-2 text-sm text-slate-400">Edit, review and deliver the next reel.</p>
         </div>
-
-        {/* Login Card */}
-        <div className="orbit-card-strong p-8 rounded-2xl border border-orbit-border/50 shadow-2xl">
-          <h2 className="text-xl font-bold mb-6 text-white text-center">
-            Sign In to Workspace
-          </h2>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-muted-foreground uppercase mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="e.g. editor@orbit.com"
-                className="w-full bg-[#111] border border-orbit-border rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-orbit-cyan transition-colors"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-muted-foreground uppercase mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-[#111] border border-orbit-border rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-orbit-cyan transition-colors"
-                required
-              />
-            </div>
-
-            {error && (
-              <p className="text-sm text-red-400 font-medium text-center">
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-orbit-cyan to-orbit-purple text-black font-semibold rounded-xl py-3 mt-6 hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center space-x-2"
-            >
-              {isLoading ? (
-                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <span>Access Workspace</span>
-              )}
-            </button>
-          </form>
-        </div>
-
-        <p className="text-center text-xs text-gray-600 mt-6">
-          Authorized Orbit editors only. Live tracking active.
-        </p>
-      </motion.div>
+        <form onSubmit={submit} className="space-y-4">
+          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="editor@orbit.com" required className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 outline-none focus:border-cyan-400" />
+          <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Password" required className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 outline-none focus:border-cyan-400" />
+          {error && <p className="text-sm text-red-300">{error}</p>}
+          <button disabled={loading} className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-violet-500 py-3 font-bold text-black disabled:opacity-50">{loading ? "Signing in…" : "Enter Editor Studio"}</button>
+        </form>
+      </div>
     </main>
   );
 }
