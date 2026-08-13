@@ -66,22 +66,12 @@ export async function POST(
     });
 
     let editorId: string | null = null;
+    let assignmentPending = false;
     try {
       editorId = await assignEditor(bookingId);
     } catch (editorError) {
+      assignmentPending = true;
       console.error("[Editor] automatic assignment failed:", editorError);
-      return NextResponse.status ? NextResponse.json({
-        success: true,
-        assignmentPending: true,
-        booking: {
-          id: updated.id,
-          status: updated.status,
-          syncPercentage: 100,
-          footageUrls,
-          fileName: fileName || String(footageUrls[footageUrls.length - 1] || "").split("/").pop() || "",
-          fileSize: fileSize || 0,
-        },
-      }) : NextResponse.json({ success: true });
     }
 
     notifyClient({
@@ -93,11 +83,12 @@ export async function POST(
     notifyClient({
       bookingId,
       event: "editor:booking-ready",
-      data: { bookingId, status: "EDITING", editorId, footageUrls },
+      data: { bookingId, status: "EDITING", editorId, assignmentPending, footageUrls },
     });
 
     return NextResponse.json({
       success: true,
+      assignmentPending,
       booking: {
         id: updated.id,
         status: updated.status,
