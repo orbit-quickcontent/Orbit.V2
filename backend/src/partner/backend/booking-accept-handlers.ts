@@ -3,7 +3,6 @@ import { dbClient } from '@/services/db.service';
 import { acquireBookingLock } from '@/services/redis.service';
 import { verifyToken } from '@/lib/security-auth';
 import { NextRequest, NextResponse } from 'next/server';
-import { attachPartnerEarningSnapshot } from '@/services/partner-earnings.service';
 import { notifyAccept, notifyClient } from '@/services/websocket.service';
 
 interface AcceptBody { partnerId?: string }
