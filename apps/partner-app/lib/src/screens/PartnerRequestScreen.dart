@@ -69,7 +69,7 @@ class _PartnerRequestScreenState extends State<PartnerRequestScreen> {
           ? const Center(
               child: Text(
                 'No active requests in range',
-                style: TextStyle(color: Colors.slate400, fontSize: 16),
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 16),
               ),
             )
           : ListView.builder(
@@ -90,7 +90,7 @@ class _PartnerRequestScreenState extends State<PartnerRequestScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.between,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
                               item['id'],
