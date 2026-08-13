@@ -17,11 +17,6 @@ declare global {
   }
 }
 
-/**
- * Authentication and Role-Based Access Control (RBAC) Middleware.
- *
- * @param allowedRoles Single role or array of allowed roles. If omitted, any valid authenticated user is allowed.
- */
 export function requireAuth(allowedRoles?: UserRole | UserRole[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const authHeader = req.headers.authorization;
@@ -30,11 +25,11 @@ export function requireAuth(allowedRoles?: UserRole | UserRole[]) {
       return;
     }
 
-    const token = authHeader.split(" ")[1];
+    const token = authHeader.slice(7).trim();
     const payload: JWTPayload | null = verifyToken(token);
 
-    if (!payload) {
-      res.status(401).json({ error: "Invalid or expired authentication token" });
+    if (!payload || payload.type !== "access") {
+      res.status(401).json({ error: "Invalid or expired access token" });
       return;
     }
 
@@ -50,16 +45,12 @@ export function requireAuth(allowedRoles?: UserRole | UserRole[]) {
 
     if (allowedRoles) {
       const rolesArray = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
-      
-      // SUPER_ADMIN override: super admins can access any role-protected route
       const isSuperAdmin = userRole === "SUPER_ADMIN";
-      const isAllowed = isSuperAdmin || rolesArray.includes(userRole);
-
-      if (!isAllowed) {
+      if (!isSuperAdmin && !rolesArray.includes(userRole)) {
         res.status(403).json({
           error: "Forbidden: insufficient permissions for this operation",
           requiredRole: rolesArray,
-          userRole: userRole,
+          userRole,
         });
         return;
       }
