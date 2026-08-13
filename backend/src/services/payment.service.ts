@@ -48,14 +48,19 @@ export async function createRazorpayOrder(input: {
   return response.json() as Promise<RazorpayOrder>;
 }
 
+function timingSafeHexEquals(expected: string, actual: string): boolean {
+  if (!actual || expected.length !== actual.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(expected, 'utf8'), Buffer.from(actual, 'utf8'));
+}
+
 export function verifyRazorpaySignature(orderId: string, paymentId: string, signature: string): boolean {
   const secret = requiredEnv('RAZORPAY_KEY_SECRET');
   const expected = crypto.createHmac('sha256', secret).update(`${orderId}|${paymentId}`).digest('hex');
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  return timingSafeHexEquals(expected, signature);
 }
 
 export function verifyWebhookSignature(rawBody: string, signature: string): boolean {
   const secret = requiredEnv('RAZORPAY_WEBHOOK_SECRET');
   const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  return timingSafeHexEquals(expected, signature);
 }
