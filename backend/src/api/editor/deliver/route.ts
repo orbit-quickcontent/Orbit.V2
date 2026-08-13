@@ -4,7 +4,7 @@ import { verifyToken } from "@/lib/security-auth";
 import { logAudit } from "@/lib/auth-server";
 import { startTranscoding } from "@/services/transcoding.service";
 import { releasePartnerEarning } from "@/services/partner-earnings.service";
-import { notifyClient, getIo } from "@/services/websocket.service";
+import { notifyClient, notifyPartnerEarningAvailable } from "@/services/websocket.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -79,13 +79,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    getIo()?.to(`booking:${bookingId}`).emit("partner:earning-available", {
-      bookingId,
-      partnerEarningAmount,
-      currency: "INR",
-      status: "AVAILABLE",
-      availableAt: now.toISOString(),
-    });
+    if (booking?.partnerId) {
+      notifyPartnerEarningAvailable(booking.partnerId, {
+        bookingId,
+        partnerEarningAmount,
+        currency: "INR",
+        status: "AVAILABLE",
+        availableAt: now.toISOString(),
+      });
+    }
 
     return NextResponse.json({
       success: true,
