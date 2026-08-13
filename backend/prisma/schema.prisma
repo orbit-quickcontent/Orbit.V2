@@ -14,18 +14,18 @@ model User {
   displayName  String?
   phone        String?
   location     String?
-  role         String    @default("CLIENT") // CLIENT, PARTNER, EDITOR, ADMIN, SUPER_ADMIN
-  brandLogo    String?    // URL to brand logo
-  brandFont    String?    // Brand font name
-  brandColor   String?    // Brand hex color
-  editorRequirements String?    // Editor requirements from client
-  avatar       String?    // URL to avatar
+  role         String    @default("CLIENT")
+  brandLogo    String?
+  brandFont    String?
+  brandColor   String?
+  editorRequirements String?
+  avatar       String?
   photoURL     String?
-  passwordHash String?    // Secure password hash for email/password auth
-  status       String    @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  passwordHash String?
+  status       String    @default("ACTIVE")
   walletBalance Float    @default(0.0)
   rating       Float     @default(0.0)
-  kycStatus    String    @default("UNVERIFIED") // UNVERIFIED, PENDING, VERIFIED, FAILED
+  kycStatus    String    @default("UNVERIFIED")
   deviceType   String?
   deviceId     String?
   appVersion   String?
@@ -34,7 +34,7 @@ model User {
   lastSeen     DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime? // Soft delete support
+  deletedAt    DateTime?
 
   bookings     Booking[]
   partner      Partner?
@@ -45,12 +45,12 @@ model User {
 
 model Package {
   id           String   @id @default(cuid())
-  name         String   // Personalized, Professional (UGC)
-  tier         String   @unique // PERSONALIZED, PROFESSIONAL
-  price        Int      // Price in INR (1999, 4999)
-  focus        String   // Description of focus area
-  deliveryTime String   // "60-120 mins"
-  features     String   // JSON array of features
+  name         String
+  tier         String   @unique
+  price        Int
+  focus        String
+  deliveryTime String
+  features     String
   popular      Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -65,39 +65,35 @@ model Partner {
   location          String
   latitude          Float?
   longitude         Float?
-  availability      Boolean  @default(true) // online/offline
-  isVerified        Boolean  @default(false) // KYC verification
+  availability      Boolean  @default(true)
+  isVerified        Boolean  @default(false)
   rating            Float    @default(0.0)
   completedProjects Int      @default(0)
-  deviceInfo        String?  // iPhone 15 Pro, Pixel 8, etc.
-  
-  // Secure Bank account fields
+  deviceInfo        String?
   accountHolderName      String?
   encryptedAccountNumber String?
   ifscCode               String?
   bankName               String?
   branchName             String?
   panNumber              String?
-  verificationStatus     String    @default("UNVERIFIED") // UNVERIFIED, PENDING, VERIFIED, FAILED
-  verificationMethod     String?   // PENNY_DROP
+  verificationStatus     String    @default("UNVERIFIED")
+  verificationMethod     String?
   verificationReference  String?
   verifiedAt             DateTime?
   payoutEnabled          Boolean   @default(false)
-  
-  // Wallet
   walletBalance     Float    @default(0.0)
   pendingClearance  Float    @default(0.0)
   totalWithdrawn    Float    @default(0.0)
-  
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-  deletedAt         DateTime? // Soft delete support
+  deletedAt         DateTime?
 
   bookings          Booking[]
   workDispatches    WorkDispatch[]
   transactions      Transaction[]
 
   @@index([availability, isVerified])
+  @@index([latitude, longitude])
 }
 
 model Booking {
@@ -109,31 +105,35 @@ model Booking {
   partnerId      String?
   partner        Partner? @relation(fields: [partnerId], references: [id])
 
-  status         String   @default("PENDING") // PENDING, PAID, PARTNER_DISPATCHED, EN_ROUTE, SHOOTING, SYNCING, EDITING, DELIVERED, CANCELLED
-  paymentStatus  String   @default("UNPAID") // UNPAID, PROCESSING, SUCCESS, FAILED, REFUNDED
-  paymentId      String?  // External payment gateway ID
-  paymentMethod  String?  // razorpay, stripe
+  editorId       String?
+  editorAssignedAt DateTime?
 
-  bookingDate    DateTime // Selected date for the shoot
-  timeSlot       String   // "10:00 AM", "12:00 PM", etc.
-  location       String?  // Shoot location
+  status         String   @default("PENDING")
+  paymentStatus  String   @default("UNPAID")
+  paymentId      String?
+  paymentMethod  String?
 
-  syncPercentage Int      @default(0) // 0-100
-  editCountdown  Int?     // Minutes remaining for delivery
+  bookingDate    DateTime
+  timeSlot       String
+  location       String?
+  latitude       Float?
+  longitude      Float?
+
+  syncPercentage Int      @default(0)
+  editCountdown  Int?
   deliveredAt    DateTime?
-  cancelledBy    String?  // CLIENT or PARTNER
-  deletedAt      DateTime? // Soft delete support
+  cancelledBy    String?
+  deletedAt      DateTime?
 
-  notes          String?  // Additional notes from user
-  footageUrls    String?  // Serialized JSON array of uploaded footage URLs
+  notes          String?
+  footageUrls    String?
   masterReelUrl  String?
   hlsPlaylistUrl String?
   proxyFootageUrl String?
-  
-  // Dispatch tracking
-  dispatchRound  Int      @default(0) // How many rounds of dispatch attempted
-  declinedBy     String?  // JSON array of partner IDs who declined
-  
+
+  dispatchRound  Int      @default(0)
+  declinedBy     String?
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -141,6 +141,7 @@ model Booking {
 
   @@index([userId])
   @@index([partnerId])
+  @@index([editorId])
   @@index([status])
   @@index([createdAt])
 }
@@ -151,34 +152,30 @@ model WorkDispatch {
   booking     Booking  @relation(fields: [bookingId], references: [id])
   partnerId   String
   partner     Partner  @relation(fields: [partnerId], references: [id])
-  
-  status      String   @default("PENDING") // PENDING, ACCEPTED, DECLINED, EXPIRED, CANCELLED
+  status      String   @default("PENDING")
   dispatchedAt DateTime @default(now())
   respondedAt  DateTime?
-  
-  round       Int      @default(1) // Dispatch round number
-  
+  round       Int      @default(1)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([bookingId])
   @@index([partnerId])
   @@index([status])
+  @@unique([bookingId, partnerId, round])
 }
 
 model Transaction {
   id          String   @id @default(cuid())
   partnerId   String
   partner     Partner  @relation(fields: [partnerId], references: [id])
-  bookingId   String?  // Null for withdrawals, non-null for earnings
-  
-  type        String   // EARNING, WITHDRAWAL, REFUND, BONUS
-  amount      Float    // Positive for credits, negative for debits
-  status      String   @default("COMPLETED") // PENDING, COMPLETED, FAILED
-  
+  bookingId   String?
+  type        String
+  amount      Float
+  status      String   @default("COMPLETED")
   description String?
   createdAt   DateTime @default(now())
-  deletedAt   DateTime? // Soft delete support
+  deletedAt   DateTime?
 
   @@index([partnerId])
   @@index([createdAt])
@@ -188,10 +185,10 @@ model AuditLog {
   id        String   @id @default(cuid())
   userId    String?
   user      User?    @relation(fields: [userId], references: [id])
-  action    String   // e.g. "USER_LOGIN", "CREATE_BOOKING", "UPDATE_WALLET"
-  entity    String   // e.g. "User", "Booking", "Transaction"
-  entityId  String?  // ID of the target object
-  details   String?  // JSON string of details/changes
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
   ipAddress String?
   userAgent String?
   createdAt DateTime @default(now())
