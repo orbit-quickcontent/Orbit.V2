@@ -52,6 +52,9 @@ model Package {
   deliveryTime String
   features     String
   popular      Boolean  @default(false)
+  partnerPayoutAmount Int @default(700)
+  editorPayoutAmount  Int @default(0)
+  taxAmount          Int @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -93,6 +96,7 @@ model Partner {
   bookings       Booking[]
   workDispatches WorkDispatch[]
   transactions   Transaction[]
+  partnerEarnings PartnerEarning[]
 
   @@index([availability, isVerified])
   @@index([latitude, longitude])
@@ -130,15 +134,24 @@ model Booking {
   proxyFootageUrl  String?
   dispatchRound    Int      @default(0)
   declinedBy       String?
+  partnerEarningAmount Int @default(700)
+  platformCommissionAmount Int @default(0)
+  taxAmount        Int @default(0)
+  editorPayoutAmount Int @default(0)
+  partnerEarningStatus String @default("PENDING")
+  partnerEarningAvailableAt DateTime?
+  partnerPaidAt    DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   workDispatches WorkDispatch[]
+  partnerEarning PartnerEarning?
 
   @@index([userId])
   @@index([partnerId])
   @@index([editorId])
   @@index([status])
+  @@index([partnerEarningStatus])
   @@index([createdAt])
 }
 
@@ -161,6 +174,27 @@ model WorkDispatch {
   @@index([status])
   @@index([expiresAt])
   @@unique([bookingId, partnerId, round])
+}
+
+model PartnerEarning {
+  id                     String   @id @default(cuid())
+  bookingId              String   @unique
+  booking                Booking  @relation(fields: [bookingId], references: [id])
+  partnerId              String
+  partner                Partner  @relation(fields: [partnerId], references: [id])
+  grossAmount             Int
+  platformCommissionAmount Int
+  taxAmount              Int
+  editorPayoutAmount      Int
+  partnerEarningAmount    Int
+  status                  String   @default("PENDING")
+  availableAt             DateTime?
+  paidAt                  DateTime?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@index([partnerId, status])
+  @@index([createdAt])
 }
 
 model Transaction {
