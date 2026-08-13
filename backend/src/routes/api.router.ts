@@ -30,6 +30,7 @@ import * as adminDirectoryRoute from "../api/admin/onboarded-directory/route";
 import * as adminVerifyPartnerRoute from "../api/admin/verify-partner/route";
 import * as adminSeedRoute from "../api/admin/seed/route";
 import * as adminAuditLogsRoute from "../api/admin/audit-logs/route";
+import * as adminMetricsRoute from "../api/admin/metrics/route";
 import * as packagesRoute from "../api/packages/route";
 import * as rootRoute from "../api/route";
 import * as paymentOrderRoute from "../api/payments/order/route";
@@ -52,7 +53,6 @@ router.get("/health", async (_req, res) => {
   }
 });
 router.get("/packages", jsonParser, nextToExpress(packagesRoute.GET));
-
 router.post("/auth/send-otp", authRateLimiter, jsonParser, nextToExpress(sendOtpHandler.POST));
 router.post("/auth/verify-otp", authRateLimiter, jsonParser, nextToExpress(verifyOtpHandler.POST));
 router.post("/auth/login", authRateLimiter, jsonParser, nextToExpress(authHandlers.loginHandler));
@@ -65,7 +65,6 @@ router.post("/auth/refresh", authRateLimiter, jsonParser, nextToExpress(authHand
 router.post("/auth/logout", requireAuth(), jsonParser, nextToExpress(authHandlers.logoutHandler));
 router.get("/auth/me", requireAuth(), jsonParser, nextToExpress(authHandlers.meHandler));
 router.post("/partner/verify-code", authRateLimiter, jsonParser, nextToExpress(authHandlers.verifyPartnerCodeHandler));
-
 router.get("/users", requireAuth(["ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(userHandlers.GET));
 router.post("/users", requireAuth(["ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(userHandlers.POST));
 router.get("/bookings", requireAuth(), jsonParser, nextToExpress(bookingListHandlers.GET));
@@ -78,7 +77,6 @@ router.post("/bookings/:id/dispatch", requireAuth(["CLIENT", "ADMIN", "SUPER_ADM
 router.post("/bookings/:id/accept", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(bookingAcceptHandlers.POST));
 router.post("/bookings/:id/decline", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(bookingDeclineHandlers.POST));
 router.post("/bookings/:id/sync-complete", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(syncCompleteRoute.POST));
-
 router.post("/partner/location", requireAuth(["PARTNER"]), jsonParser, nextToExpress(partnerLocationHandlers.POST));
 router.get("/partners", requireAuth(), jsonParser, nextToExpress(partnerListHandlers.GET));
 router.post("/partners", requireAuth(["ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(partnerListHandlers.POST));
@@ -88,30 +86,26 @@ router.patch("/partners/:id", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), 
 router.get("/partners/:id/wallet", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(partnerWalletHandlers.GET));
 router.post("/partners/:id/withdraw", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), requireIdempotency, paymentRateLimiter, jsonParser, nextToExpress(partnerWalletHandlers.POST));
 router.post("/partners/link-bank", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(partnerBankHandlers.POST));
-
 router.get("/editor/bookings", requireAuth(["EDITOR", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(editorBookingsRoute.GET));
 router.get("/editor/bookings/:id", requireAuth(["EDITOR", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(editorBookingDetailRoute.GET));
 router.post("/editor/bookings/:id", requireAuth(["EDITOR", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(editorBookingDetailRoute.POST));
 router.post("/editor/deliver", requireAuth(["EDITOR", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(editorDeliverRoute.POST));
 router.post("/upload-reel", requireAuth(["EDITOR", "ADMIN", "SUPER_ADMIN"]), uploadRateLimiter, jsonParser, nextToExpress(editorDeliverRoute.POST));
-
 router.post("/upload/presigned-url", requireAuth(), uploadRateLimiter, jsonParser, nextToExpress(uploadPresignedUrlRoute.POST));
 router.put("/upload/mock-s3", requireAuth(["PARTNER", "EDITOR", "ADMIN", "SUPER_ADMIN"]), rawParser, nextToExpress(uploadMockS3Route.PUT));
-
 router.post("/payments/order", requireAuth(["CLIENT", "ADMIN", "SUPER_ADMIN"]), requireIdempotency, paymentRateLimiter, jsonParser, nextToExpress(paymentOrderRoute.POST));
 router.post("/payments/webhook", rawParser, nextToExpress(paymentWebhookRoute.POST));
-
 router.post("/admin/dispatch", requireAuth(["ADMIN", "SUPER_ADMIN"]), jsonParser, async (req, res) => {
   try {
     const bookingId = String(req.body.bookingId || '');
     const booking = await dbClient.booking.findUnique({ where: { id: bookingId } });
     if (!booking || booking.latitude == null || booking.longitude == null) return res.status(400).json({ error: 'Booking with coordinates required' });
-    const result = await dispatchBooking(bookingId, booking.latitude, booking.longitude);
-    res.json(result);
+    res.json(await dispatchBooking(bookingId, booking.latitude, booking.longitude));
   } catch (error) {
     res.status(409).json({ error: (error as Error).message });
   }
 });
+router.get("/admin/metrics", requireAuth(["ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(adminMetricsRoute.GET));
 router.get("/admin/onboarded-directory", requireAuth(["ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(adminDirectoryRoute.GET));
 router.post("/admin/verify-partner", requireAuth("SUPER_ADMIN"), jsonParser, nextToExpress(adminVerifyPartnerRoute.POST));
 router.post("/admin/seed", requireAuth("SUPER_ADMIN"), jsonParser, nextToExpress(adminSeedRoute.POST));
