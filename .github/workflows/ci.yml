@@ -65,7 +65,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://orbit:orbitsecret@localhost:5432/orbit_db?schema=public
           JWT_SECRET: ci-only-orbit-jwt-secret-should-never-be-used-in-production
-        run: npm test -- --runInBand
+        run: npm test
 
   admin:
     name: Admin dashboard build
