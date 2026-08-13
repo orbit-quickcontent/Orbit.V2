@@ -58,6 +58,29 @@ fun MainPartnerNavigationHost() {
     var currentTab by remember { mutableStateOf("home") }
     val tabStack = remember { mutableStateListOf("home") }
 
+    val coroutineScope = rememberCoroutineScope()
+
+    val requiredPermissions = remember {
+        mutableStateListOf(
+            android.Manifest.permission.ACCESS_FINE_LOCATION,
+            android.Manifest.permission.ACCESS_COARSE_LOCATION,
+            android.Manifest.permission.CAMERA,
+            android.Manifest.permission.RECORD_AUDIO
+        ).apply {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                add(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+    var showPermissionModal by remember {
+        mutableStateOf(
+            requiredPermissions.any { perm ->
+                androidx.core.content.ContextCompat.checkSelfPermission(context, perm) != android.content.pm.PackageManager.PERMISSION_GRANTED
+            }
+        )
+    }
+
     fun navigateToTab(newTab: String) {
         if (newTab != currentTab) {
             if (tabStack.lastOrNull() != newTab) {
@@ -82,28 +105,6 @@ fun MainPartnerNavigationHost() {
                 currentTab = "home"
             }
         }
-    }
-    val coroutineScope = rememberCoroutineScope()
-
-    val requiredPermissions = remember {
-        mutableStateListOf(
-            android.Manifest.permission.ACCESS_FINE_LOCATION,
-            android.Manifest.permission.ACCESS_COARSE_LOCATION,
-            android.Manifest.permission.CAMERA,
-            android.Manifest.permission.RECORD_AUDIO
-        ).apply {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                add(android.Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-    }
-
-    var showPermissionModal by remember {
-        mutableStateOf(
-            requiredPermissions.any { perm ->
-                androidx.core.content.ContextCompat.checkSelfPermission(context, perm) != android.content.pm.PackageManager.PERMISSION_GRANTED
-            }
-        )
     }
 
     val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(

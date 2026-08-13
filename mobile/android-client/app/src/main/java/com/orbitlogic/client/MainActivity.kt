@@ -72,35 +72,6 @@ fun MainClientNavigationHost(
     var currentTab by remember { mutableStateOf("home") }
     val tabStack = remember { mutableStateListOf("home") }
 
-    fun navigateToTab(newTab: String) {
-        if (newTab != currentTab) {
-            if (tabStack.lastOrNull() != newTab) {
-                tabStack.add(newTab)
-            }
-            currentTab = newTab
-        }
-    }
-
-    val canGoBack = showSearch || showNotifications || showSettings || showPermissionModal || tabStack.size > 1 || currentTab != "home"
-
-    androidx.activity.compose.BackHandler(enabled = canGoBack) {
-        when {
-            showSearch -> showSearch = false
-            showNotifications -> showNotifications = false
-            showSettings -> showSettings = false
-            showPermissionModal -> showPermissionModal = false
-            tabStack.size > 1 -> {
-                tabStack.removeAt(tabStack.lastIndex)
-                currentTab = tabStack.last()
-            }
-            currentTab != "home" -> {
-                tabStack.clear()
-                tabStack.add("home")
-                currentTab = "home"
-            }
-        }
-    }
-
     var selectedPackageId by remember { mutableStateOf("pkg-professional") }
     var activeBookingId by remember { mutableStateOf("bk_active_901") }
     val coroutineScope = rememberCoroutineScope()
@@ -128,6 +99,35 @@ fun MainClientNavigationHost(
                 androidx.core.content.ContextCompat.checkSelfPermission(context, perm) != android.content.pm.PackageManager.PERMISSION_GRANTED
             }
         )
+    }
+
+    fun navigateToTab(newTab: String) {
+        if (newTab != currentTab) {
+            if (tabStack.lastOrNull() != newTab) {
+                tabStack.add(newTab)
+            }
+            currentTab = newTab
+        }
+    }
+
+    val canGoBack = showSearch || showNotifications || showSettings || showPermissionModal || tabStack.size > 1 || currentTab != "home"
+
+    androidx.activity.compose.BackHandler(enabled = canGoBack) {
+        when {
+            showSearch -> showSearch = false
+            showNotifications -> showNotifications = false
+            showSettings -> showSettings = false
+            showPermissionModal -> showPermissionModal = false
+            tabStack.size > 1 -> {
+                tabStack.removeAt(tabStack.lastIndex)
+                currentTab = tabStack.last()
+            }
+            currentTab != "home" -> {
+                tabStack.clear()
+                tabStack.add("home")
+                currentTab = "home"
+            }
+        }
     }
 
     val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
