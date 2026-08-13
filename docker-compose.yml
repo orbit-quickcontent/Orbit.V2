@@ -3,26 +3,22 @@ version: '3.8'
 services:
   api:
     build:
-      context: .
-      dockerfile: services/api/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
       - "5000:5000"
     environment:
-      - PORT=5000
-      - NODE_ENV=development
-      - DATABASE_URL=postgresql://orbit:orbitsecret@postgres:5432/orbit_db?schema=public
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - JWT_SECRET=orbit_super_secret_jwt_key_2026_production
-      - CORS_ORIGIN=*
+      NODE_ENV: development
+      PORT: 5000
+      DATABASE_URL: postgresql://orbit:orbitsecret@postgres:5432/orbit_db?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev-only-change-me}
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - ./services/api:/app
-      - /app/node_modules
 
   postgres:
     image: postgres:15-alpine
