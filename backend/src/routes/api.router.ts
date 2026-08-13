@@ -9,6 +9,7 @@ import * as sendOtpHandler from "../shared/backend/send-otp-handler";
 import * as verifyOtpHandler from "../shared/backend/verify-otp-handler";
 import * as authHandlers from "../shared/backend/auth-handlers";
 import * as bookingListHandlers from "../client/backend/booking-list-handlers";
+import * as bookingCreateHandler from "../client/backend/booking-create-handler";
 import * as bookingDetailHandlers from "../client/backend/booking-detail-handlers";
 import * as trackingHandlers from "../client/backend/tracking-handlers";
 import * as userHandlers from "../client/backend/user-handlers";
@@ -69,7 +70,7 @@ router.post("/partner/verify-code", authRateLimiter, jsonParser, nextToExpress(a
 router.get("/users", requireAuth(["ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(userHandlers.GET));
 router.post("/users", requireAuth(["ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(userHandlers.POST));
 router.get("/bookings", requireAuth(), jsonParser, nextToExpress(bookingListHandlers.GET));
-router.post("/bookings", requireAuth(["CLIENT", "ADMIN", "SUPER_ADMIN"]), jsonParser, requireIdempotency, nextToExpress(bookingListHandlers.POST));
+router.post("/bookings", requireAuth(["CLIENT", "ADMIN", "SUPER_ADMIN"]), jsonParser, requireIdempotency, nextToExpress(bookingCreateHandler.POST));
 router.get("/bookings/available", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(bookingAvailableHandlers.GET));
 router.get("/bookings/:id", requireAuth(), jsonParser, nextToExpress(bookingDetailHandlers.GET));
 router.patch("/bookings/:id", requireAuth(), jsonParser, bookingPatchPolicy, nextToExpress(bookingDetailHandlers.PATCH));
