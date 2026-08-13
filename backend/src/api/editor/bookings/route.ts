@@ -1,71 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { firestoreDb } from "@/lib/db";
+import { dbClient } from "../../../services/db.service";
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const editorId = searchParams.get("editorId") || "editor_1";
+    const editorId = new URL(request.url).searchParams.get("editorId");
+    if (!editorId) return NextResponse.json({ error: "editorId is required" }, { status: 400 });
 
-    // 1. Fetch bookings already assigned to (accepted by) this editor
-    const assignedBookings = await firestoreDb.bookings.findMany({
-      where: {
-        editorId: editorId
-      }
-    });
+    const bookings = await dbClient.booking.findMany({ where: { editorId }, orderBy: { updatedAt: "desc" } });
+    const resolved = await Promise.all(bookings.map(async (booking) => {
+      const [client, pkg] = await Promise.all([
+        dbClient.user.findUnique({ where: { id: booking.userId } }),
+        dbClient.package.findUnique({ where: { id: booking.packageId } }),
+      ]);
+      return {
+        ...booking,
+        status: booking.status,
+        client: client ? { id: client.id, name: client.name || "Client", email: client.email, phone: client.phone, brandColor: client.brandColor, brandFont: client.brandFont, brandLogo: client.brandLogo, editorRequirements: client.editorRequirements } : null,
+        packageName: pkg?.name,
+        package: pkg,
+      };
+    }));
 
-    // 2. Fetch all unassigned READY_TO_EDIT bookings — these are AVAILABLE for
-    //    this editor to explicitly accept. We no longer auto-assign them; the
-    //    editor must tap "Accept & Edit" (POST /editor/bookings/:id) first.
-    const allBookings = await firestoreDb.bookings.findMany();
-    const availableBookings = allBookings.filter(
-      (b) => b.status === "READY_TO_EDIT" && (!b.editorId || b.editorId === "")
-    );
-
-    // 3. Resolve client + package details for a list of bookings
-    const resolveDetails = async (list: any[]) => {
-      return await Promise.all(
-        list.map(async (booking) => {
-          const client = await firestoreDb.clientUsers.findUnique({
-            where: { id: booking.userId }
-          });
-          const pkg = await firestoreDb.packages.findUnique({
-            where: { id: booking.packageId }
-          });
-
-          return {
-            ...booking,
-            client: client ? {
-              id: client.id,
-              name: client.name || "Client",
-              email: client.email,
-              phone: client.phone || "N/A",
-              brandColor: client.brandColor,
-              brandFont: client.brandFont,
-              brandLogo: client.brandLogo,
-              editorRequirements: client.editorRequirements
-            } : null,
-            package: pkg
-          };
-        })
-      );
-    };
-
-    const resolvedAssigned = await resolveDetails(assignedBookings);
-    const resolvedAvailable = await resolveDetails(availableBookings);
-
-    // "bookings" = this editor's own accepted/active/delivered work
-    // "available" = unclaimed READY_TO_EDIT projects waiting to be accepted
-    return NextResponse.json({
-      success: true,
-      bookings: resolvedAssigned,
-      available: resolvedAvailable,
-    });
+    return NextResponse.json({ success: true, bookings: resolved, available: [] });
   } catch (error) {
     console.error("Error fetching editor bookings:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch editor bookings" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch editor bookings" }, { status: 500 });
   }
 }
-
