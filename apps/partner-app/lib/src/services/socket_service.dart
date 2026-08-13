@@ -11,6 +11,7 @@ class SocketService {
   SocketService._internal();
 
   io.Socket? _socket;
+  String? _partnerId;
   final StreamController<BookingOffer> _bookingOfferController =
       StreamController<BookingOffer>.broadcast();
   final StreamController<Map<String, dynamic>> _statusChangeController =
@@ -24,10 +25,9 @@ class SocketService {
 
   bool get isConnected => _socket?.connected ?? false;
 
-  /// Determines default server host URL based on platform (Android Emulator vs iOS/Desktop)
   static String get defaultSocketUrl {
     if (!kIsWeb && Platform.isAndroid) {
-      return 'http://10.0.2.2:5000'; // Android emulator host localhost loopback
+      return 'http://10.0.2.2:5000';
     }
     return 'http://localhost:5000';
   }
@@ -35,10 +35,8 @@ class SocketService {
   void init({String? baseUrl, String? authToken}) {
     final targetUrl = baseUrl ?? defaultSocketUrl;
 
-    if (_socket != null) {
-      _socket!.disconnect();
-      _socket!.dispose();
-    }
+    _socket?.disconnect();
+    _socket?.dispose();
 
     try {
       _socket = io.io(
@@ -57,6 +55,9 @@ class SocketService {
 
       _socket!.onConnect((_) {
         if (kDebugMode) print('[SOCKET_CONNECTED] Socket ID: ${_socket!.id}');
+        if (_partnerId != null) {
+          _socket!.emit('partner:online', {'partnerId': _partnerId});
+        }
       });
 
       _socket!.onConnectError((err) {
@@ -73,10 +74,8 @@ class SocketService {
         if (kDebugMode) print('[SOCKET_DISCONNECTED] Reason: $reason');
       });
 
-      // Listen for incoming booking dispatch offers
       _socket!.on('booking:offer', (data) {
         try {
-          if (kDebugMode) print('[SOCKET_RECEIVED_BOOKING_OFFER]: $data');
           if (data != null) {
             final offer = BookingOffer.fromJson(Map<String, dynamic>.from(data));
             _bookingOfferController.add(offer);
@@ -86,10 +85,8 @@ class SocketService {
         }
       });
 
-      // Listen for status changes
       _socket!.on('booking:statusChanged', (data) {
         try {
-          if (kDebugMode) print('[SOCKET_STATUS_CHANGED]: $data');
           if (data != null) {
             _statusChangeController.add(Map<String, dynamic>.from(data));
           }
@@ -104,16 +101,18 @@ class SocketService {
   }
 
   void connectPartner(String partnerId) {
+    _partnerId = partnerId;
     if (_socket != null && _socket!.connected) {
-      _socket!.emit('partner:connect', {'partnerId': partnerId});
+      _socket!.emit('partner:online', {'partnerId': partnerId});
     }
   }
 
   void sendLocationUpdate(LocationModel location) {
-    if (_socket != null && _socket!.connected) {
-      _socket!.emit('partner:location', {
-        'latitude': location.latitude,
-        'longitude': location.longitude,
+    if (_socket != null && _socket!.connected && _partnerId != null) {
+      _socket!.emit('partner:updateLocation', {
+        'partnerId': _partnerId,
+        'lat': location.latitude,
+        'lng': location.longitude,
         'speed': location.speed,
         'heading': location.heading,
       });
@@ -139,7 +138,11 @@ class SocketService {
   }
 
   void disconnect() {
+    if (_socket != null && _socket!.connected && _partnerId != null) {
+      _socket!.emit('partner:offline', {'partnerId': _partnerId});
+    }
     _socket?.disconnect();
     _socket = null;
+    _partnerId = null;
   }
 }
