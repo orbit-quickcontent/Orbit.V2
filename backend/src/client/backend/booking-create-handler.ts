@@ -3,6 +3,7 @@ import { dbClient } from '../../services/db.service';
 import { validateBody, bookingSchema } from '../../lib/validation';
 import { verifyToken } from '../../lib/security-auth';
 import { logAudit } from '../../lib/auth-server';
+import { calculatePackageEconomics } from '../../services/partner-earnings.service';
 
 function parseBookingDate(raw: string): string {
   if (!raw) return new Date().toISOString();
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
     const user = await dbClient.user.findUnique({ where: { id: userId } });
     if (!user) return NextResponse.json({ error: 'Client account not found' }, { status: 404 });
 
+    const economics = calculatePackageEconomics(pkg);
     const booking = await dbClient.booking.create({
       data: {
         userId,
@@ -50,6 +52,11 @@ export async function POST(request: NextRequest) {
         status: 'PENDING',
         paymentStatus: 'UNPAID',
         syncPercentage: 0,
+        partnerEarningAmount: economics.partnerEarningAmount,
+        platformCommissionAmount: economics.platformCommissionAmount,
+        taxAmount: economics.taxAmount,
+        editorPayoutAmount: economics.editorPayoutAmount,
+        partnerEarningStatus: 'PENDING',
       },
       include: { package: true, partner: true },
     });
