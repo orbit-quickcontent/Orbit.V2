@@ -9,9 +9,9 @@ class BookingOfferSheet extends ConsumerStatefulWidget {
   final BookingOffer offer;
 
   const BookingOfferSheet({
-    Key? key,
+    super.key,
     required this.offer,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<BookingOfferSheet> createState() => _BookingOfferSheetState();
@@ -138,7 +138,7 @@ class _BookingOfferSheetState extends ConsumerState<BookingOfferSheet> {
                     final success = await ref
                         .read(partnerProvider.notifier)
                         .acceptActiveOffer();
-                    if (success && mounted) {
+                    if (success && context.mounted) {
                       context.go('/trip');
                     }
                   },
