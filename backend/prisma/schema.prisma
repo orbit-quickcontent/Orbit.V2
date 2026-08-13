@@ -79,20 +79,20 @@ model Partner {
   branchName             String?
   panNumber              String?
   verificationStatus     String    @default("UNVERIFIED")
-  verificationMethod     String?
-  verificationReference  String?
+  verificationMethod    String?
+  verificationReference String?
   verifiedAt             DateTime?
   payoutEnabled          Boolean   @default(false)
-  walletBalance     Float    @default(0.0)
-  pendingClearance  Float    @default(0.0)
-  totalWithdrawn    Float    @default(0.0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  deletedAt         DateTime?
+  walletBalance         Float     @default(0.0)
+  pendingClearance      Float     @default(0.0)
+  totalWithdrawn        Float     @default(0.0)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  deletedAt             DateTime?
 
-  bookings          Booking[]
-  workDispatches    WorkDispatch[]
-  transactions      Transaction[]
+  bookings       Booking[]
+  workDispatches WorkDispatch[]
+  transactions   Transaction[]
 
   @@index([availability, isVerified])
   @@index([latitude, longitude])
@@ -100,45 +100,38 @@ model Partner {
 }
 
 model Booking {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id])
-  packageId      String
-  package        Package  @relation(fields: [packageId], references: [id])
-  partnerId      String?
-  partner        Partner? @relation(fields: [partnerId], references: [id])
-
-  editorId       String?
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  packageId        String
+  package          Package  @relation(fields: [packageId], references: [id])
+  partnerId        String?
+  partner           Partner? @relation(fields: [partnerId], references: [id])
+  editorId         String?
   editorAssignedAt DateTime?
-
-  status         String   @default("PENDING")
-  paymentStatus  String   @default("UNPAID")
-  paymentId      String?
-  paymentMethod  String?
-
-  bookingDate    DateTime
-  timeSlot       String
-  location       String?
-  latitude       Float?
-  longitude      Float?
-
-  syncPercentage Int      @default(0)
-  editCountdown  Int?
-  deliveredAt    DateTime?
-  cancelledBy    String?
-  deletedAt      DateTime?
-
-  notes          String?
-  footageUrls    String?
-  masterReelUrl  String?
-  hlsPlaylistUrl String?
-  proxyFootageUrl String?
-
-  dispatchRound  Int      @default(0)
-  declinedBy     String?
-
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  status           String   @default("PENDING")
+  paymentStatus    String   @default("UNPAID")
+  paymentId        String?
+  paymentMethod    String?
+  bookingDate      DateTime
+  timeSlot         String
+  location         String?
+  latitude         Float?
+  longitude        Float?
+  syncPercentage   Int      @default(0)
+  editCountdown    Int?
+  deliveredAt      DateTime?
+  cancelledBy      String?
+  deletedAt        DateTime?
+  notes            String?
+  footageUrls      String?
+  masterReelUrl    String?
+  hlsPlaylistUrl   String?
+  proxyFootageUrl  String?
+  dispatchRound    Int      @default(0)
+  declinedBy       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   workDispatches WorkDispatch[]
 
@@ -150,21 +143,23 @@ model Booking {
 }
 
 model WorkDispatch {
-  id          String   @id @default(cuid())
-  bookingId   String
-  booking     Booking  @relation(fields: [bookingId], references: [id])
-  partnerId   String
-  partner     Partner  @relation(fields: [partnerId], references: [id])
-  status      String   @default("PENDING")
+  id           String   @id @default(cuid())
+  bookingId    String
+  booking      Booking  @relation(fields: [bookingId], references: [id])
+  partnerId    String
+  partner      Partner  @relation(fields: [partnerId], references: [id])
+  status       String   @default("PENDING")
   dispatchedAt DateTime @default(now())
+  expiresAt    DateTime?
   respondedAt  DateTime?
-  round       Int      @default(1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  round        Int      @default(1)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([bookingId])
   @@index([partnerId])
   @@index([status])
+  @@index([expiresAt])
   @@unique([bookingId, partnerId, round])
 }
 
