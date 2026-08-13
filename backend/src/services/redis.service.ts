@@ -61,9 +61,31 @@ export async function nearbyOnlinePartners(lat: number, lng: number, radiusKm: n
   return candidates.filter((_, index) => String(statuses?.[index]?.[1] ?? '') === '1');
 }
 
-export async function acquireBookingLock(bookingId: string, partnerId: string, ttlMs = 15000): Promise<boolean> {
+export async function acquireLock(key: string, owner: string, ttlMs: number): Promise<boolean> {
   const client = await connectRedis();
   if (!client) return true;
-  const result = await client.set(`orbit:booking:${bookingId}:accept`, partnerId, 'PX', ttlMs, 'NX');
+  const result = await client.set(key, owner, 'PX', ttlMs, 'NX');
   return result === 'OK';
+}
+
+export async function acquireBookingLock(bookingId: string, partnerId: string, ttlMs = 15000): Promise<boolean> {
+  return acquireLock(`orbit:booking:${bookingId}:accept`, partnerId, ttlMs);
+}
+
+export async function scheduleDispatchTimeout(bookingId: string, round: number, expiresAtMs: number): Promise<void> {
+  const client = await connectRedis();
+  if (!client) return;
+  await client.zadd('orbit:dispatch:timeouts', expiresAtMs, `${bookingId}:${round}`);
+}
+
+export async function claimDueDispatchTimeouts(limit = 25): Promise<string[]> {
+  const client = await connectRedis();
+  if (!client) return [];
+  const raw = await client.zrangebyscore('orbit:dispatch:timeouts', '-inf', Date.now(), 'LIMIT', 0, limit);
+  const entries = raw.map(String);
+  if (!entries.length) return [];
+  const pipeline = client.pipeline();
+  entries.forEach((entry) => pipeline.zrem('orbit:dispatch:timeouts', entry));
+  await pipeline.exec();
+  return entries;
 }
