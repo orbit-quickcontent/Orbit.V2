@@ -3,7 +3,8 @@ import { dbClient } from "@/services/db.service";
 import { verifyToken } from "@/lib/security-auth";
 import { logAudit } from "@/lib/auth-server";
 import { startTranscoding } from "@/services/transcoding.service";
-import { notifyClient } from "@/services/websocket.service";
+import { releasePartnerEarning } from "@/services/partner-earnings.service";
+import { notifyClient, getIo } from "@/services/websocket.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,9 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { bookingId, reelUrl } = (await request.json()) as { bookingId?: string; reelUrl?: string };
-    if (!bookingId || !reelUrl) {
-      return NextResponse.json({ error: "bookingId and reelUrl are required" }, { status: 400 });
-    }
+    if (!bookingId || !reelUrl) return NextResponse.json({ error: "bookingId and reelUrl are required" }, { status: 400 });
 
     const existingBooking = await dbClient.booking.findUnique({ where: { id: bookingId } });
     if (!existingBooking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
@@ -45,14 +44,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Booking changed before delivery" }, { status: 409 });
     }
 
+    try {
+      await releasePartnerEarning(bookingId);
+    } catch (earningError) {
+      console.error("[PartnerEarnings] release failed:", earningError);
+      return NextResponse.json({ error: "Reel delivered but partner payout settlement failed" }, { status: 503 });
+    }
+
     const booking = await dbClient.booking.findUnique({ where: { id: bookingId } });
+    const partnerEarningAmount = booking?.partnerEarningAmount ?? 0;
 
     await logAudit({
       userId: session.id,
       action: "DELIVER_REEL",
       entity: "Booking",
       entityId: bookingId,
-      details: { reelUrl },
+      details: { reelUrl, partnerEarningAmount },
       req: request,
     });
 
@@ -72,7 +79,20 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, booking });
+    getIo()?.to(`booking:${bookingId}`).emit("partner:earning-available", {
+      bookingId,
+      partnerEarningAmount,
+      currency: "INR",
+      status: "AVAILABLE",
+      availableAt: now.toISOString(),
+    });
+
+    return NextResponse.json({
+      success: true,
+      booking,
+      partnerEarningAmount,
+      partnerEarningStatus: "AVAILABLE",
+    });
   } catch (error) {
     console.error("Error in deliver route:", error);
     return NextResponse.json({ error: "Failed to deliver booking" }, { status: 500 });
