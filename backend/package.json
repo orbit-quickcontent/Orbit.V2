@@ -14,7 +14,7 @@
     "db:deploy": "prisma migrate deploy"
   },
   "dependencies": {
-    "@prisma/client": "^6.11.1",
+    "@prisma/client": "6.19.3",
     "@supabase/supabase-js": "^2.112.3",
     "@types/node": "^20.11.0",
     "@types/react": "^18.3.12",
@@ -41,6 +41,7 @@
     "@types/nodemailer": "^6.4.14",
     "next": "^16.3.0",
     "next-auth": "^4.24.14",
+    "prisma": "6.19.3",
     "vitest": "^4.1.10"
   }
 }
