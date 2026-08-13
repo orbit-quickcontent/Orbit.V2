@@ -34,8 +34,8 @@ jobs:
         run: |
           cd backend
           npm install --legacy-peer-deps
-          npx prisma validate
-          npx prisma generate
+          npx prisma@6.19.3 validate
+          npx prisma@6.19.3 generate
           npm run build
 
       - name: Verify Docker Compose Build Configuration
