@@ -1,9 +1,10 @@
 enum BookingStatus {
   pending,
-  assigned,
-  accepted,
+  paid,
+  dispatched,
   enRoute,
   shooting,
+  syncing,
   editing,
   delivered,
   cancelled,
@@ -12,45 +13,30 @@ enum BookingStatus {
 extension BookingStatusExtension on BookingStatus {
   String toShortString() {
     switch (this) {
-      case BookingStatus.pending:
-        return 'PENDING';
-      case BookingStatus.assigned:
-        return 'ASSIGNED';
-      case BookingStatus.accepted:
-        return 'ACCEPTED';
-      case BookingStatus.enRoute:
-        return 'EN_ROUTE';
-      case BookingStatus.shooting:
-        return 'SHOOTING';
-      case BookingStatus.editing:
-        return 'EDITING';
-      case BookingStatus.delivered:
-        return 'DELIVERED';
-      case BookingStatus.cancelled:
-        return 'CANCELLED';
+      case BookingStatus.pending: return 'PENDING';
+      case BookingStatus.paid: return 'PAID';
+      case BookingStatus.dispatched: return 'DISPATCHED';
+      case BookingStatus.enRoute: return 'EN_ROUTE';
+      case BookingStatus.shooting: return 'SHOOTING';
+      case BookingStatus.syncing: return 'SYNCING';
+      case BookingStatus.editing: return 'EDITING';
+      case BookingStatus.delivered: return 'DELIVERED';
+      case BookingStatus.cancelled: return 'CANCELLED';
     }
   }
 
   static BookingStatus fromString(String? status) {
-    if (status == null) return BookingStatus.pending;
-    switch (status.toUpperCase()) {
-      case 'ASSIGNED':
-        return BookingStatus.assigned;
-      case 'ACCEPTED':
-        return BookingStatus.accepted;
-      case 'EN_ROUTE':
-        return BookingStatus.enRoute;
-      case 'SHOOTING':
-        return BookingStatus.shooting;
-      case 'EDITING':
-        return BookingStatus.editing;
-      case 'DELIVERED':
-        return BookingStatus.delivered;
-      case 'CANCELLED':
-        return BookingStatus.cancelled;
-      case 'PENDING':
-      default:
-        return BookingStatus.pending;
+    switch ((status ?? 'PENDING').toUpperCase()) {
+      case 'PAID': return BookingStatus.paid;
+      case 'DISPATCHED':
+      case 'PARTNER_DISPATCHED': return BookingStatus.dispatched;
+      case 'EN_ROUTE': return BookingStatus.enRoute;
+      case 'SHOOTING': return BookingStatus.shooting;
+      case 'SYNCING': return BookingStatus.syncing;
+      case 'EDITING': return BookingStatus.editing;
+      case 'DELIVERED': return BookingStatus.delivered;
+      case 'CANCELLED': return BookingStatus.cancelled;
+      default: return BookingStatus.pending;
     }
   }
 }
@@ -79,30 +65,17 @@ class BookingOffer {
   });
 
   factory BookingOffer.fromJson(Map<String, dynamic>? json) {
-    if (json == null) {
-      return BookingOffer(
-        bookingId: '',
-        clientId: '',
-        pickupLat: 0.0,
-        pickupLng: 0.0,
-        destinationLat: 0.0,
-        destinationLng: 0.0,
-        distanceKm: 0.0,
-        etaMinutes: 0,
-        expiresInSeconds: 15,
-      );
-    }
-
+    final source = json ?? const <String, dynamic>{};
     return BookingOffer(
-      bookingId: json['bookingId'] as String? ?? '',
-      clientId: json['clientId'] as String? ?? '',
-      pickupLat: (json['pickupLat'] as num?)?.toDouble() ?? 0.0,
-      pickupLng: (json['pickupLng'] as num?)?.toDouble() ?? 0.0,
-      destinationLat: (json['destinationLat'] as num?)?.toDouble() ?? 0.0,
-      destinationLng: (json['destinationLng'] as num?)?.toDouble() ?? 0.0,
-      distanceKm: (json['distanceKm'] as num?)?.toDouble() ?? 0.0,
-      etaMinutes: (json['etaMinutes'] as num?)?.toInt() ?? 0,
-      expiresInSeconds: (json['expiresInSeconds'] as num?)?.toInt() ?? 15,
+      bookingId: source['bookingId'] as String? ?? '',
+      clientId: source['clientId'] as String? ?? '',
+      pickupLat: (source['pickupLat'] as num?)?.toDouble() ?? 0,
+      pickupLng: (source['pickupLng'] as num?)?.toDouble() ?? 0,
+      destinationLat: (source['destinationLat'] as num?)?.toDouble() ?? 0,
+      destinationLng: (source['destinationLng'] as num?)?.toDouble() ?? 0,
+      distanceKm: (source['distanceKm'] as num?)?.toDouble() ?? 0,
+      etaMinutes: (source['etaMinutes'] as num?)?.toInt() ?? 0,
+      expiresInSeconds: (source['expiresInSeconds'] as num?)?.toInt() ?? 15,
     );
   }
 }
@@ -129,27 +102,16 @@ class BookingModel {
   });
 
   factory BookingModel.fromJson(Map<String, dynamic>? json) {
-    if (json == null) {
-      return BookingModel(
-        id: '',
-        clientId: '',
-        pickupLat: 0.0,
-        pickupLng: 0.0,
-        destinationLat: 0.0,
-        destinationLng: 0.0,
-        status: BookingStatus.pending,
-      );
-    }
-
+    final source = json ?? const <String, dynamic>{};
     return BookingModel(
-      id: json['id'] as String? ?? json['bookingId'] as String? ?? '',
-      clientId: json['clientId'] as String? ?? '',
-      partnerId: json['partnerId'] as String?,
-      pickupLat: (json['pickupLat'] as num?)?.toDouble() ?? 0.0,
-      pickupLng: (json['pickupLng'] as num?)?.toDouble() ?? 0.0,
-      destinationLat: (json['destinationLat'] as num?)?.toDouble() ?? 0.0,
-      destinationLng: (json['destinationLng'] as num?)?.toDouble() ?? 0.0,
-      status: BookingStatusExtension.fromString(json['status'] as String?),
+      id: source['id'] as String? ?? source['bookingId'] as String? ?? '',
+      clientId: source['clientId'] as String? ?? source['userId'] as String? ?? '',
+      partnerId: source['partnerId'] as String?,
+      pickupLat: (source['pickupLat'] as num?)?.toDouble() ?? (source['latitude'] as num?)?.toDouble() ?? 0,
+      pickupLng: (source['pickupLng'] as num?)?.toDouble() ?? (source['longitude'] as num?)?.toDouble() ?? 0,
+      destinationLat: (source['destinationLat'] as num?)?.toDouble() ?? 0,
+      destinationLng: (source['destinationLng'] as num?)?.toDouble() ?? 0,
+      status: BookingStatusExtension.fromString(source['status'] as String?),
     );
   }
 }
