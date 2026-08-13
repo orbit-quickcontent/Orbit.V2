@@ -105,12 +105,13 @@ jobs:
         run: flutter --version
       - name: Repair Flutter Android project scaffolding
         working-directory: apps/partner-app
-        run: flutter create --project-name partner_app --platforms=android --org com.orbit .
+        run: |
+          flutter create --project-name partner_app --platforms=android --org com.orbit .
+          rm -f android/app/src/main/kotlin/com/orbit/partner_app/MainActivity.kt
       - name: Upgrade Flutter dependencies
         working-directory: apps/partner-app
         run: flutter pub upgrade
-      - name: Ensure Android SDK 35 is selected
-        working-directory: apps/partner-app
-        run: flutter build apk --debug
       - working-directory: apps/partner-app
         run: flutter analyze
+      - working-directory: apps/partner-app
+        run: flutter build apk --debug
