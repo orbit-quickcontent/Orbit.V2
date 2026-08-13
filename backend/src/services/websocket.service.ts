@@ -41,20 +41,29 @@ export function notifyDispatch(payload: {
   if (!_io) return;
 
   const { bookingId, partnerIds, booking, round } = payload;
-  const eventPayload = {
-    booking,
+  const partnerEarningAmount = Number(booking?.partnerEarningAmount || 0);
+  const offer = {
     bookingId,
     id: bookingId,
     dispatchId: bookingId,
     round: round || 1,
     expiresAt: new Date(Date.now() + OFFER_TIMEOUT_MS).toISOString(),
+    clientId: booking?.userId || booking?.clientId || '',
+    serviceType: booking?.package?.name || booking?.serviceType || 'Reel Shoot',
+    clientLatitude: booking?.latitude ?? booking?.lat ?? null,
+    clientLongitude: booking?.longitude ?? booking?.lng ?? null,
+    partnerEarningAmount,
+    earningAmount: partnerEarningAmount,
+    currency: 'INR',
+    payoutStatus: 'PENDING',
+    booking,
   };
 
   for (const partnerId of partnerIds) {
     const sockets = onlinePartners.get(partnerId);
     sockets?.forEach((socketId) => {
-      _io!.to(socketId).emit('booking:dispatched', eventPayload);
-      _io!.to(socketId).emit('booking:offer', eventPayload);
+      _io!.to(socketId).emit('booking:dispatched', offer);
+      _io!.to(socketId).emit('booking:offer', offer);
     });
   }
 }
@@ -72,6 +81,7 @@ export function notifyAccept(payload: {
     bookingId,
     partnerId,
     partnerName,
+    partnerEarningAmount: booking?.partnerEarningAmount ?? null,
     booking,
   });
 
@@ -95,8 +105,6 @@ export function notifyClient(payload: {
   const room = `booking:${payload.bookingId}`;
   _io.to(room).emit(payload.event, payload.data);
 
-  // Canonical client contract from the platform architecture. Keep the existing
-  // event for backward compatibility while guaranteeing one stable event name.
   if (payload.event === 'booking:status-update') {
     _io.to(room).emit('booking:statusChanged', payload.data);
   }
@@ -258,76 +266,33 @@ export function initWebSocketService(existingServer?: HttpServer) {
 
       _io?.emit('partner:location', {
         partnerId,
-        lat,
-        lng,
-        heading: heading ?? null,
-        speed: speed ?? null,
-        accuracy: accuracy ?? null,
+        latitude: lat,
+        longitude: lng,
+        heading,
+        speed,
         timestamp: lastLocationAt.toISOString(),
       });
     });
 
+    socket.on('booking:accepted', async ({ bookingId, partnerId }: { bookingId: string; partnerId: string }) => {
+      if (!(await resolvePartnerId(user, partnerId))) return;
+    });
+
+    socket.on('booking:rejected', async ({ bookingId, partnerId }: { bookingId: string; partnerId: string }) => {
+      if (!(await resolvePartnerId(user, partnerId))) return;
+    });
+
     socket.on('disconnect', async () => {
       const partnerId = socket.data.partnerId as string | undefined;
-      if (partnerId) {
-        const sockets = onlinePartners.get(partnerId);
-        sockets?.delete(socket.id);
-        if (sockets && sockets.size === 0) {
-          onlinePartners.delete(partnerId);
-          await removePartnerPresence(partnerId).catch(() => undefined);
-        }
+      if (!partnerId) return;
+      const sockets = onlinePartners.get(partnerId);
+      sockets?.delete(socket.id);
+      if (sockets && sockets.size === 0) {
+        onlinePartners.delete(partnerId);
+        await removePartnerPresence(partnerId).catch(() => undefined);
       }
-      socketSubscriptions.delete(socket.id);
     });
   });
 
-  const checkSecret = (req: express.Request, res: express.Response): boolean => {
-    const secret = process.env.INTERNAL_WS_SECRET;
-    if (!secret && process.env.NODE_ENV === 'production') {
-      res.status(503).json({ error: 'Internal WebSocket secret is not configured' });
-      return false;
-    }
-    if (!secret || req.headers['x-internal-secret'] === secret) return true;
-    res.status(401).json({ error: 'Unauthorized: Invalid internal secret' });
-    return false;
-  };
-
-  if (app) {
-    app.post('/internal/dispatch', (req, res) => {
-      if (!checkSecret(req, res)) return;
-      notifyDispatch(req.body);
-      res.json({ success: true });
-    });
-    app.post('/internal/accept', (req, res) => {
-      if (!checkSecret(req, res)) return;
-      notifyAccept(req.body);
-      res.json({ success: true });
-    });
-    app.post('/internal/notify-client', (req, res) => {
-      if (!checkSecret(req, res)) return;
-      const { bookingId, event, payload } = req.body;
-      if (!bookingId || !event) return res.status(400).json({ error: 'Missing bookingId or event' });
-      notifyClient({ bookingId, event, data: payload });
-      res.json({ success: true });
-    });
-    app.get('/internal/partners/:partnerId/status', (req, res) => {
-      res.json({ partnerId: req.params.partnerId, isOnline: onlinePartners.has(req.params.partnerId) });
-    });
-  }
-
-  if (!existingServer) {
-    const WS_PORT = Number(process.env.WS_PORT) || 3003;
-    server.on('error', (err: any) => {
-      if (err.code === 'EADDRINUSE') {
-        console.warn(`[WS Warning] Port ${WS_PORT} is already in use.`);
-      } else {
-        console.error('[WS Error]', err);
-      }
-    });
-    server.listen(WS_PORT, () => {
-      console.log(`[WS] Standalone WebSocket server running on port ${WS_PORT}`);
-    });
-  }
-
-  return { server, io };
+  return io;
 }
