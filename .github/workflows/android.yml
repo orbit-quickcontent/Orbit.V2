@@ -26,7 +26,9 @@ jobs:
 
       - name: Generate Android project scaffolding
         working-directory: apps/partner-app
-        run: flutter create --project-name partner_app --platforms=android --org com.orbit .
+        run: |
+          flutter create --project-name partner_app --platforms=android --org com.orbit .
+          rm -f android/app/src/main/kotlin/com/orbit/partner_app/MainActivity.kt
 
       - name: Resolve Flutter dependencies
         working-directory: apps/partner-app
