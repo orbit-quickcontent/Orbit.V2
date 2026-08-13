@@ -1,79 +1,82 @@
 import { NextRequest, NextResponse } from "next/server";
-import { firestoreDb } from "@/lib/db";
+import { dbClient } from "@/services/db.service";
+import { verifyToken } from "@/lib/security-auth";
 import { logAudit } from "@/lib/auth-server";
 import { startTranscoding } from "@/services/transcoding.service";
 import { notifyClient } from "@/services/websocket.service";
 
 export async function POST(request: NextRequest) {
   try {
-    const { bookingId, reelUrl, editorId } = (await request.json()) as any;
+    const token = request.headers.get("authorization") || "";
+    const session = verifyToken(token);
+    if (!session || session.type !== "access" || !["EDITOR", "ADMIN", "SUPER_ADMIN"].includes(session.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
+    const { bookingId, reelUrl } = (await request.json()) as { bookingId?: string; reelUrl?: string };
     if (!bookingId || !reelUrl) {
-      return NextResponse.json(
-        { error: "bookingId and reelUrl are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "bookingId and reelUrl are required" }, { status: 400 });
     }
 
-    const existingBooking = await firestoreDb.bookings.findUnique({
-      where: { id: bookingId }
-    });
-
-    if (!existingBooking) {
-      return NextResponse.json(
-        { error: "Booking not found" },
-        { status: 404 }
-      );
-    }
-
+    const existingBooking = await dbClient.booking.findUnique({ where: { id: bookingId } });
+    if (!existingBooking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
     if (existingBooking.status !== "EDITING") {
-      return NextResponse.json(
-        { error: `Booking cannot be delivered unless it is in EDITING status. Current status: ${existingBooking.status}` },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: `Booking cannot be delivered unless it is in EDITING status. Current status: ${existingBooking.status}` }, { status: 409 });
+    }
+    if (session.role === "EDITOR" && existingBooking.editorId !== session.id) {
+      return NextResponse.json({ error: "Booking is assigned to a different editor" }, { status: 403 });
     }
 
-    const now = new Date().toISOString();
-
-    const booking = await firestoreDb.bookings.update({
-      where: { id: bookingId },
+    const now = new Date();
+    const updated = await dbClient.booking.updateMany({
+      where: {
+        id: bookingId,
+        status: "EDITING",
+        ...(session.role === "EDITOR" ? { editorId: session.id } : {}),
+      },
       data: {
         status: "DELIVERED",
-        reelUrl: reelUrl,
+        reelUrl,
         masterReelUrl: reelUrl,
         deliveredAt: now,
-        reelUploadedAt: now
-      }
+        reelUploadedAt: now,
+      },
     });
 
-    // Record audit log
+    if (updated.count !== 1) {
+      return NextResponse.json({ error: "Booking changed before delivery" }, { status: 409 });
+    }
+
+    const booking = await dbClient.booking.findUnique({ where: { id: bookingId } });
+
     await logAudit({
-      userId: editorId || "editor_1",
+      userId: session.id,
       action: "DELIVER_REEL",
       entity: "Booking",
       entityId: bookingId,
       details: { reelUrl },
-      req: request
+      req: request,
     });
 
-    // Trigger background transcoding asynchronously (do not await to let response return immediately)
-    startTranscoding(bookingId, reelUrl).catch((transcodeErr) => {
-      console.error("Transcoding failed:", transcodeErr);
+    startTranscoding(bookingId, reelUrl).catch((error) => {
+      console.error("[Transcoding] failed:", error);
     });
 
-    // Trigger WebSocket status change to DELIVERED (in-process)
     notifyClient({
       bookingId,
       event: "booking:status-update",
-      data: { bookingId, status: "DELIVERED", reelUrl, masterReelUrl: reelUrl, deliveredAt: now },
-    })
+      data: {
+        bookingId,
+        status: "DELIVERED",
+        reelUrl,
+        masterReelUrl: reelUrl,
+        deliveredAt: now.toISOString(),
+      },
+    });
 
     return NextResponse.json({ success: true, booking });
   } catch (error) {
     console.error("Error in deliver route:", error);
-    return NextResponse.json(
-      { error: "Failed to deliver booking" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to deliver booking" }, { status: 500 });
   }
 }
