@@ -1,10 +1,10 @@
-name: ORBIT Android Partner Build
+name: ORBIT Android Builds
 
 on:
   push:
-    branches: [main, master]
+    branches: [ main, master ]
   pull_request:
-    branches: [main, master]
+    branches: [ main, master ]
 
 permissions:
   contents: read
@@ -15,35 +15,59 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-
-      - name: Verify Flutter toolchain
-        run: flutter --version
-
+      - run: flutter --version
       - name: Generate Android project scaffolding
         working-directory: apps/partner-app
         run: |
           flutter create --project-name partner_app --platforms=android --org com.orbit .
           rm -f android/app/src/main/kotlin/com/orbit/partner_app/MainActivity.kt
-
       - name: Resolve Flutter dependencies
         working-directory: apps/partner-app
         run: flutter pub upgrade
-
       - name: Analyze Partner app
         working-directory: apps/partner-app
         run: flutter analyze
-
       - name: Build Partner APK
         working-directory: apps/partner-app
         run: flutter build apk --debug
-
       - name: Upload Partner APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: orbit-partner-debug-apk
           path: apps/partner-app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  client:
+    name: Client Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter --version
+      - name: Generate Android project scaffolding
+        working-directory: apps/client-app
+        run: flutter create --project-name orbit_client --platforms=android --org com.orbit .
+      - name: Resolve Flutter dependencies
+        working-directory: apps/client-app
+        run: flutter pub upgrade
+      - name: Analyze Client app
+        working-directory: apps/client-app
+        run: flutter analyze
+      - name: Build Client APK
+        working-directory: apps/client-app
+        run: flutter build apk --debug
+      - name: Upload Client APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: orbit-client-debug-apk
+          path: apps/client-app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
