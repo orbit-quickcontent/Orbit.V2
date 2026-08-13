@@ -72,6 +72,7 @@ export function notifyDispatch(payload: {
     sockets?.forEach((socketId) => {
       _io!.to(socketId).emit('booking:dispatched', offer);
       _io!.to(socketId).emit('booking:offer', offer);
+      _io!.to(socketId).emit('partner_searching', { bookingId, round: round || 1, partnerEarningAmount, currency: 'INR' });
     });
   }
 }
@@ -91,6 +92,12 @@ export function notifyAccept(payload: {
     partnerName,
     partnerEarningAmount: booking?.partnerEarningAmount ?? null,
     booking,
+  });
+  _io.to(`booking:${bookingId}`).emit('partner_assigned', {
+    bookingId,
+    partnerId,
+    partnerName,
+    partnerEarningAmount: booking?.partnerEarningAmount ?? null,
   });
 
   onlinePartners.forEach((sockets, onlinePartnerId) => {
@@ -115,6 +122,19 @@ export function notifyClient(payload: {
 
   if (payload.event === 'booking:status-update') {
     _io.to(room).emit('booking:statusChanged', payload.data);
+
+    const status = payload.data?.status;
+    const aliases: Record<string, string> = {
+      EN_ROUTE: 'partner_en_route',
+      SHOOTING: 'shoot_started',
+      SYNCING: 'footage_uploading',
+      EDITING: 'editing_started',
+      DELIVERED: 'reel_delivered',
+      CANCELLED: 'booking_cancelled',
+    };
+    const alias = aliases[status];
+    if (alias) _io.to(room).emit(alias, payload.data);
+    if (status === 'SHOOTING') _io.to(room).emit('partner_arrived', payload.data);
   }
 }
 
