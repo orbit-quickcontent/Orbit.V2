@@ -11,6 +11,18 @@ let _io: SocketIOServer | null = null;
 const onlinePartners = new Map<string, Set<string>>();
 const socketSubscriptions = new Map<string, string>();
 const OFFER_TIMEOUT_MS = Number(process.env.DISPATCH_OFFER_TIMEOUT_MS || 15000);
+const MAX_PLAUSIBLE_SPEED_MPS = Number(process.env.MAX_PLAUSIBLE_SPEED_MPS || 100);
+
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const earthRadius = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos((lat1 * Math.PI) / 180)
+    * Math.cos((lat2 * Math.PI) / 180)
+    * Math.sin(dLng / 2) ** 2;
+  return 2 * earthRadius * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 export function getIo(): SocketIOServer | null {
   return _io;
@@ -80,7 +92,14 @@ export function notifyClient(payload: {
   data: any;
 }) {
   if (!_io) return;
-  _io.to(`booking:${payload.bookingId}`).emit(payload.event, payload.data);
+  const room = `booking:${payload.bookingId}`;
+  _io.to(room).emit(payload.event, payload.data);
+
+  // Canonical client contract from the platform architecture. Keep the existing
+  // event for backward compatibility while guaranteeing one stable event name.
+  if (payload.event === 'booking:status-update') {
+    _io.to(room).emit('booking:statusChanged', payload.data);
+  }
 }
 
 function allowedOrigins(): string[] {
@@ -107,7 +126,6 @@ function extractSocketToken(socket: Socket): string | null {
 }
 
 async function resolvePartnerId(user: JWTPayload | null, requestedPartnerId: string): Promise<boolean> {
-  if (process.env.NODE_ENV !== 'production' && !user) return Boolean(requestedPartnerId);
   if (!user || user.type !== 'access' || user.role !== 'PARTNER') return false;
   const partner = await dbClient.partner.findUnique({ where: { userId: user.id } });
   return Boolean(partner && partner.id === requestedPartnerId);
@@ -142,11 +160,7 @@ export function initWebSocketService(existingServer?: HttpServer) {
     const rawToken = extractSocketToken(socket);
     const token = rawToken?.replace(/^Bearer\s+/i, '').trim();
     const user = token ? verifyToken(token) : null;
-
-    if (process.env.NODE_ENV === 'production' && (!user || user.type !== 'access')) {
-      return next(new Error('Unauthorized'));
-    }
-
+    if (!user || user.type !== 'access') return next(new Error('Unauthorized'));
     socket.data.user = user;
     next();
   });
@@ -154,7 +168,7 @@ export function initWebSocketService(existingServer?: HttpServer) {
   _io = io;
 
   io.on('connection', (socket: Socket) => {
-    const user = (socket.data.user || null) as JWTPayload | null;
+    const user = socket.data.user as JWTPayload;
 
     socket.on('partner:online', async ({ partnerId }: { partnerId: string }) => {
       if (!(await resolvePartnerId(user, partnerId))) {
@@ -176,16 +190,21 @@ export function initWebSocketService(existingServer?: HttpServer) {
 
     socket.on('client:subscribe', async ({ bookingId }: { bookingId: string }) => {
       if (!bookingId) return;
-      if (process.env.NODE_ENV === 'production' && (!user || user.type !== 'access')) return;
-
-      if (user?.role === 'CLIENT') {
+      if (user.role === 'CLIENT') {
         const booking = await dbClient.booking.findUnique({ where: { id: bookingId }, select: { userId: true } });
         if (!booking || booking.userId !== user.id) {
           socket.emit('socket:denied', { reason: 'Booking subscription denied' });
           return;
         }
       }
-
+      if (user.role === 'PARTNER') {
+        const booking = await dbClient.booking.findUnique({ where: { id: bookingId }, select: { partnerId: true } });
+        const partner = await dbClient.partner.findUnique({ where: { userId: user.id }, select: { id: true } });
+        if (!booking || !partner || booking.partnerId !== partner.id) {
+          socket.emit('socket:denied', { reason: 'Booking subscription denied' });
+          return;
+        }
+      }
       socket.join(`booking:${bookingId}`);
       socketSubscriptions.set(socket.id, bookingId);
     });
@@ -196,12 +215,28 @@ export function initWebSocketService(existingServer?: HttpServer) {
       lng: number;
       heading?: number;
       speed?: number;
+      accuracy?: number;
+      timestamp?: number;
     }) => {
-      const { partnerId, lat, lng, heading, speed } = payload || {};
+      const { partnerId, lat, lng, heading, speed, accuracy, timestamp } = payload || {};
       if (!(await resolvePartnerId(user, partnerId))) return;
       if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+      if (speed !== undefined && (!Number.isFinite(speed) || speed < 0 || speed > MAX_PLAUSIBLE_SPEED_MPS)) return;
+      if (accuracy !== undefined && (!Number.isFinite(accuracy) || accuracy < 0 || accuracy > Number(process.env.MAX_GPS_ACCURACY_METERS || 100))) return;
 
-      const lastLocationAt = new Date();
+      const nowMs = Date.now();
+      const reportedMs = timestamp === undefined ? nowMs : Number(timestamp);
+      if (!Number.isFinite(reportedMs)) return;
+      if (reportedMs < nowMs - Number(process.env.MAX_GPS_AGE_MS || 15000) || reportedMs > nowMs + Number(process.env.MAX_GPS_FUTURE_SKEW_MS || 10000)) return;
+
+      const previous = await dbClient.partner.findUnique({ where: { id: partnerId }, select: { latitude: true, longitude: true, lastLocationAt: true } });
+      if (previous?.latitude != null && previous.longitude != null && previous.lastLocationAt) {
+        const elapsedMs = Math.max(1000, reportedMs - previous.lastLocationAt.getTime());
+        const derivedSpeed = haversineMeters(previous.latitude, previous.longitude, lat, lng) / (elapsedMs / 1000);
+        if (derivedSpeed > MAX_PLAUSIBLE_SPEED_MPS) return;
+      }
+
+      const lastLocationAt = new Date(reportedMs);
       const locationService = LocationService.getInstance();
       locationService.updateLocation(partnerId, lat, lng, heading, speed);
 
@@ -227,6 +262,7 @@ export function initWebSocketService(existingServer?: HttpServer) {
         lng,
         heading: heading ?? null,
         speed: speed ?? null,
+        accuracy: accuracy ?? null,
         timestamp: lastLocationAt.toISOString(),
       });
     });
