@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -965,7 +967,7 @@ fun PartnerDashboardScreen(
             if (!isOnline) {
                 Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF140A00)), shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, Color(0xFFFF9500).copy(alpha = 0.5f)), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
                     Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(modifier = Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFFF9500).copy(alpha = 0.15f)), contentAlignment = Alignment.Center) { Text("⚡", fontSize = 15.sp) }
+                        Box(modifier = Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFFF9500).copy(alpha = 0.15f)), contentAlignment = Alignment.Center) { Icon(Icons.Default.FlashOn, contentDescription = null, tint = Color(0xFFFF9500), modifier = Modifier.size(16.dp)) }
                         Column(modifier = Modifier.weight(1f)) { Text("High-demand area active now", color = White, fontWeight = FontWeight.Bold, fontSize = 13.sp); Text("Go online to avoid missing bookings", color = Color(0xFFFF9500), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                         Button(onClick = { onToggleOnline(true) }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500)), shape = RoundedCornerShape(10.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp), modifier = Modifier.height(36.dp)) { Text("Go Online", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.sp) }
                     }
@@ -1325,7 +1327,7 @@ fun PartnerWalletScreen(
                             .background(SpaceNavy),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("🏛️", fontSize = 24.sp)
+                        Icon(Icons.Default.AccountBalance, contentDescription = null, tint = OrbitCyan, modifier = Modifier.size(26.dp))
                     }
                     Spacer(modifier = Modifier.height(14.dp))
                     Text("Link Bank Account to Withdraw", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = White)
@@ -1336,7 +1338,7 @@ fun PartnerWalletScreen(
                         colors = ButtonDefaults.outlinedButtonColors(containerColor = OrbitCyanBg.copy(alpha = 0.3f)),
                         shape = RoundedCornerShape(24.dp)
                     ) {
-                        Text("⚙️ Go to Settings", color = OrbitCyan, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        Text("Go to Settings", color = OrbitCyan, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                     }
                 }
             }
@@ -1351,7 +1353,7 @@ fun PartnerWalletScreen(
                             .background(OrbitGreen.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("👛", fontSize = 16.sp)
+                        Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = OrbitGreen, modifier = Modifier.size(18.dp))
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
@@ -1431,7 +1433,7 @@ fun PartnerWalletScreen(
 
                 GlassCard(modifier = Modifier.weight(1f).height(100.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("⭐", fontSize = 14.sp)
+                        Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFEAB308), modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("RATING", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
@@ -1444,7 +1446,7 @@ fun PartnerWalletScreen(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 GlassCard(modifier = Modifier.weight(1f).height(100.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("⏱️", fontSize = 14.sp)
+                        Icon(Icons.Default.Schedule, contentDescription = null, tint = OrbitCyan, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("WEEK", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
@@ -1453,7 +1455,7 @@ fun PartnerWalletScreen(
 
                 GlassCard(modifier = Modifier.weight(1f).height(100.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("📊", fontSize = 14.sp)
+                        Icon(Icons.Default.BarChart, contentDescription = null, tint = OrbitPurple, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("AVG", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
@@ -1526,7 +1528,7 @@ fun PartnerProfileScreen(
                                 .background(Brush.linearGradient(listOf(OrbitCyan, OrbitPurple))),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("👤", fontSize = 28.sp)
+                            Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
                         }
 
                         Spacer(modifier = Modifier.width(12.dp))

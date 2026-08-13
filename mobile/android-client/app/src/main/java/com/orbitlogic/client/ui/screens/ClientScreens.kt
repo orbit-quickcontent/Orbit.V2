@@ -18,6 +18,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -1833,7 +1835,7 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("⏰", fontSize = 14.sp)
+                            Icon(Icons.Default.Schedule, contentDescription = null, tint = OrbitCyan, modifier = Modifier.size(16.dp))
                             Text("Select Time *", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
 
@@ -1938,8 +1940,8 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text("Address details", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            
-                            // 🎯 LOCATE ME (Real Device GPS Fetcher)
+
+                            // LOCATE ME (Real Device GPS Fetcher)
                             Surface(
                                 color = OrbitCyan.copy(alpha = 0.12f),
                                 shape = RoundedCornerShape(20.dp),
@@ -1950,7 +1952,7 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(if (isLocatingGps) "⏳" else "🎯", fontSize = 12.sp)
+                                    Icon(if (isLocatingGps) Icons.Default.Refresh else Icons.Default.MyLocation, contentDescription = null, tint = OrbitCyan, modifier = Modifier.size(14.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         if (isLocatingGps) "Locating..." else "LOCATE ME",
@@ -1977,7 +1979,7 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("🏢", fontSize = 18.sp)
+                                    Icon(Icons.Default.LocationCity, contentDescription = null, tint = OrbitCyan, modifier = Modifier.size(20.dp))
                                     Column {
                                         Text("Select a city", color = MutedText, fontSize = 11.sp)
                                         Text(selectedCity, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
@@ -2032,7 +2034,7 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("📍", fontSize = 18.sp)
+                                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = OrbitCyan, modifier = Modifier.size(20.dp))
                                     Column {
                                         Text("Select an area, street", color = MutedText, fontSize = 11.sp)
                                         Text(selectedArea, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
@@ -2102,7 +2104,7 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                             value = gmapsLink,
                             onValueChange = { gmapsLink = it },
                             placeholder = { Text("Add google maps link (optional)", color = Color(0xFF71717A), fontSize = 13.sp) },
-                            leadingIcon = { Text("📍", fontSize = 14.sp) },
+                            leadingIcon = { Icon(Icons.Default.Link, contentDescription = null, tint = OrbitCyan, modifier = Modifier.size(16.dp)) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
@@ -2177,7 +2179,7 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                             value = receiverPhone,
                             onValueChange = { receiverPhone = it },
                             placeholder = { Text("Receiver's phone number*", color = Color(0xFF71717A), fontSize = 13.sp) },
-                            trailingIcon = { Text("📇", fontSize = 16.sp) },
+                            trailingIcon = { Icon(Icons.Default.ContactPhone, contentDescription = null, tint = OrbitCyan, modifier = Modifier.size(18.dp)) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth(),
