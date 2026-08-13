@@ -78,6 +78,8 @@ router.get("/bookings/:id/track", requireAuth(), jsonParser, nextToExpress(track
 router.post("/bookings/:id/dispatch", requireAuth(["CLIENT", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(bookingDispatchHandlers.POST));
 router.post("/bookings/:id/accept", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(bookingAcceptHandlers.POST));
 router.post("/bookings/:id/decline", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(bookingDeclineHandlers.POST));
+router.post("/partner/bookings/:id/accept", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(bookingAcceptHandlers.POST));
+router.post("/partner/bookings/:id/reject", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(bookingDeclineHandlers.POST));
 router.post("/bookings/:id/sync-complete", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(syncCompleteRoute.POST));
 router.post("/partner/location", requireAuth(["PARTNER"]), jsonParser, nextToExpress(partnerLocationHandlers.POST));
 router.get("/partners", requireAuth(), jsonParser, nextToExpress(partnerListHandlers.GET));

@@ -67,14 +67,20 @@ export function notifyDispatch(payload: {
     booking,
   };
 
-  for (const partnerId of partnerIds) {
+  partnerIds.forEach((partnerId) => {
     const sockets = onlinePartners.get(partnerId);
-    sockets?.forEach((socketId) => {
-      _io!.to(socketId).emit('booking:dispatched', offer);
-      _io!.to(socketId).emit('booking:offer', offer);
-      _io!.to(socketId).emit('partner_searching', { bookingId, round: round || 1, partnerEarningAmount, currency: 'INR' });
-    });
-  }
+    if (sockets) {
+      sockets.forEach((socketId) => {
+        _io!.to(socketId).emit('booking:dispatched', offer);
+        _io!.to(socketId).emit('booking:offer', offer);
+        _io!.to(socketId).emit('booking_request', offer);
+        _io!.to(socketId).emit('partner_searching', { bookingId, round: round || 1, partnerEarningAmount, currency: 'INR' });
+      });
+    }
+  });
+
+  // Broadcast event on the booking channel
+  _io.to(`booking:${bookingId}`).emit('booking:dispatched', offer);
 }
 
 export function notifyAccept(payload: {
@@ -206,15 +212,31 @@ export function initWebSocketService(existingServer?: HttpServer) {
   io.on('connection', (socket: Socket) => {
     const user = socket.data.user as JWTPayload;
 
+<<<<<<< HEAD
     socket.on('partner:online', async ({ partnerId }: { partnerId: string }) => {
       if (!(await resolvePartnerId(user, partnerId))) {
         socket.emit('socket:denied', { reason: 'Invalid partner identity' });
         return;
+=======
+    const registerPartner = (partnerId: string) => {
+      if (!partnerId) return;
+      console.log(`[WS] Partner online/registered: ${partnerId} (socket: ${socket.id})`);
+      if (!onlinePartners.has(partnerId)) {
+        onlinePartners.set(partnerId, new Set());
+>>>>>>> 2857d4d (feat(dispatch): connect 8-step dispatch workflow, socket event listeners, and API routes)
       }
       if (!onlinePartners.has(partnerId)) onlinePartners.set(partnerId, new Set());
       onlinePartners.get(partnerId)!.add(socket.id);
+<<<<<<< HEAD
       socket.data.partnerId = partnerId;
     });
+=======
+      (socket as any).partnerId = partnerId;
+    };
+
+    socket.on('partner:online', ({ partnerId }: { partnerId: string }) => registerPartner(partnerId));
+    socket.on('partner:register', ({ partnerId }: { partnerId: string }) => registerPartner(partnerId));
+>>>>>>> 2857d4d (feat(dispatch): connect 8-step dispatch workflow, socket event listeners, and API routes)
 
     socket.on('partner:offline', async ({ partnerId }: { partnerId: string }) => {
       if (!(await resolvePartnerId(user, partnerId))) return;
