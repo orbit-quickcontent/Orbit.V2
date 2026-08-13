@@ -57,7 +57,7 @@ fun MainPartnerNavigationHost() {
     var isAuthenticated by remember { mutableStateOf(prefsManager.isLoggedIn()) }
     var currentTab by remember { mutableStateOf("home") }
     val tabStack = remember { mutableStateListOf("home") }
-
+    var isOnline by remember { mutableStateOf(prefsManager.isOnline()) }
     val coroutineScope = rememberCoroutineScope()
 
     val requiredPermissions = remember {
@@ -172,14 +172,44 @@ fun MainPartnerNavigationHost() {
                     ) { targetTab ->
                         when (targetTab) {
                             "home" -> PartnerDashboardScreen(
+<<<<<<< HEAD
                                 onAcceptDispatch = { navigateToTab("nav") },
                                 onNavigateToWork = { navigateToTab("nav") }
+=======
+                                isOnline = isOnline,
+                                onToggleOnline = { newOnline ->
+                                    isOnline = newOnline
+                                    prefsManager.setOnline(newOnline)
+                                },
+                                onAcceptDispatch = { currentTab = "nav" },
+                                onNavigateToWork = { currentTab = "nav" }
+>>>>>>> da1feb8 (fix(partner): resolve Online/Offline toggle touch target and hoist state across screens)
                             )
-                            "work" -> PartnerWorkHistoryScreen()
+                            "work" -> PartnerWorkHistoryScreen(
+                                isOnline = isOnline,
+                                onToggleOnline = { newOnline ->
+                                    isOnline = newOnline
+                                    prefsManager.setOnline(newOnline)
+                                }
+                            )
                             "earnings" -> PartnerWalletScreen(
+<<<<<<< HEAD
                                 onGoToSettings = { navigateToTab("profile") }
+=======
+                                isOnline = isOnline,
+                                onToggleOnline = { newOnline ->
+                                    isOnline = newOnline
+                                    prefsManager.setOnline(newOnline)
+                                },
+                                onGoToSettings = { currentTab = "profile" }
+>>>>>>> da1feb8 (fix(partner): resolve Online/Offline toggle touch target and hoist state across screens)
                             )
                             "profile" -> PartnerProfileScreen(
+                                isOnline = isOnline,
+                                onToggleOnline = { newOnline ->
+                                    isOnline = newOnline
+                                    prefsManager.setOnline(newOnline)
+                                },
                                 onLogout = {
                                     prefsManager.clearSession()
                                     isAuthenticated = false

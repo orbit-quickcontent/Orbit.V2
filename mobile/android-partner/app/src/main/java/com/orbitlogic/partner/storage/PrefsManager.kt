@@ -47,6 +47,14 @@ class PrefsManager(context: Context) {
         return prefs.getBoolean(KEY_IS_LOGGED_IN, false)
     }
 
+    fun setOnline(online: Boolean) {
+        prefs.edit().putBoolean("is_online", online).apply()
+    }
+
+    fun isOnline(): Boolean {
+        return prefs.getBoolean("is_online", true)
+    }
+
     fun clearSession() {
         prefs.edit().apply {
             remove(KEY_TOKEN)

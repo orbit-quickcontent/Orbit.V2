@@ -189,10 +189,10 @@ fun PartnerHeader(
             // Right: Online Toggle & Refresh / Notif Icons
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Surface(
+                    onClick = { onToggleOnline(!isOnline) },
                     color = SpaceNavyLighter,
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, OrbitBorder),
-                    modifier = Modifier.clickable { onToggleOnline(!isOnline) }
+                    border = BorderStroke(1.dp, if (isOnline) OrbitGreen.copy(alpha = 0.5f) else OrbitBorder)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -785,6 +785,8 @@ fun PartnerSplashScreen(onSplashFinished: () -> Unit) {
 
 @Composable
 fun PartnerDashboardScreen(
+    isOnline: Boolean = true,
+    onToggleOnline: (Boolean) -> Unit = {},
     onAcceptDispatch: (String) -> Unit,
     onNavigateToWork: () -> Unit
 ) {
@@ -793,7 +795,6 @@ fun PartnerDashboardScreen(
     val coroutineScope = rememberCoroutineScope()
 
     // ── Core State ─────────────────────────────────────────────────────────
-    var isOnline by remember { mutableStateOf(true) }
     var activeDispatch by remember { mutableStateOf<BookingDto?>(null) }
     var isAccepting by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
@@ -943,7 +944,7 @@ fun PartnerDashboardScreen(
     Column(modifier = Modifier.fillMaxSize().background(SpaceNavy)) {
         PartnerHeader(
             isOnline = isOnline,
-            onToggleOnline = { isOnline = it },
+            onToggleOnline = onToggleOnline,
             onRefreshClick = { refreshRequests() }
         )
 
@@ -966,7 +967,7 @@ fun PartnerDashboardScreen(
                     Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(modifier = Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFFF9500).copy(alpha = 0.15f)), contentAlignment = Alignment.Center) { Text("⚡", fontSize = 15.sp) }
                         Column(modifier = Modifier.weight(1f)) { Text("High-demand area active now", color = White, fontWeight = FontWeight.Bold, fontSize = 13.sp); Text("Go online to avoid missing bookings", color = Color(0xFFFF9500), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-                        Button(onClick = { isOnline = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500)), shape = RoundedCornerShape(10.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp), modifier = Modifier.height(36.dp)) { Text("Go Online", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.sp) }
+                        Button(onClick = { onToggleOnline(true) }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500)), shape = RoundedCornerShape(10.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp), modifier = Modifier.height(36.dp)) { Text("Go Online", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.sp) }
                     }
                 }
                 return@Column
@@ -1170,13 +1171,16 @@ fun <T> AnimateContent(targetState: T, content: @Composable (T) -> Unit) {
 
 
 @Composable
-fun PartnerWorkHistoryScreen() {
+fun PartnerWorkHistoryScreen(
+    isOnline: Boolean = true,
+    onToggleOnline: (Boolean) -> Unit = {}
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(SpaceNavy)
     ) {
-        PartnerHeader()
+        PartnerHeader(isOnline = isOnline, onToggleOnline = onToggleOnline)
 
         Column(
             modifier = Modifier
@@ -1291,6 +1295,8 @@ fun PartnerWorkHistoryScreen() {
 
 @Composable
 fun PartnerWalletScreen(
+    isOnline: Boolean = true,
+    onToggleOnline: (Boolean) -> Unit = {},
     onGoToSettings: () -> Unit = {}
 ) {
     Column(
@@ -1298,7 +1304,7 @@ fun PartnerWalletScreen(
             .fillMaxSize()
             .background(SpaceNavy)
     ) {
-        PartnerHeader()
+        PartnerHeader(isOnline = isOnline, onToggleOnline = onToggleOnline)
 
         Column(
             modifier = Modifier
@@ -1488,6 +1494,8 @@ fun PartnerWalletScreen(
 
 @Composable
 fun PartnerProfileScreen(
+    isOnline: Boolean = true,
+    onToggleOnline: (Boolean) -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     Column(
@@ -1495,7 +1503,7 @@ fun PartnerProfileScreen(
             .fillMaxSize()
             .background(SpaceNavy)
     ) {
-        PartnerHeader()
+        PartnerHeader(isOnline = isOnline, onToggleOnline = onToggleOnline)
 
         Column(
             modifier = Modifier
