@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   const updated = await dbClient.$transaction(async (tx) => {
     const current = await tx.booking.findUnique({ where: { id: booking.id } });
     if (!current || current.paymentStatus === 'SUCCESS') return current;
-    if (!['PENDING', 'PROCESSING'].includes(current.paymentStatus)) return current;
+    if (!['UNPAID', 'PROCESSING'].includes(current.paymentStatus)) return current;
     return tx.booking.update({
       where: { id: current.id },
       data: { paymentStatus: 'SUCCESS', paymentId, status: 'PAID' },
@@ -40,11 +40,17 @@ export async function POST(request: NextRequest) {
   });
 
   if (updated) {
-    notifyClient({ bookingId: updated.id, event: 'booking:payment-confirmed', data: { bookingId: updated.id, status: updated.status } });
+    notifyClient({ bookingId: updated.id, event: 'booking:payment-confirmed', data: { bookingId: updated.id, status: 'PAID' } });
+    notifyClient({ bookingId: updated.id, event: 'booking_paid', data: { bookingId: updated.id, status: 'PAID', paymentId } });
+
     const lat = Number(updated.latitude);
     const lng = Number(updated.longitude);
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      try { await dispatchBooking(updated.id, lat, lng); } catch (error) { console.warn('[Payment] dispatch after payment failed:', (error as Error).message); }
+      try {
+        await dispatchBooking(updated.id, lat, lng);
+      } catch (error) {
+        console.warn('[Payment] dispatch after payment failed:', (error as Error).message);
+      }
     }
   }
 
