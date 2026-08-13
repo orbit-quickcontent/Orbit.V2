@@ -65,6 +65,8 @@ model Partner {
   location          String
   latitude          Float?
   longitude         Float?
+  lastSeenAt        DateTime?
+  lastLocationAt    DateTime?
   availability      Boolean  @default(true)
   isVerified        Boolean  @default(false)
   rating            Float    @default(0.0)
@@ -94,6 +96,7 @@ model Partner {
 
   @@index([availability, isVerified])
   @@index([latitude, longitude])
+  @@index([lastSeenAt])
 }
 
 model Booking {
@@ -134,8 +137,8 @@ model Booking {
   dispatchRound  Int      @default(0)
   declinedBy     String?
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   workDispatches WorkDispatch[]
 
