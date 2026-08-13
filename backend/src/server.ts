@@ -6,16 +6,14 @@ import path from "path";
 import helmet from "helmet";
 import apiRouter from "./routes/api.router";
 import { initWebSocketService } from "./services/websocket.service";
+import { startDispatchTimeoutWorker } from "./services/dispatch.service";
 import { validateEnv } from "./lib/env-validator";
 import { requestLogger, logger } from "./lib/logger";
+import { validatePresignedToken } from "./lib/security";
 
-// 1. Load environment variables
 dotenv.config();
-
-// 2. Validate environment schema on startup (server halts if required vars are missing)
 validateEnv();
 
-// 3. Sentry Error Monitoring setup
 if (process.env.SENTRY_DSN && process.env.NODE_ENV === "production") {
   try {
     const Sentry = require("@sentry/node");
@@ -33,15 +31,13 @@ if (process.env.SENTRY_DSN && process.env.NODE_ENV === "production") {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// 4. Security Headers (Helmet)
 app.use(
   helmet({
-    contentSecurityPolicy: false, // Disabled for REST API server to allow S3/WebSocket media origins
+    contentSecurityPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
 
-// 5. Enable CORS for configured frontend origins
 const allowedOrigins = [
   "https://orbit-quickcontent.com",
   "https://www.orbit-quickcontent.com",
@@ -72,10 +68,8 @@ app.use(
   })
 );
 
-// 6. Request Logger Middleware (Pino JSON logger + Request ID)
 app.use(requestLogger);
 
-// 7. Health check endpoints (Root GET/HEAD for Cloud Render/Railway probes + /health)
 app.all("/", (_req, res) => {
   res.status(200).json({
     name: "ORBIT Standalone Backend API",
@@ -95,13 +89,9 @@ app.get("/health", (_req, res) => {
   });
 });
 
-import { validatePresignedToken } from "./lib/security";
-
-// 8. Secure static uploads middleware enforcing presigned tokens for reels
 const secureUploadsMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const token = (req.query.token as string) || null;
   const expires = (req.query.expires as string) || null;
-
   const cleanPath = req.path;
   const fullUrlPath = `/upload/reels${cleanPath}`;
 
@@ -111,19 +101,23 @@ const secureUploadsMiddleware = (req: express.Request, res: express.Response, ne
   next();
 };
 
-app.use("/upload/reels", secureUploadsMiddleware, express.static(path.join(__dirname, "../../dashboard-web-app/public/upload/reels")));
-app.use("/upload", express.static(path.join(__dirname, "../../dashboard-web-app/public/upload")));
+app.use(
+  "/upload/reels",
+  secureUploadsMiddleware,
+  express.static(path.join(__dirname, "../../dashboard-web-app/public/upload/reels"))
+);
 
-// 9. Mount main unified API routes
+// Local filesystem uploads are development-only. Production uses signed Firebase URLs.
+if (process.env.NODE_ENV !== "production" && process.env.LOCAL_UPLOADS_ENABLED !== "false") {
+  app.use("/upload", express.static(path.join(__dirname, "../../dashboard-web-app/public/upload")));
+}
+
 app.use("/api", apiRouter);
 
-// 10. Create unified HTTP server
 const httpServer = createHttpServer(app);
-
-// 11. Attach WebSocket service to unified HTTP server
 initWebSocketService(httpServer);
+startDispatchTimeoutWorker();
 
-// 12. Start unified REST API & WebSocket server on PORT
 httpServer.listen(Number(PORT), "0.0.0.0", () => {
   logger.info(`[API + WS] Unified REST & WebSocket server running on http://0.0.0.0:${PORT}`);
 });
