@@ -6,11 +6,11 @@ class FloatingBottomBar extends StatefulWidget {
   final String userInitials;
 
   const FloatingBottomBar({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onTabSelected,
     this.userInitials = 'GC',
-  }) : super(key: key);
+  });
 
   @override
   State<FloatingBottomBar> createState() => _FloatingBottomBarState();
@@ -35,7 +35,7 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
         border: Border.all(color: const Color(0xFF22242E), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.6),
+            color: Colors.black.withValues(alpha: 0.6),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -63,8 +63,7 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    if (isSelected) ...[
-                      // Glowing White Top Bar
+                    if (isSelected)
                       Positioned(
                         top: 0,
                         child: Container(
@@ -75,7 +74,7 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
                             borderRadius: BorderRadius.circular(2),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha: 0.9),
                                 blurRadius: 8,
                                 spreadRadius: 1,
                               ),
@@ -83,7 +82,6 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
                           ),
                         ),
                       ),
-                    ],
                     Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
