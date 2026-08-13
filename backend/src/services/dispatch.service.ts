@@ -1,5 +1,10 @@
-import { firestoreDb } from '../lib/db';
-import { nearbyOnlinePartners } from './redis.service';
+import { dbClient } from './db.service';
+import {
+  acquireLock,
+  nearbyOnlinePartners,
+  scheduleDispatchTimeout,
+  claimDueDispatchTimeouts,
+} from './redis.service';
 import { notifyDispatch } from './websocket.service';
 
 const OFFER_TIMEOUT_MS = Number(process.env.DISPATCH_OFFER_TIMEOUT_MS || 15000);
@@ -14,68 +19,134 @@ export interface DispatchResult {
   expiresAt: string;
 }
 
+function parseDeclined(value: string | null | undefined): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function dispatchBooking(bookingId: string, lat: number, lng: number): Promise<DispatchResult> {
-  const booking = await firestoreDb.bookings.findUnique({ where: { id: bookingId } });
+  const booking = await dbClient.booking.findUnique({ where: { id: bookingId } });
   if (!booking) throw new Error('Booking not found');
   if (!['PAID', 'DISPATCHED'].includes(booking.status)) {
     throw new Error(`Booking cannot be dispatched from ${booking.status}`);
   }
 
-  const declined = booking.declinedBy ? JSON.parse(booking.declinedBy) as string[] : [];
+  // Webhook retries and duplicate admin requests are idempotent while an active
+  // round already exists.
+  const activeDispatches = await dbClient.workDispatch.findMany({
+    where: { bookingId, status: 'PENDING', expiresAt: { gt: new Date() } },
+    orderBy: { round: 'desc' },
+  });
+  if (booking.status === 'DISPATCHED' && activeDispatches.length) {
+    const round = activeDispatches[0].round;
+    const partnerIds = activeDispatches.map((item) => item.partnerId);
+    const expiresAt = activeDispatches
+      .map((item) => item.expiresAt)
+      .filter(Boolean)
+      .sort((a, b) => a!.getTime() - b!.getTime())[0]!.toISOString();
+    return { bookingId, round, partnerIds, expiresAt };
+  }
+
+  const declined = parseDeclined(booking.declinedBy);
   const candidates = await nearbyOnlinePartners(lat, lng, RADIUS_KM, 100);
-  const eligible = candidates.filter((id) => !declined.includes(id)).slice(0, BATCH_SIZE);
+  const profiles = await dbClient.partner.findMany({
+    where: {
+      id: { in: candidates },
+      availability: true,
+      isVerified: true,
+      deletedAt: null,
+    },
+    select: { id: true },
+  });
+  const eligibleSet = new Set(profiles.map((profile) => profile.id));
+  const eligible = candidates.filter((id) => eligibleSet.has(id) && !declined.includes(id)).slice(0, BATCH_SIZE);
   if (!eligible.length) throw new Error('No eligible online partners available');
 
   const round = Number(booking.dispatchRound || 0) + 1;
   if (round > MAX_ROUNDS) throw new Error('Dispatch retry limit reached');
 
-  await firestoreDb.bookings.update({
-    where: { id: bookingId },
-    data: { status: 'DISPATCHED', dispatchRound: round },
+  const expiresAtDate = new Date(Date.now() + OFFER_TIMEOUT_MS);
+
+  const updatedBooking = await dbClient.$transaction(async (tx) => {
+    const current = await tx.booking.findUnique({ where: { id: bookingId } });
+    if (!current || !['PAID', 'DISPATCHED'].includes(current.status)) {
+      throw new Error(`Booking changed before dispatch: ${current?.status || 'missing'}`);
+    }
+
+    const next = await tx.booking.update({
+      where: { id: bookingId },
+      data: { status: 'DISPATCHED', dispatchRound: round },
+    });
+
+    await Promise.all(
+      eligible.map((partnerId) => tx.workDispatch.create({
+        data: {
+          bookingId,
+          partnerId,
+          status: 'PENDING',
+          round,
+          expiresAt: expiresAtDate,
+        },
+      }))
+    );
+
+    return next;
   });
 
-  for (const partnerId of eligible) {
-    await firestoreDb.workDispatches.create({
-      data: {
-        bookingId,
-        partnerId,
-        status: 'PENDING',
-        round,
-        dispatchedAt: new Date().toISOString(),
-      },
-    });
-  }
+  await scheduleDispatchTimeout(bookingId, round, expiresAtDate.getTime());
 
-  const expiresAt = new Date(Date.now() + OFFER_TIMEOUT_MS).toISOString();
-  notifyDispatch({ bookingId, partnerIds: eligible, booking, round });
+  notifyDispatch({
+    bookingId,
+    partnerIds: eligible,
+    booking: updatedBooking,
+    round,
+  });
 
-  setTimeout(() => {
-    void expireRound(bookingId, round, eligible);
-  }, OFFER_TIMEOUT_MS).unref?.();
-
-  return { bookingId, round, partnerIds: eligible, expiresAt };
+  return {
+    bookingId,
+    round,
+    partnerIds: eligible,
+    expiresAt: expiresAtDate.toISOString(),
+  };
 }
 
-async function expireRound(bookingId: string, round: number, partnerIds: string[]): Promise<void> {
-  const active = await firestoreDb.bookings.findUnique({ where: { id: bookingId } });
+async function expireRound(bookingId: string, round: number): Promise<void> {
+  const active = await dbClient.booking.findUnique({ where: { id: bookingId } });
   if (!active || active.status !== 'DISPATCHED' || active.partnerId) return;
 
-  await firestoreDb.workDispatches.updateMany({
+  const pending = await dbClient.workDispatch.findMany({
     where: { bookingId, round, status: 'PENDING' },
-    data: { status: 'EXPIRED', respondedAt: new Date().toISOString() },
+    select: { partnerId: true },
+  });
+  if (!pending.length) return;
+
+  await dbClient.$transaction(async (tx) => {
+    await tx.workDispatch.updateMany({
+      where: { bookingId, round, status: 'PENDING' },
+      data: { status: 'EXPIRED', respondedAt: new Date() },
+    });
+
+    const current = await tx.booking.findUnique({ where: { id: bookingId } });
+    if (!current || current.partnerId || current.status !== 'DISPATCHED') return;
+
+    const declined = parseDeclined(current.declinedBy);
+    const merged = Array.from(new Set([...declined, ...pending.map((item) => item.partnerId)]));
+    await tx.booking.update({
+      where: { id: bookingId },
+      data: { declinedBy: JSON.stringify(merged) },
+    });
   });
 
-  const current = await firestoreDb.bookings.findUnique({ where: { id: bookingId } });
-  if (!current || current.partnerId) return;
-  const declined = current.declinedBy ? JSON.parse(current.declinedBy) as string[] : [];
-  const merged = Array.from(new Set([...declined, ...partnerIds]));
-  await firestoreDb.bookings.update({
-    where: { id: bookingId },
-    data: { declinedBy: JSON.stringify(merged) },
-  });
+  const current = await dbClient.booking.findUnique({ where: { id: bookingId } });
+  if (!current || current.partnerId || !["PAID", "DISPATCHED"].includes(current.status)) return;
 
-  const lat = Number((current as any).latitude);
-  const lng = Number((current as any).longitude);
+  const lat = Number(current.latitude);
+  const lng = Number(current.longitude);
   if (Number.isFinite(lat) && Number.isFinite(lng)) {
     try {
       await dispatchBooking(bookingId, lat, lng);
@@ -83,4 +154,33 @@ async function expireRound(bookingId: string, round: number, partnerIds: string[
       console.warn('[Dispatch] retry stopped:', (error as Error).message);
     }
   }
+}
+
+let workerStarted = false;
+
+export function startDispatchTimeoutWorker(): void {
+  if (workerStarted) return;
+  workerStarted = true;
+
+  const tick = async () => {
+    const owner = `${process.pid}:${Date.now()}`;
+    const locked = await acquireLock('orbit:dispatch:worker', owner, 2500);
+    if (!locked) return;
+
+    const entries = await claimDueDispatchTimeouts(25);
+    for (const entry of entries) {
+      const separator = entry.lastIndexOf(':');
+      if (separator < 1) continue;
+      const bookingId = entry.slice(0, separator);
+      const round = Number(entry.slice(separator + 1));
+      if (!Number.isInteger(round)) continue;
+      await expireRound(bookingId, round).catch((error) => {
+        console.warn('[DispatchWorker] expiry processing failed:', (error as Error).message);
+      });
+    }
+  };
+
+  void tick();
+  const interval = setInterval(() => void tick(), 2000);
+  interval.unref?.();
 }
