@@ -3,6 +3,7 @@ import express from "express";
 import { nextToExpress } from "../services/adapter";
 import { requireAuth } from "../middleware/auth";
 import { requireIdempotency } from "../middleware/idempotency";
+import { bookingPatchPolicy } from "../middleware/booking-policy";
 import { authRateLimiter, uploadRateLimiter, paymentRateLimiter } from "../middleware/rate-limiters";
 import * as sendOtpHandler from "../shared/backend/send-otp-handler";
 import * as verifyOtpHandler from "../shared/backend/verify-otp-handler";
@@ -71,7 +72,7 @@ router.get("/bookings", requireAuth(), jsonParser, nextToExpress(bookingListHand
 router.post("/bookings", requireAuth(["CLIENT", "ADMIN", "SUPER_ADMIN"]), jsonParser, requireIdempotency, nextToExpress(bookingListHandlers.POST));
 router.get("/bookings/available", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(bookingAvailableHandlers.GET));
 router.get("/bookings/:id", requireAuth(), jsonParser, nextToExpress(bookingDetailHandlers.GET));
-router.patch("/bookings/:id", requireAuth(), jsonParser, nextToExpress(bookingDetailHandlers.PATCH));
+router.patch("/bookings/:id", requireAuth(), jsonParser, bookingPatchPolicy, nextToExpress(bookingDetailHandlers.PATCH));
 router.get("/bookings/:id/track", requireAuth(), jsonParser, nextToExpress(trackingHandlers.GET));
 router.post("/bookings/:id/dispatch", requireAuth(["CLIENT", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(bookingDispatchHandlers.POST));
 router.post("/bookings/:id/accept", requireAuth(["PARTNER", "ADMIN", "SUPER_ADMIN"]), jsonParser, nextToExpress(bookingAcceptHandlers.POST));
