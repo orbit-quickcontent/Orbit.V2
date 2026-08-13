@@ -1,14 +1,9 @@
 /**
  * Partner Backend | Available Bookings Handlers
  *
- * Get all available (dispatched) bookings for a partner using Firestore:
- * - Finds all PENDING WorkDispatch records for the partner
- * - Includes booking details + package info
- *
- * Re-exported by: src/app/api/bookings/available/route.ts
- * Category: Partner Backend
+ * Get all available dispatched bookings for a partner.
+ * Partner earnings are included in the offer before acceptance.
  */
-
 import { firestoreDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -16,29 +11,17 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const partnerId = searchParams.get('partnerId')
+    if (!partnerId) return NextResponse.json({ error: 'partnerId query parameter is required' }, { status: 400 })
 
-    if (!partnerId) {
-      return NextResponse.json(
-        { error: 'partnerId query parameter is required' },
-        { status: 400 }
-      )
-    }
-
-    // Resolve partner — try by profile id first, then by userId
     let partner = await firestoreDb.partners.findUnique({ where: { id: partnerId } })
-    if (!partner) {
-      partner = await firestoreDb.partners.findUnique({ where: { userId: partnerId } })
-    }
+    if (!partner) partner = await firestoreDb.partners.findUnique({ where: { userId: partnerId } })
 
-    // Auto-create partner profile if not found (handles new signups where
-    // /auth/google or /auth/register created a user but no partner profile yet)
     if (!partner) {
       try {
         const partnerUser = await firestoreDb.partnerUsers.findUnique({ where: { id: partnerId } })
-        const profileId = `prt-${partnerId}`
         partner = await firestoreDb.partners.create({
           data: {
-            id: profileId,
+            id: `prt-${partnerId}`,
             userId: partnerId,
             location: 'Mumbai, IN',
             latitude: 19.076,
@@ -52,56 +35,53 @@ export async function GET(request: NextRequest) {
             displayName: partnerUser?.name || 'Orbit Partner',
           }
         })
-        console.log(`[AvailableBookings] Auto-created partner profile for userId: ${partnerId}`)
       } catch (createErr) {
         console.warn('[AvailableBookings] Could not auto-create partner profile:', createErr)
         return NextResponse.json({ availableBookings: [] })
       }
     }
 
-    // Find all PENDING WorkDispatch records for this partner
     const pendingDispatches = await firestoreDb.workDispatches.findMany({
-      where: {
-        partnerId: partner.id, // Ensure we use the resolved partner ID
-        status: 'PENDING',
-      },
+      where: { partnerId: partner.id, status: 'PENDING' },
     })
 
-    // Sort dispatches by dispatchedAt descending in-memory
     pendingDispatches.sort((a, b) => {
-      const dateA = a.dispatchedAt ? new Date(a.dispatchedAt).getTime() : 0;
-      const dateB = b.dispatchedAt ? new Date(b.dispatchedAt).getTime() : 0;
-      return dateB - dateA;
-    });
+      const dateA = a.dispatchedAt ? new Date(a.dispatchedAt).getTime() : 0
+      const dateB = b.dispatchedAt ? new Date(b.dispatchedAt).getTime() : 0
+      return dateB - dateA
+    })
 
-    // Resolve booking, user, and package relationships in-memory
     const availableBookings = await Promise.all(
       pendingDispatches.map(async (dispatch) => {
-        const booking = await firestoreDb.bookings.findUnique({
-          where: { id: dispatch.bookingId },
-        })
+        const booking = await firestoreDb.bookings.findUnique({ where: { id: dispatch.bookingId } })
+        if (!booking || booking.status === 'CANCELLED') return null
 
-        if (!booking || booking.status === 'CANCELLED') {
-          return null
-        }
+        const pkg = await firestoreDb.packages.findUnique({ where: { id: booking.packageId } })
+        const user = await firestoreDb.clientUsers.findUnique({ where: { id: booking.userId } })
+        const partnerEarningAmount = Number((booking as any).partnerEarningAmount ?? (pkg as any)?.partnerPayoutAmount ?? 700)
 
-        let resolvedBooking = null
-        if (booking) {
-          const pkg = await firestoreDb.packages.findUnique({
-            where: { id: booking.packageId },
-          })
-          const user = await firestoreDb.clientUsers.findUnique({
-            where: { id: booking.userId },
-          })
-          resolvedBooking = {
+        return {
+          dispatchId: dispatch.id,
+          round: dispatch.round,
+          dispatchedAt: dispatch.dispatchedAt,
+          expiresAt: dispatch.expiresAt,
+          earningAmount: partnerEarningAmount,
+          partnerEarningAmount,
+          currency: 'INR',
+          payoutStatus: 'PENDING',
+          booking: {
             ...booking,
-            clientLatitude: booking.lat != null ? Number(booking.lat) : (booking as any).latitude != null ? Number((booking as any).latitude) : null,
-            clientLongitude: booking.lng != null ? Number(booking.lng) : (booking as any).longitude != null ? Number((booking as any).longitude) : null,
+            clientLatitude: (booking as any).lat != null ? Number((booking as any).lat) : (booking as any).latitude != null ? Number((booking as any).latitude) : null,
+            clientLongitude: (booking as any).lng != null ? Number((booking as any).lng) : (booking as any).longitude != null ? Number((booking as any).longitude) : null,
             clientName: user?.name || 'Creative Client',
             clientPhone: user?.phone || null,
             packageName: pkg?.name || 'UGC Brand Reel Shoot',
             packagePrice: pkg?.price || 1500,
             distanceKm: dispatch.distanceKm != null ? Number(dispatch.distanceKm) : null,
+            partnerEarningAmount,
+            earningAmount: partnerEarningAmount,
+            currency: 'INR',
+            payoutStatus: 'PENDING',
             package: pkg,
             user: user ? {
               id: user.id,
@@ -114,24 +94,14 @@ export async function GET(request: NextRequest) {
               editorRequirements: user.editorRequirements || null,
               avatar: user.avatar || null,
             } : null,
-          }
-        }
-
-        return {
-          dispatchId: dispatch.id,
-          round: dispatch.round,
-          dispatchedAt: dispatch.dispatchedAt,
-          booking: resolvedBooking,
+          },
         }
       })
     )
-    const validAvailableBookings = availableBookings.filter((item): item is NonNullable<typeof item> => item !== null && item.booking !== null)
-    return NextResponse.json({ availableBookings: validAvailableBookings })
+
+    return NextResponse.json({ availableBookings: availableBookings.filter(Boolean) })
   } catch (error) {
     console.error('Error fetching available bookings:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch available bookings' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch available bookings' }, { status: 500 })
   }
 }
