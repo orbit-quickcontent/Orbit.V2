@@ -9,8 +9,8 @@ import { notifyDispatch } from './websocket.service';
 
 const OFFER_TIMEOUT_MS = Number(process.env.DISPATCH_OFFER_TIMEOUT_MS || 15000);
 const MAX_ROUNDS = Number(process.env.DISPATCH_MAX_ROUNDS || 5);
-const RADIUS_KM = Number(process.env.DISPATCH_RADIUS_KM || 10);
-const BATCH_SIZE = Number(process.env.DISPATCH_BATCH_SIZE || 3);
+const RADIUS_KM = Number(process.env.DISPATCH_RADIUS_KM || 5);
+const BATCH_SIZE = Number(process.env.DISPATCH_BATCH_SIZE || 1);
 
 export interface DispatchResult {
   bookingId: string;
