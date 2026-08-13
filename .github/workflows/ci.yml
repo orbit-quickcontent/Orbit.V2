@@ -140,6 +140,9 @@ jobs:
       - name: Analyze Client app
         working-directory: apps/client-app
         run: flutter analyze
+      - name: Client widget tests
+        working-directory: apps/client-app
+        run: flutter test
       - name: Build Client APK
         working-directory: apps/client-app
         run: flutter build apk --debug
