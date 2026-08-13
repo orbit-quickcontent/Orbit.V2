@@ -8,7 +8,7 @@
     "build": "prisma generate && tsc --noEmit",
     "start": "ts-node -r tsconfig-paths/register --transpile-only src/server.ts",
     "render-build": "npm install && prisma generate && tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --config ./vitest.config.ts",
     "lint": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:deploy": "prisma migrate deploy"
@@ -29,7 +29,6 @@
     "ioredis": "^5.6.1",
     "nodemailer": "^6.9.13",
     "pino": "^10.3.1",
-    "prisma": "^6.11.1",
     "socket.io": "^4.7.5",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
