@@ -32,9 +32,7 @@ class _PartnerRequestScreenState extends State<PartnerRequestScreen> {
         backgroundColor: Colors.green,
       ),
     );
-    setState(() {
-      _requests.removeAt(index);
-    });
+    setState(() => _requests.removeAt(index));
   }
 
   void _handleReject(int index) {
@@ -44,9 +42,7 @@ class _PartnerRequestScreenState extends State<PartnerRequestScreen> {
         backgroundColor: Colors.redAccent,
       ),
     );
-    setState(() {
-      _requests.removeAt(index);
-    });
+    setState(() => _requests.removeAt(index));
   }
 
   @override
@@ -85,7 +81,7 @@ class _PartnerRequestScreenState extends State<PartnerRequestScreen> {
                     side: const BorderSide(color: Color(0xFF334155)),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -101,14 +97,11 @@ class _PartnerRequestScreenState extends State<PartnerRequestScreen> {
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.15),
+                                color: Colors.green.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.green.withOpacity(0.3)),
+                                border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
                               ),
                               child: Text(
                                 item['payout'],
