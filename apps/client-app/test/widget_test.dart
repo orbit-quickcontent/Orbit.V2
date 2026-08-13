@@ -1,16 +1,19 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:orbit_client/main.dart';
 
 void main() {
   testWidgets('ORBIT Client boots', (tester) async {
-    await tester.pumpWidget(const OrbitClientApp());
-    expect(find.byType(OrbitClientApp), findsOneWidget);
-
-    await tester.pumpAndSettle(const Duration(milliseconds: 500));
-
-    expect(
-      find.text('ORBIT'),
-      findsAtLeastNWidgets(1),
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: OrbitClientApp(),
+      ),
     );
+
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OrbitClientApp), findsOneWidget);
+    expect(find.text('ORBIT'), findsOneWidget);
   });
 }
