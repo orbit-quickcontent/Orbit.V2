@@ -51,7 +51,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final email = _emailController.text.trim().isNotEmpty
         ? _emailController.text.trim()
         : 'partner.google@orbit.com';
-    final googleName = 'Partner Google User';
+    const googleName = 'Partner Google User';
 
     final data = await ref
         .read(partnerProvider.notifier)
@@ -65,11 +65,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         context.go('/setup-profile', extra: name);
       }
     } else {
-      // Local fallback provisioning if backend server is unreachable or offline
+      // Keep local fallback deterministic and valid Dart when the backend is unreachable.
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
       ref.read(partnerProvider.notifier).setPartnerCredentials(
-            'prt-google-${Date.now()}',
+            'prt-google-$timestamp',
             email,
-            'token-google-fallback-${Date.now()}',
+            'token-google-fallback-$timestamp',
             name: googleName,
           );
       if (mounted) {
