@@ -36,8 +36,6 @@ export async function dispatchBooking(bookingId: string, lat: number, lng: numbe
     throw new Error(`Booking cannot be dispatched from ${booking.status}`);
   }
 
-  // Webhook retries and duplicate admin requests are idempotent while an active
-  // round already exists.
   const activeDispatches = await dbClient.workDispatch.findMany({
     where: { bookingId, status: 'PENDING', expiresAt: { gt: new Date() } },
     orderBy: { round: 'desc' },
@@ -45,10 +43,10 @@ export async function dispatchBooking(bookingId: string, lat: number, lng: numbe
   if (booking.status === 'DISPATCHED' && activeDispatches.length) {
     const round = activeDispatches[0].round;
     const partnerIds = activeDispatches.map((item) => item.partnerId);
-    const expiresAt = activeDispatches
+    const expiryDates = activeDispatches
       .map((item) => item.expiresAt)
-      .filter(Boolean)
-      .sort((a, b) => a!.getTime() - b!.getTime())[0]!.toISOString();
+      .filter((value): value is Date => value instanceof Date);
+    const expiresAt = (expiryDates.sort((a, b) => a.getTime() - b.getTime())[0] || new Date()).toISOString();
     return { bookingId, round, partnerIds, expiresAt };
   }
 
@@ -100,12 +98,7 @@ export async function dispatchBooking(bookingId: string, lat: number, lng: numbe
 
   await scheduleDispatchTimeout(bookingId, round, expiresAtDate.getTime());
 
-  notifyDispatch({
-    bookingId,
-    partnerIds: eligible,
-    booking: updatedBooking,
-    round,
-  });
+  notifyDispatch({ bookingId, partnerIds: eligible, booking: updatedBooking, round });
 
   return {
     bookingId,
@@ -143,13 +136,13 @@ async function expireRound(bookingId: string, round: number): Promise<void> {
   });
 
   const current = await dbClient.booking.findUnique({ where: { id: bookingId } });
-  if (!current || current.partnerId || !["PAID", "DISPATCHED"].includes(current.status)) return;
+  if (!current || current.partnerId || !['PAID', 'DISPATCHED'].includes(current.status)) return;
 
-  const lat = Number(current.latitude);
-  const lng = Number(current.longitude);
-  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+  const currentLat = Number(current.latitude);
+  const currentLng = Number(current.longitude);
+  if (Number.isFinite(currentLat) && Number.isFinite(currentLng)) {
     try {
-      await dispatchBooking(bookingId, lat, lng);
+      await dispatchBooking(bookingId, currentLat, currentLng);
     } catch (error) {
       console.warn('[Dispatch] retry stopped:', (error as Error).message);
     }
