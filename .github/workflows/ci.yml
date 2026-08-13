@@ -113,13 +113,40 @@ jobs:
         run: flutter pub upgrade
       - working-directory: apps/partner-app
         run: flutter analyze
-      - name: Build Partner APK
-        working-directory: apps/partner-app
+      - working-directory: apps/partner-app
         run: flutter build apk --debug
       - name: Upload Partner APK
         uses: actions/upload-artifact@v4
         with:
           name: orbit-partner-debug-apk
           path: apps/partner-app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  client-flutter:
+    name: Client Flutter analyze and Android build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Generate Android project scaffolding
+        working-directory: apps/client-app
+        run: flutter create --project-name orbit_client --platforms=android --org com.orbit .
+      - name: Resolve Flutter dependencies
+        working-directory: apps/client-app
+        run: flutter pub upgrade
+      - name: Analyze Client app
+        working-directory: apps/client-app
+        run: flutter analyze
+      - name: Build Client APK
+        working-directory: apps/client-app
+        run: flutter build apk --debug
+      - name: Upload Client APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: orbit-client-debug-apk
+          path: apps/client-app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
