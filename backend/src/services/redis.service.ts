@@ -45,18 +45,20 @@ export async function removePartnerPresence(partnerId: string): Promise<void> {
 export async function nearbyOnlinePartners(lat: number, lng: number, radiusKm: number, limit = 25): Promise<string[]> {
   const client = await connectRedis();
   if (!client) return [];
-  const candidates = await client.geosearch(
+  const rawCandidates = await client.geosearch(
     'orbit:partners:geo',
     'FROMLONLAT', lng, lat,
     'BYRADIUS', radiusKm, 'km',
     'ASC',
     'COUNT', limit,
   );
+  const candidates = rawCandidates.map(String);
   if (!candidates.length) return [];
+
   const pipeline = client.pipeline();
   candidates.forEach((id) => pipeline.hget(`orbit:partner:${id}`, 'online'));
   const statuses = await pipeline.exec();
-  return candidates.filter((_, index) => statuses?.[index]?.[1] === '1');
+  return candidates.filter((_, index) => String(statuses?.[index]?.[1] ?? '') === '1');
 }
 
 export async function acquireBookingLock(bookingId: string, partnerId: string, ttlMs = 15000): Promise<boolean> {
