@@ -36,10 +36,8 @@ export async function POST(request: NextRequest) {
       },
       data: {
         status: "DELIVERED",
-        reelUrl,
         masterReelUrl: reelUrl,
         deliveredAt: now,
-        reelUploadedAt: now,
       },
     });
 
