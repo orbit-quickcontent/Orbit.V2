@@ -7,6 +7,9 @@ const defaultPackages = [
     name: "Personalized",
     tier: "PERSONALIZED",
     price: 1999,
+    partnerPayoutAmount: 700,
+    editorPayoutAmount: 0,
+    taxAmount: 0,
     focus: "Individual/Event cinematic reels",
     deliveryTime: "60-120 mins",
     features: [
@@ -24,6 +27,9 @@ const defaultPackages = [
     name: "Professional (UGC)",
     tier: "PROFESSIONAL",
     price: 4999,
+    partnerPayoutAmount: 700,
+    editorPayoutAmount: 0,
+    taxAmount: 0,
     focus: "Brand-focused storytelling with Brand DNA",
     deliveryTime: "60-120 mins",
     features: [
@@ -102,17 +108,14 @@ const defaultPartnerProfiles = [
 
 export async function POST() {
   try {
-    console.log("[API Seed] Seeding Firestore database...");
+    console.log("[API Seed] Seeding database...");
 
-    // 1. Seed Packages
     for (const pkg of defaultPackages) {
       await firestoreDb.packages.create({ data: pkg });
     }
 
-    // 2. Seed Client User
     await firestoreDb.clientUsers.create({ data: defaultClientUser });
 
-    // 3. Seed Partner Users & Profiles
     for (const u of defaultPartnerUsers) {
       await firestoreDb.partnerUsers.create({ data: u });
     }
@@ -120,7 +123,6 @@ export async function POST() {
       await firestoreDb.partners.create({ data: p });
     }
 
-    console.log("[API Seed] Database seeding completed successfully!");
     return NextResponse.json({ success: true, message: "Database seeded successfully!" });
   } catch (error: any) {
     console.error("[API Seed] Error during seeding:", error);
