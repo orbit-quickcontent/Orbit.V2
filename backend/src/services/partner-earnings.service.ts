@@ -142,10 +142,7 @@ export async function releasePartnerEarning(bookingId: string): Promise<void> {
     const now = new Date();
     await tx.partnerEarning.update({
       where: { bookingId },
-      data: {
-        status: 'AVAILABLE',
-        availableAt: now,
-      },
+      data: { status: 'AVAILABLE', availableAt: now },
     });
 
     await tx.booking.update({
@@ -158,15 +155,7 @@ export async function releasePartnerEarning(bookingId: string): Promise<void> {
 
     await tx.partner.update({
       where: { id: earning.partnerId },
-      data: {
-        walletBalance: { increment: earning.partnerEarningAmount },
-        pendingClearance: { decrement: Math.min(earning.partnerEarningAmount, undefined as never) },
-      },
-    }).catch(async () => {
-      await tx.partner.update({
-        where: { id: earning.partnerId },
-        data: { walletBalance: { increment: earning.partnerEarningAmount } },
-      });
+      data: { walletBalance: { increment: earning.partnerEarningAmount } },
     });
 
     await tx.transaction.create({
