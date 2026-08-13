@@ -3,6 +3,7 @@ import { dbClient } from '@/services/db.service';
 import { acquireBookingLock } from '@/services/redis.service';
 import { verifyToken } from '@/lib/security-auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { attachPartnerEarningSnapshot } from '@/services/partner-earnings.service';
 import { notifyAccept, notifyClient } from '@/services/websocket.service';
 
 interface AcceptBody { partnerId?: string }
@@ -43,6 +44,21 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       });
       if (claimed.count !== 1) throw new Error('Booking was claimed by another partner');
 
+      await tx.partnerEarning.upsert({
+        where: { bookingId },
+        update: { partnerId },
+        create: {
+          bookingId,
+          partnerId,
+          grossAmount: booking.partnerEarningAmount + booking.platformCommissionAmount + booking.taxAmount + booking.editorPayoutAmount,
+          platformCommissionAmount: booking.platformCommissionAmount,
+          taxAmount: booking.taxAmount,
+          editorPayoutAmount: booking.editorPayoutAmount,
+          partnerEarningAmount: booking.partnerEarningAmount,
+          status: 'PENDING',
+        },
+      });
+
       await tx.workDispatch.update({ where: { id: dispatch.id }, data: { status: 'ACCEPTED', respondedAt: new Date() } });
       await tx.workDispatch.updateMany({
         where: { bookingId, status: 'PENDING', id: { not: dispatch.id } },
@@ -66,7 +82,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     notifyAccept({ bookingId, partnerId, partnerName: partnerUser?.name || 'A partner', booking: updatedBooking });
     notifyClient({ bookingId, event: 'booking:status-update', data: { bookingId, status: 'EN_ROUTE', previousStatus: 'DISPATCHED' } });
 
-    return NextResponse.json({ booking: updatedBooking });
+    return NextResponse.json({ booking: updatedBooking, partnerEarningAmount: result?.partnerEarningAmount ?? 0, earningStatus: 'PENDING' });
   } catch (error: any) {
     const status = /not found|No active|not dispatched|already assigned|claimed by another|already being claimed/.test(error?.message || '') ? 409 : 500;
     console.error('[Dispatch] accept failed:', error);
