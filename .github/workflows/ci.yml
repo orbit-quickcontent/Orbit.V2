@@ -1,76 +1,102 @@
-name: Orbit Platform CI / CD Pipeline
+name: ORBIT Platform CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
 
 jobs:
-  backend-tests:
-    name: Backend Unit & Integration Tests
+  backend:
+    name: Backend typecheck and tests
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22.x'
+    services:
+      postgres:
+        image: postgres:15-alpine
         env:
-          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
-      - name: Install Dependencies
-        run: |
-          cd backend
-          npm ci --legacy-peer-deps || npm install --legacy-peer-deps
-      - name: Run Backend Linter & Typecheck
-        run: |
-          cd backend
-          npx tsc --noEmit
+          POSTGRES_USER: orbit
+          POSTGRES_PASSWORD: orbitsecret
+          POSTGRES_DB: orbit_db
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U orbit -d orbit_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package.json
+      - name: Install backend
+        working-directory: backend
+        run: npm install --legacy-peer-deps
+      - name: Prisma validate
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://orbit:orbitsecret@localhost:5432/orbit_db?schema=public
+        run: npx prisma validate
+      - name: Generate Prisma client
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://orbit:orbitsecret@localhost:5432/orbit_db?schema=public
+        run: npx prisma generate
+      - name: Typecheck
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://orbit:orbitsecret@localhost:5432/orbit_db?schema=public
+          JWT_SECRET: ci-only-orbit-jwt-secret-should-never-be-used-in-production
+        run: npm run lint
+      - name: Tests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://orbit:orbitsecret@localhost:5432/orbit_db?schema=public
+          JWT_SECRET: ci-only-orbit-jwt-secret-should-never-be-used-in-production
+        run: npm test -- --runInBand
 
-  security-scan:
-    name: Dependency Security Scan
+  admin:
+    name: Admin dashboard build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Security Audit
-        run: |
-          cd backend
-          npm audit --audit-level=high || true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - working-directory: apps/admin-dashboard
+        run: npm install --legacy-peer-deps
+      - working-directory: apps/admin-dashboard
+        run: npm run build
 
-  android-build:
-    name: Build Android Native Apps (Client & Partner)
+  editor:
+    name: Editor web build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-node@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          node-version: 22
+      - working-directory: editor-web-app
+        run: npm install --legacy-peer-deps
+      - working-directory: editor-web-app
+        run: npm run build
 
-      - name: Setup Gradle 8.5
-        uses: gradle/actions/setup-gradle@v4
+  partner-flutter:
+    name: Partner Flutter analyze and Android build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
         with:
-          gradle-version: '8.5'
-
-      - name: Build Android Client APK
-        run: |
-          cd mobile/android-client
-          gradle assembleDebug --no-daemon
-
-      - name: Upload Android Client APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-client-apk
-          path: mobile/android-client/app/build/outputs/apk/debug/*.apk
-
-      - name: Build Android Partner APK
-        run: |
-          cd mobile/android-partner
-          gradle assembleDebug --no-daemon
-
-      - name: Upload Android Partner APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-partner-apk
-          path: mobile/android-partner/app/build/outputs/apk/debug/*.apk
+          channel: stable
+          flutter-version: '3.24.0'
+      - working-directory: apps/partner-app
+        run: flutter pub get
+      - working-directory: apps/partner-app
+        run: flutter analyze
+      - working-directory: apps/partner-app
+        run: flutter build apk --debug
