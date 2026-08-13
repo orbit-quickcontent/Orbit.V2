@@ -1,0 +1,9 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # ORBIT keeps CI focused on correctness and safety. These style rules are
+    # intentionally disabled until the broader Flutter UI refactor is completed.
+    use_super_parameters: false
+    prefer_const_constructors: false
+    file_names: false
