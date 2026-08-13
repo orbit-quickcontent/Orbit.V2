@@ -1,202 +1,75 @@
-/**
- * Partner Backend | Booking Accept Handlers
- *
- * Partner accepts a dispatched booking using Firestore:
- * - Updates WorkDispatch to ACCEPTED
- * - Assigns partner to booking, sets status EN_ROUTE
- * - Expires all other PENDING dispatches for this booking
- * - Notifies WebSocket (client + other partners)
- *
- * Re-exported by: src/app/api/bookings/[id]/accept/route.ts
- * Category: Partner Backend
- */
+import { firestoreDb } from '@/lib/db';
+import { dbClient } from '@/services/db.service';
+import { acquireBookingLock } from '@/services/redis.service';
+import { verifyToken } from '@/lib/security-auth';
+import { NextRequest, NextResponse } from 'next/server';
+import { notifyAccept, notifyClient } from '@/services/websocket.service';
 
-import { firestoreDb } from '@/lib/db'
-import { NextRequest, NextResponse } from 'next/server'
-import { notifyAccept, notifyClient } from '@/services/websocket.service'
+interface AcceptBody { partnerId?: string }
 
-interface AcceptBody {
-  partnerId: string
-}
-
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id: bookingId } = await params
-    const body: AcceptBody = (await request.json()) as any
-    const { partnerId } = body
+    const { id: bookingId } = await params;
+    const body = (await request.json()) as AcceptBody;
+    const partnerId = body.partnerId;
+    if (!partnerId) return NextResponse.json({ error: 'partnerId is required' }, { status: 400 });
 
-    if (!partnerId) {
-      return NextResponse.json(
-        { error: 'partnerId is required' },
-        { status: 400 }
-      )
+    const token = request.headers.get('authorization') || '';
+    const payload = verifyToken(token);
+    if (!payload || payload.type !== 'access') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const partner = await dbClient.partner.findUnique({ where: { id: partnerId } });
+    if (!partner) return NextResponse.json({ error: 'Partner profile not found' }, { status: 404 });
+    if (payload.role === 'PARTNER' && partner.userId !== payload.id) return NextResponse.json({ error: 'Cannot accept for another partner' }, { status: 403 });
+    if (process.env.NODE_ENV !== 'development' && partner.verificationStatus !== 'VERIFIED') {
+      return NextResponse.json({ error: 'Partner verification is required before accepting jobs' }, { status: 403 });
     }
 
-    // Fetch and verify partner bank details status
-    const partner = await firestoreDb.partners.findUnique({
-      where: { id: partnerId },
+    const locked = await acquireBookingLock(bookingId, partnerId);
+    if (!locked) return NextResponse.json({ error: 'Booking is already being claimed' }, { status: 409 });
+
+    const result = await dbClient.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({ where: { id: bookingId } });
+      if (!booking) throw new Error('Booking not found');
+      if (booking.status !== 'DISPATCHED') throw new Error(`Booking is not dispatched: ${booking.status}`);
+      if (booking.partnerId) throw new Error('Booking already assigned');
+
+      const dispatch = await tx.workDispatch.findFirst({ where: { bookingId, partnerId, status: 'PENDING' }, orderBy: { createdAt: 'desc' } });
+      if (!dispatch) throw new Error('No active dispatch offer exists for this partner');
+
+      const claimed = await tx.booking.updateMany({
+        where: { id: bookingId, status: 'DISPATCHED', partnerId: null },
+        data: { partnerId, status: 'EN_ROUTE' },
+      });
+      if (claimed.count !== 1) throw new Error('Booking was claimed by another partner');
+
+      await tx.workDispatch.update({ where: { id: dispatch.id }, data: { status: 'ACCEPTED', respondedAt: new Date() } });
+      await tx.workDispatch.updateMany({
+        where: { bookingId, status: 'PENDING', id: { not: dispatch.id } },
+        data: { status: 'EXPIRED', respondedAt: new Date() },
+      });
+
+      return tx.booking.findUnique({ where: { id: bookingId } });
     });
 
-    if (!partner) {
-      return NextResponse.json(
-        { error: 'Partner profile not found' },
-        { status: 404 }
-      )
-    }
-
-    if (process.env.NODE_ENV !== 'development' && partner.verificationStatus !== "VERIFIED") {
-      return NextResponse.json(
-        { error: 'Accepting bookings requires a connected and verified bank account. Link your bank details in Profile settings.' },
-        { status: 403 }
-      )
-    }
-
-    // 1. Find the booking, verify it's in PARTNER_DISPATCHED status
-    const booking = await firestoreDb.bookings.findUnique({
-      where: { id: bookingId },
-    })
-
-    if (!booking) {
-      return NextResponse.json(
-        { error: 'Booking not found' },
-        { status: 404 }
-      )
-    }
-
-    if (booking.status !== 'DISPATCHED' && booking.status !== 'PARTNER_DISPATCHED') {
-      return NextResponse.json(
-        { error: `Booking is not dispatched. Current status: ${booking.status}` },
-        { status: 400 }
-      )
-    }
-
-    if (booking.partnerId) {
-      return NextResponse.json(
-        { error: 'Booking already has a partner assigned' },
-        { status: 400 }
-      )
-    }
-
-    // 2. Find the WorkDispatch for this partner and booking (status: PENDING)
-    const workDispatch = await firestoreDb.workDispatches.findFirst({
-      where: {
-        bookingId,
-        partnerId,
-        status: 'PENDING',
-      },
-    })
-
-    if (!workDispatch) {
-      return NextResponse.json(
-        { error: 'No pending dispatch found for this partner and booking' },
-        { status: 404 }
-      )
-    }
-
-    // 3. Update the WorkDispatch status to ACCEPTED, set respondedAt
-    await firestoreDb.workDispatches.update({
-      where: { id: workDispatch.id },
-      data: {
-        status: 'ACCEPTED',
-        respondedAt: new Date().toISOString(),
-      },
-    })
-
-    // 4. Update booking: partnerId, status = ACCEPTED
-    const updatedRaw = await firestoreDb.bookings.update({
-      where: { id: bookingId },
-      data: {
-        partnerId,
-        status: 'ACCEPTED',
-      },
-    })
-
-    const clientUser = await firestoreDb.clientUsers.findUnique({
-      where: { id: updatedRaw.userId },
-    })
-
-    const pkg = await firestoreDb.packages.findUnique({
-      where: { id: updatedRaw.packageId },
-    })
-
-    // Fetch partner details from Partner DB in-memory
-    const partnerData = await firestoreDb.partners.findUnique({
-      where: { id: partnerId },
-    })
-
-    let resolvedPartner = null
-    if (partnerData) {
-      const partnerUser = await firestoreDb.partnerUsers.findUnique({
-        where: { id: partnerData.userId },
-      })
-      resolvedPartner = {
-        ...partnerData,
-        user: partnerUser ? {
-          id: partnerUser.id,
-          name: partnerUser.name,
-          phone: partnerUser.phone,
-          avatar: partnerUser.avatar,
-        } : null,
-      }
-    }
-
+    const clientUser = result ? await firestoreDb.clientUsers.findUnique({ where: { id: result.userId } }) : null;
+    const pkg = result ? await firestoreDb.packages.findUnique({ where: { id: result.packageId } }) : null;
+    const partnerUser = await firestoreDb.partnerUsers.findUnique({ where: { id: partner.userId } });
+    const resolvedPartner = { ...partner, user: partnerUser ? { id: partnerUser.id, name: partnerUser.name, phone: partnerUser.phone, avatar: partnerUser.avatar } : null };
     const updatedBooking = {
-      ...updatedRaw,
-      user: clientUser ? {
-        id: clientUser.id,
-        name: clientUser.name,
-        email: clientUser.email,
-        phone: clientUser.phone,
-      } : null,
+      ...result,
+      user: clientUser ? { id: clientUser.id, name: clientUser.name, email: clientUser.email, phone: clientUser.phone } : null,
       package: pkg,
       partner: resolvedPartner,
-    }
+    };
 
-    // 5. Mark ALL other PENDING WorkDispatches for this booking as EXPIRED
-    const otherDispatches = await firestoreDb.workDispatches.findMany({
-      where: {
-        bookingId,
-        status: 'PENDING',
-      },
-    });
+    notifyAccept({ bookingId, partnerId, partnerName: partnerUser?.name || 'A partner', booking: updatedBooking });
+    notifyClient({ bookingId, event: 'booking:status-update', data: { bookingId, status: 'EN_ROUTE', previousStatus: 'DISPATCHED' } });
 
-    await Promise.all(
-      otherDispatches
-        .filter((item) => item.id !== workDispatch.id)
-        .map((item) =>
-          firestoreDb.workDispatches.update({
-            where: { id: item.id },
-            data: {
-              status: 'EXPIRED',
-              respondedAt: new Date().toISOString(),
-            },
-          })
-        )
-    );
-
-    // 6. Notify WebSocket: partner accepted (notify client + other partners) — in-process
-    notifyAccept({
-      bookingId,
-      partnerId,
-      partnerName: resolvedPartner?.user?.name || 'A partner',
-      booking: updatedBooking,
-    })
-    notifyClient({
-      bookingId,
-      event: 'booking:status-update',
-      data: { bookingId, status: 'ACCEPTED', previousStatus: booking.status },
-    })
-
-    // 7. Return the updated booking
-    return NextResponse.json({ booking: updatedBooking })
-  } catch (error) {
-    console.error('Error accepting booking:', error)
-    return NextResponse.json(
-      { error: 'Failed to accept booking' },
-      { status: 500 }
-    )
+    return NextResponse.json({ booking: updatedBooking });
+  } catch (error: any) {
+    const status = /not found|No active|not dispatched|already assigned|claimed by another|already being claimed/.test(error?.message || '') ? 409 : 500;
+    console.error('[Dispatch] accept failed:', error);
+    return NextResponse.json({ error: error?.message || 'Failed to accept booking' }, { status });
   }
 }
