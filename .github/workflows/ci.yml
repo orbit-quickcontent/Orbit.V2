@@ -102,6 +102,9 @@ jobs:
         with:
           channel: stable
           flutter-version: '3.24.0'
+      - name: Repair Flutter Android project scaffolding
+        working-directory: apps/partner-app
+        run: flutter create --platforms=android --org com.orbit .
       - working-directory: apps/partner-app
         run: flutter pub get
       - working-directory: apps/partner-app
