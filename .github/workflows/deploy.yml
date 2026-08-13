@@ -31,6 +31,9 @@ jobs:
           npm run build
 
       - name: Install & Verify Standalone Backend
+        env:
+          DATABASE_URL: postgresql://orbit:orbitsecret@localhost:5432/orbit_db?schema=public
+          JWT_SECRET: ci-only-orbit-jwt-secret-should-never-be-used-in-production
         run: |
           cd backend
           npm install --legacy-peer-deps
@@ -39,6 +42,8 @@ jobs:
           npm run build
 
       - name: Verify Docker Compose Build Configuration
+        env:
+          DATABASE_URL: postgresql://orbit:orbitsecret@localhost:5432/orbit_db?schema=public
         run: |
           touch .env.production
           docker compose -f docker-compose.prod.yml config
