@@ -1,28 +1,77 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function HomePage() {
+  const [metrics, setMetrics] = useState<Record<string, any>>({});
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const token = window.localStorage.getItem('orbit_admin_token') || '';
+    fetch(`${API}/admin/metrics`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to load metrics');
+        setMetrics(data);
+      })
+      .catch((e) => setError(e.message));
+  }, []);
+
+  const cards = [
+    ['Total Revenue', `₹${Number(metrics.totalRevenue || 0).toLocaleString('en-IN')}`],
+    ['Platform Fee', `₹${Number(metrics.platformFee || 0).toLocaleString('en-IN')}`],
+    ['Bookings', metrics.totalBookings ?? '—'],
+    ['Active Bookings', metrics.activeBookings ?? '—'],
+    ['Online Partners', metrics.onlinePartners ?? '—'],
+    ['Active Editors', metrics.activeEditors ?? '—'],
+    ['Avg Delivery', metrics.averageDeliveryMinutes ? `${Math.round(metrics.averageDeliveryMinutes)} min` : '—'],
+    ['Satisfaction', metrics.clientSatisfaction ? `${metrics.clientSatisfaction}%` : '—'],
+  ];
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
-      <div className="w-16 h-16 bg-indigo-600/20 text-indigo-500 rounded-2xl flex items-center justify-center mb-6">
-        <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-        </svg>
+    <main className="min-h-screen bg-[#05060A] text-white px-5 py-8 md:px-10">
+      <div className="mx-auto max-w-7xl">
+        <header className="mb-8 flex flex-wrap items-end justify-between gap-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-300">ORBIT CONTROL</p>
+            <h1 className="mt-2 text-4xl font-black tracking-tight">Live Fleet & Revenue Center</h1>
+            <p className="mt-2 text-slate-400">Bookings, dispatch, partner utilization, editor throughput and customer delivery in one place.</p>
+          </div>
+          <Link href="/live-map" className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold shadow-lg shadow-indigo-900/30 hover:bg-indigo-500">Open Live Fleet Map</Link>
+        </header>
+
+        {error && <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">{error} — configure an Admin access token in localStorage as <code>orbit_admin_token</code>.</div>}
+
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {cards.map(([label, value]) => (
+            <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur-xl">
+              <p className="text-sm text-slate-400">{label}</p>
+              <p className="mt-2 text-3xl font-black">{value}</p>
+            </div>
+          ))}
+        </section>
+
+        <section className="mt-8 grid gap-5 lg:grid-cols-3">
+          <Link href="/live-map" className="rounded-2xl border border-indigo-400/20 bg-gradient-to-br from-indigo-500/10 to-transparent p-6 hover:border-indigo-400/40">
+            <p className="text-sm font-semibold text-indigo-200">Dispatch</p>
+            <h2 className="mt-2 text-xl font-bold">Monitor nearby Partners</h2>
+            <p className="mt-2 text-sm text-slate-400">Watch live presence, assignments and movement across the fleet.</p>
+          </Link>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+            <p className="text-sm font-semibold text-slate-300">Operations</p>
+            <h2 className="mt-2 text-xl font-bold">Partner acceptance is mandatory</h2>
+            <p className="mt-2 text-sm text-slate-400">Payment confirmation dispatches the job; only the winning Partner moves it to EN_ROUTE.</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+            <p className="text-sm font-semibold text-slate-300">Delivery</p>
+            <h2 className="mt-2 text-xl font-bold">Editor pipeline</h2>
+            <p className="mt-2 text-sm text-slate-400">Sync completion assigns the least-loaded editor and final delivery closes the client loop.</p>
+          </div>
+        </section>
       </div>
-      <h1 className="text-4xl font-bold tracking-tight text-white mb-2">
-        ORBIT Live Fleet Control Center
-      </h1>
-      <p className="text-slate-400 max-w-md mb-8">
-        Real-time nearby videographer tracking, Socket.IO updates, and automated 15s dispatch matching.
-      </p>
-      <Link
-        href="/live-map"
-        className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-2 shadow-lg shadow-indigo-600/30"
-      >
-        <span>Open Live Fleet Map</span>
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-        </svg>
-      </Link>
-    </div>
+    </main>
   );
 }
