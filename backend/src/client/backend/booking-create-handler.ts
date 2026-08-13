@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { dbClient } from '../../services/db.service';
+import { dbClient } from '../../../services/db.service';
 import { validateBody, bookingSchema } from '../../../lib/validation';
 import { verifyToken } from '../../../lib/security-auth';
 import { logAudit } from '../../../lib/auth-server';
