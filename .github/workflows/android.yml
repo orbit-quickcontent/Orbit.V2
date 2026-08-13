@@ -6,42 +6,40 @@ on:
   pull_request:
     branches: [ main, master ]
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  partner:
+    name: Partner Android APK
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-    - name: set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.24.0'
 
-    - name: Setup Gradle 8.5
-      uses: gradle/actions/setup-gradle@v4
-      with:
-        gradle-version: '8.5'
+      - name: Repair Flutter Android project scaffolding
+        working-directory: apps/partner-app
+        run: flutter create --platforms=android --org com.orbit .
 
-    - name: Build Android Client APK
-      run: |
-        cd mobile/android-client
-        gradle assembleDebug --no-daemon
+      - name: Install Flutter dependencies
+        working-directory: apps/partner-app
+        run: flutter pub get
 
-    - name: Upload Android Client APK Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: android-client-apk
-        path: mobile/android-client/app/build/outputs/apk/debug/app-debug.apk
+      - name: Analyze Partner app
+        working-directory: apps/partner-app
+        run: flutter analyze
 
-    - name: Build Android Partner APK
-      run: |
-        cd mobile/android-partner
-        gradle assembleDebug --no-daemon
+      - name: Build Partner APK
+        working-directory: apps/partner-app
+        run: flutter build apk --debug
 
-    - name: Upload Android Partner APK Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: android-partner-apk
-        path: mobile/android-partner/app/build/outputs/apk/debug/app-debug.apk
+      - name: Upload Partner APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: orbit-partner-debug-apk
+          path: apps/partner-app/build/app/outputs/flutter-apk/app-debug.apk
