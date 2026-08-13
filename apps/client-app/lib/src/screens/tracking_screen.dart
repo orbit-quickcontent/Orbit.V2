@@ -1,0 +1,99 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:socket_io_client/socket_io_client.dart' as io;
+import '../api/orbit_api.dart';
+import '../state/session.dart';
+
+class TrackingScreen extends ConsumerStatefulWidget {
+  const TrackingScreen({super.key});
+  @override
+  ConsumerState<TrackingScreen> createState() => _TrackingScreenState();
+}
+
+class _TrackingScreenState extends ConsumerState<TrackingScreen> {
+  String? bookingId;
+  Map<String, dynamic>? booking;
+  io.Socket? socket;
+  String status = 'PENDING';
+  String? reelUrl;
+  bool loading = true;
+
+  @override
+  void initState() { super.initState(); }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (bookingId == null) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args != null) { bookingId = args.toString(); _load(); }
+    }
+  }
+
+  Future<void> _load() async {
+    try {
+      final api = ref.read(orbitApiProvider);
+      final b = await api.tracking(bookingId!);
+      if (mounted) setState(() { booking = b['booking'] is Map ? Map<String, dynamic>.from(b['booking']) : b; status = booking?['status']?.toString() ?? 'PENDING'; reelUrl = booking?['masterReelUrl']?.toString() ?? booking?['reelUrl']?.toString(); loading = false; });
+      _connect();
+    } catch (_) { if (mounted) setState(() => loading = false); }
+  }
+
+  void _connect() {
+    final token = ref.read(sessionProvider).token;
+    if (token == null || bookingId == null) return;
+    final wsUrl = const String.fromEnvironment('ORBIT_WS_URL', defaultValue: 'http://10.0.2.2:5000');
+    socket = io.io(wsUrl, io.OptionBuilder().setTransports(['websocket']).setAuth({'token': token}).enableAutoConnect().enableReconnection().build());
+    socket!.onConnect((_) => socket!.emit('client:subscribe', {'bookingId': bookingId}));
+    socket!.on('booking:statusChanged', (data) => _applyEvent(data));
+    socket!.on('booking:payment-confirmed', (data) => _applyEvent(data));
+    socket!.on('booking:location', (data) => _applyEvent(data));
+  }
+
+  void _applyEvent(dynamic data) {
+    if (!mounted) return;
+    final map = data is Map ? Map<String, dynamic>.from(data) : jsonDecode(data.toString()) as Map<String, dynamic>;
+    final eventBookingId = map['bookingId']?.toString() ?? map['data']?['bookingId']?.toString();
+    if (eventBookingId != null && eventBookingId != bookingId) return;
+    final next = map['status']?.toString() ?? map['data']?['status']?.toString();
+    if (next != null) setState(() => status = next);
+    if (map['reelUrl'] != null) setState(() => reelUrl = map['reelUrl'].toString());
+  }
+
+  @override
+  void dispose() { socket?.disconnect(); socket?.dispose(); super.dispose(); }
+
+  Color _statusColor() {
+    if (status == 'DELIVERED') return const Color(0xFF35D07F);
+    if (status == 'CANCELLED') return Colors.redAccent;
+    return const Color(0xFF7C5CFF);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = ['PENDING', 'PAID', 'DISPATCHED', 'EN_ROUTE', 'SHOOTING', 'SYNCING', 'EDITING', 'DELIVERED'];
+    final currentIndex = steps.indexOf(status);
+    return Scaffold(
+      appBar: AppBar(title: Text('Booking ${bookingId?.substring(0, 8) ?? ''}')),
+      body: loading ? const Center(child: CircularProgressIndicator()) : ListView(padding: const EdgeInsets.all(20), children: [
+        Container(padding: const EdgeInsets.all(22), decoration: BoxDecoration(color: _statusColor().withValues(alpha: .12), borderRadius: BorderRadius.circular(24), border: Border.all(color: _statusColor().withValues(alpha: .35))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(status.replaceAll('_', ' '), style: TextStyle(color: _statusColor(), fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.1)),
+          const SizedBox(height: 8),
+          Text(status == 'DELIVERED' ? 'Your reel is ready.' : 'We are moving your reel through the ORBIT pipeline.', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+        ])),
+        const SizedBox(height: 18),
+        ...List.generate(steps.length, (i) {
+          final done = currentIndex >= i;
+          return ListTile(leading: CircleAvatar(backgroundColor: done ? _statusColor() : Colors.white12, child: done ? const Icon(Icons.check, size: 17) : Text('${i + 1}')), title: Text(steps[i].replaceAll('_', ' ')), dense: true);
+        }),
+        if (reelUrl != null && reelUrl!.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          FilledButton.icon(onPressed: () {}, icon: const Icon(Icons.play_arrow), label: const Text('Open final reel')),
+          const SizedBox(height: 8),
+          SelectableText(reelUrl!, style: const TextStyle(color: Colors.white60, fontSize: 11)),
+        ],
+      ]),
+    );
+  }
+}
