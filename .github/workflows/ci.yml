@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: read
+
 jobs:
   backend:
     name: Backend typecheck and tests
@@ -27,8 +30,8 @@ jobs:
         image: redis:7-alpine
         ports: ['6379:6379']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -46,6 +49,11 @@ jobs:
         env:
           DATABASE_URL: postgresql://orbit:orbitsecret@localhost:5432/orbit_db?schema=public
         run: npx prisma generate
+      - name: Provision CI database schema
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://orbit:orbitsecret@localhost:5432/orbit_db?schema=public
+        run: npx prisma db push --skip-generate
       - name: Typecheck
         working-directory: backend
         env:
@@ -63,8 +71,8 @@ jobs:
     name: Admin dashboard build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - working-directory: apps/admin-dashboard
@@ -76,8 +84,8 @@ jobs:
     name: Editor web build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - working-directory: editor-web-app
@@ -89,7 +97,7 @@ jobs:
     name: Partner Flutter analyze and Android build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
