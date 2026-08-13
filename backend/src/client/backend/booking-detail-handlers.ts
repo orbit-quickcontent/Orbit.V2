@@ -1,10 +1,20 @@
+/**
+ * Client Backend | Booking Detail Handlers
+ *
+ * Individual booking business logic using Firestore:
+ * - GET   — Get booking with full details (user, package, partner)
+ * - PATCH — Update booking (status, payment, sync, partner assignment)
+ *           Includes wallet crediting on DELIVERED and re-dispatch on PARTNER cancel
+ *
+ * Re-exported by: src/app/api/bookings/[id]/route.ts
+ */
+
+import { firestoreDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
-import { dbClient } from '../../services/db.service'
 import { generatePresignedUrl } from '@/lib/security'
-import { verifyToken } from '@/lib/security-auth'
-import { assertTransition } from '@/core/booking-state'
-import { releasePartnerEarning } from '@/services/partner-earnings.service'
-import { notifyClient } from '@/services/websocket.service'
+import { logBankAudit } from '@/services/audit.service'
+import { notifyDispatch, notifyClient } from '@/services/websocket.service'
+import { transitionBookingState } from '@/services/booking-state-machine'
 
 interface UpdateBookingBody {
   status?: string
@@ -16,54 +26,87 @@ interface UpdateBookingBody {
   notes?: string
   timeSlot?: string
   bookingDate?: string
-  cancelledBy?: string
+  cancelledBy?: string // CLIENT or PARTNER
   masterReelUrl?: string
   hlsPlaylistUrl?: string
   proxyFootageUrl?: string
 }
 
-async function authorizeBooking(request: NextRequest, booking: { userId: string; partnerId: string | null }) {
-  const raw = request.headers.get('authorization') || ''
-  const session = verifyToken(raw)
-  if (!session || session.type !== 'access') return { session: null, error: 'Unauthorized' }
-
-  if (session.role === 'ADMIN' || session.role === 'SUPER_ADMIN') return { session, error: null }
-  if (session.role === 'CLIENT' && booking.userId === session.id) return { session, error: null }
-
-  if (session.role === 'PARTNER') {
-    const partner = await dbClient.partner.findUnique({ where: { userId: session.id }, select: { id: true } })
-    if (partner && booking.partnerId === partner.id) return { session, error: null }
-  }
-
-  return { session: null, error: 'Booking access denied' }
-}
-
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
-    const booking = await dbClient.booking.findUnique({
+
+    const booking = await firestoreDb.bookings.findUnique({
       where: { id },
-      include: { user: true, package: true, partner: { include: { user: true } } },
     })
-    if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
 
-    const auth = await authorizeBooking(request, booking)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.error === 'Unauthorized' ? 401 : 403 })
+    if (!booking) {
+      return NextResponse.json(
+        { error: 'Booking not found' },
+        { status: 404 }
+      )
+    }
 
-    return NextResponse.json({
-      booking: {
-        ...booking,
-        reelUrl: booking.masterReelUrl ? generatePresignedUrl(booking.masterReelUrl) : null,
-        masterReelUrl: booking.masterReelUrl ? generatePresignedUrl(booking.masterReelUrl) : null,
-        hlsPlaylistUrl: booking.hlsPlaylistUrl ? generatePresignedUrl(booking.hlsPlaylistUrl) : null,
-      },
+    const user = await firestoreDb.clientUsers.findUnique({
+      where: { id: booking.userId },
     })
+
+    const pkg = await firestoreDb.packages.findUnique({
+      where: { id: booking.packageId },
+    })
+
+    let partner = null
+    if (booking.partnerId) {
+      const partnerData = await firestoreDb.partners.findUnique({
+        where: { id: booking.partnerId },
+      })
+      if (partnerData) {
+        const partnerUser = await firestoreDb.partnerUsers.findUnique({
+          where: { id: partnerData.userId },
+        })
+        partner = {
+          ...partnerData,
+          user: partnerUser ? {
+            id: partnerUser.id,
+            name: partnerUser.name,
+            phone: partnerUser.phone,
+            avatar: partnerUser.avatar,
+          } : null,
+        }
+      }
+    }
+
+    const bookingWithDetails = {
+      ...booking,
+      reelUrl: booking.reelUrl ? generatePresignedUrl(booking.reelUrl) : null,
+      masterReelUrl: booking.masterReelUrl ? generatePresignedUrl(booking.masterReelUrl) : null,
+      hlsPlaylistUrl: booking.hlsPlaylistUrl ? generatePresignedUrl(booking.hlsPlaylistUrl) : null,
+      user: user ? {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        location: user.location || null,
+        brandLogo: user.brandLogo || null,
+        brandFont: user.brandFont || null,
+        brandColor: user.brandColor || null,
+        editorRequirements: user.editorRequirements || null,
+        avatar: user.avatar || null,
+      } : null,
+      package: pkg,
+      partner,
+    }
+
+    return NextResponse.json({ booking: bookingWithDetails })
   } catch (error) {
     console.error('Error fetching booking:', error)
-    return NextResponse.json({ error: 'Failed to fetch booking' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to fetch booking' },
+      { status: 500 }
+    )
   }
 }
 
@@ -74,92 +117,240 @@ export async function PATCH(
   try {
     const { id } = await params
     const body: UpdateBookingBody = await request.json()
-    const existing = await dbClient.booking.findUnique({ where: { id } })
-    if (!existing) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
 
-    const auth = await authorizeBooking(request, existing)
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.error === 'Unauthorized' ? 401 : 403 })
+    // Verify booking exists with package info
+    const existing = await firestoreDb.bookings.findUnique({
+      where: { id },
+    })
 
-    if (body.partnerId !== undefined) {
-      return NextResponse.json({ error: 'Partner assignment is only permitted through partner acceptance' }, { status: 403 })
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'Booking not found' },
+        { status: 404 }
+      )
     }
-    if (body.paymentStatus !== undefined) {
-      return NextResponse.json({ error: 'Payment state is managed by Razorpay order/webhook flow' }, { status: 403 })
-    }
 
-    if (body.status && body.status !== existing.status) {
-      if (body.status === 'CANCELLED') {
-        if (!['PENDING', 'PAID', 'DISPATCHED', 'EN_ROUTE', 'SHOOTING', 'SYNCING', 'EDITING'].includes(existing.status)) {
-          return NextResponse.json({ error: `Booking cannot be cancelled from ${existing.status}` }, { status: 409 })
+    const pkg = await firestoreDb.packages.findUnique({
+      where: { id: existing.packageId },
+    })
+
+    // ── Handle PARTNER cancellation with re-dispatch ──
+    if (body.status === 'CANCELLED' && body.cancelledBy === 'PARTNER') {
+      const cancelledPartnerId = existing.partnerId
+
+      await firestoreDb.bookings.update({
+        where: { id },
+        data: {
+          cancelledBy: 'PARTNER',
+          partnerId: null,
+          status: 'PAID',
+        },
+      })
+
+      // Cancel any PENDING work dispatches for this booking
+      await firestoreDb.workDispatches.updateMany({
+        where: {
+          bookingId: id,
+          status: 'PENDING',
+        },
+        data: {
+          status: 'CANCELLED',
+          respondedAt: new Date().toISOString(),
+        },
+      })
+
+      // Auto-trigger dispatch to 5 new partners
+      try {
+        let declinedBy: string[] = []
+        if (existing.declinedBy) {
+          try {
+            declinedBy = typeof existing.declinedBy === 'string' ? JSON.parse(existing.declinedBy) : (existing.declinedBy || [])
+          } catch {
+            declinedBy = []
+          }
         }
-      } else {
-        try {
-          assertTransition(existing.status, body.status)
-        } catch (transitionError) {
-          return NextResponse.json({ error: (transitionError as Error).message }, { status: 409 })
+        if (cancelledPartnerId && !declinedBy.includes(cancelledPartnerId)) {
+          declinedBy.push(cancelledPartnerId)
+        }
+
+        const onlinePartners = await firestoreDb.partners.findMany({
+          where: { availability: true },
+        })
+
+        // Filter out already declined/cancelled partners in-memory
+        const availablePartners = onlinePartners.filter(p => !declinedBy.includes(p.id))
+
+        if (availablePartners.length > 0) {
+          const newRound = (existing.dispatchRound || 0) + 1
+          const partnersToDispatch = availablePartners.slice(0, 5)
+
+          await Promise.all(
+            partnersToDispatch.map((partner) =>
+              firestoreDb.workDispatches.create({
+                data: {
+                  bookingId: id,
+                  partnerId: partner.id,
+                  status: 'PENDING',
+                  round: newRound,
+                },
+              })
+            )
+          )
+
+          await firestoreDb.bookings.update({
+            where: { id },
+            data: {
+              dispatchRound: newRound,
+              status: 'PARTNER_DISPATCHED',
+              declinedBy: JSON.stringify(declinedBy),
+            },
+          })
+
+          // Notify WebSocket (in-process)
+          const partnerIds = partnersToDispatch.map((p) => p.id)
+          notifyDispatch({ bookingId: id, partnerIds, round: newRound, booking: null })
+        }
+      } catch (reDispatchError) {
+        console.error('Error during auto re-dispatch after cancellation:', reDispatchError)
+      }
+
+      const rawBooking = await firestoreDb.bookings.findUnique({ where: { id } })
+      const clientUser = rawBooking ? await firestoreDb.clientUsers.findUnique({ where: { id: rawBooking.userId } }) : null
+
+      let partnerInfo = null
+      if (rawBooking?.partnerId) {
+        const pData = await firestoreDb.partners.findUnique({ where: { id: rawBooking.partnerId } })
+        if (pData) {
+          const pUser = await firestoreDb.partnerUsers.findUnique({ where: { id: pData.userId } })
+          partnerInfo = {
+            ...pData,
+            user: pUser ? { id: pUser.id, name: pUser.name, phone: pUser.phone } : null,
+          }
+        }
+      }
+
+      const reDispatchedBooking = rawBooking ? {
+        ...rawBooking,
+        user: clientUser ? { id: clientUser.id, name: clientUser.name, email: clientUser.email, phone: clientUser.phone } : null,
+        package: pkg,
+        partner: partnerInfo,
+      } : null
+
+      return NextResponse.json({ booking: reDispatchedBooking, reDispatched: true })
+    }
+
+    // ── Use Authoritative Booking State Machine ──
+    if (body.status !== undefined && body.status !== existing.status) {
+      const transitionResult = await transitionBookingState(
+        id,
+        body.status as any,
+        {
+          actorId: "CLIENT",
+          actorRole: (body.cancelledBy as any) || "CLIENT",
+          reason: body.notes || "Client/Admin status update",
+        },
+        {
+          ...body,
+          bookingDate: body.bookingDate ? new Date(body.bookingDate).toISOString() : undefined,
+        }
+      );
+
+      if (!transitionResult.success) {
+        return NextResponse.json(
+          { error: transitionResult.error?.message || "Invalid state transition", code: transitionResult.error?.code },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Non-status fields update
+      const updateData: Record<string, unknown> = {};
+      if (body.paymentStatus !== undefined) updateData.paymentStatus = body.paymentStatus;
+      if (body.syncPercentage !== undefined) updateData.syncPercentage = body.syncPercentage;
+      if (body.editCountdown !== undefined) updateData.editCountdown = body.editCountdown;
+      if (body.partnerId !== undefined) updateData.partnerId = body.partnerId;
+      if (body.location !== undefined) updateData.location = body.location;
+      if (body.notes !== undefined) updateData.notes = body.notes;
+      if (body.timeSlot !== undefined) updateData.timeSlot = body.timeSlot;
+      if (body.bookingDate !== undefined) updateData.bookingDate = new Date(body.bookingDate).toISOString();
+      if (body.masterReelUrl !== undefined) updateData.masterReelUrl = body.masterReelUrl;
+      if (body.hlsPlaylistUrl !== undefined) updateData.hlsPlaylistUrl = body.hlsPlaylistUrl;
+      if (body.proxyFootageUrl !== undefined) updateData.proxyFootageUrl = body.proxyFootageUrl;
+
+      await firestoreDb.bookings.update({
+        where: { id },
+        data: updateData,
+      });
+    }
+
+    const updatedRaw = (await firestoreDb.bookings.findUnique({ where: { id } })) || existing;
+
+    const clientUser = await firestoreDb.clientUsers.findUnique({
+      where: { id: updatedRaw.userId },
+    })
+
+    let partner = null
+    if (updatedRaw.partnerId) {
+      const partnerData = await firestoreDb.partners.findUnique({
+        where: { id: updatedRaw.partnerId },
+      })
+      if (partnerData) {
+        const partnerUser = await firestoreDb.partnerUsers.findUnique({
+          where: { id: partnerData.userId },
+        })
+        partner = {
+          ...partnerData,
+          user: partnerUser ? {
+            id: partnerUser.id,
+            name: partnerUser.name,
+            phone: partnerUser.phone,
+          } : null,
         }
       }
     }
 
-    if (body.status === 'CANCELLED') {
-      await dbClient.$transaction(async (tx) => {
-        await tx.workDispatch.updateMany({
-          where: { bookingId: id, status: 'PENDING' },
-          data: { status: 'CANCELLED', respondedAt: new Date() },
-        })
-        await tx.booking.update({
-          where: { id },
-          data: { status: 'CANCELLED', cancelledBy: body.cancelledBy || auth.session?.role || 'CLIENT' },
-        })
-      })
-      notifyClient({ bookingId: id, event: 'booking:status-update', data: { bookingId: id, status: 'CANCELLED', previousStatus: existing.status } })
-      return NextResponse.json({ booking: await dbClient.booking.findUnique({ where: { id } }) })
+    const booking = {
+      ...updatedRaw,
+      user: clientUser ? {
+        id: clientUser.id,
+        name: clientUser.name,
+        email: clientUser.email,
+        phone: clientUser.phone,
+      } : null,
+      package: pkg,
+      partner,
     }
 
-    const updateData: Record<string, unknown> = {}
-    if (body.status !== undefined) updateData.status = body.status
-    if (body.syncPercentage !== undefined) updateData.syncPercentage = body.syncPercentage
-    if (body.editCountdown !== undefined) updateData.editCountdown = body.editCountdown
-    if (body.location !== undefined) updateData.location = body.location
-    if (body.notes !== undefined) updateData.notes = body.notes
-    if (body.timeSlot !== undefined) updateData.timeSlot = body.timeSlot
-    if (body.bookingDate !== undefined) updateData.bookingDate = new Date(body.bookingDate)
-    if (body.masterReelUrl !== undefined) updateData.masterReelUrl = body.masterReelUrl
-    if (body.hlsPlaylistUrl !== undefined) updateData.hlsPlaylistUrl = body.hlsPlaylistUrl
-    if (body.proxyFootageUrl !== undefined) updateData.proxyFootageUrl = body.proxyFootageUrl
-    if (body.status === 'DELIVERED') updateData.deliveredAt = new Date()
-
-    const updatedRaw = await dbClient.booking.update({ where: { id }, data: updateData })
-
-    if (body.status === 'DELIVERED' && existing.status !== 'DELIVERED') {
-      await releasePartnerEarning(id)
-    }
-
+    // Notify client via WebSocket (in-process)
     if (body.status !== undefined && body.status !== existing.status) {
       notifyClient({
         bookingId: id,
         event: 'booking:status-update',
-        data: {
-          bookingId: id,
-          status: updatedRaw.status,
-          previousStatus: existing.status,
-          reelUrl: updatedRaw.masterReelUrl || null,
-          deliveredAt: updatedRaw.deliveredAt || null,
-        },
+        data: { bookingId: id, status: booking.status, previousStatus: existing.status, reelUrl: updatedRaw.reelUrl || null, deliveredAt: updatedRaw.deliveredAt || null },
       })
     }
 
     if (body.syncPercentage !== undefined && body.syncPercentage !== existing.syncPercentage) {
-      notifyClient({ bookingId: id, event: 'booking:sync-update', data: { bookingId: id, syncPercentage: updatedRaw.syncPercentage } })
+      notifyClient({
+        bookingId: id,
+        event: 'booking:sync-update',
+        data: { bookingId: id, syncPercentage: booking.syncPercentage },
+      })
     }
 
     if (body.editCountdown !== undefined && body.editCountdown !== existing.editCountdown) {
-      notifyClient({ bookingId: id, event: 'booking:countdown-update', data: { bookingId: id, editCountdown: updatedRaw.editCountdown } })
+      notifyClient({
+        bookingId: id,
+        event: 'booking:countdown-update',
+        data: { bookingId: id, editCountdown: booking.editCountdown },
+      })
     }
 
-    return NextResponse.json({ booking: updatedRaw })
+    return NextResponse.json({ booking })
   } catch (error) {
     console.error('Error updating booking:', error)
-    return NextResponse.json({ error: 'Failed to update booking' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to update booking' },
+      { status: 500 }
+    )
   }
 }

@@ -62,6 +62,8 @@ export function haversineKm(
   return R * c;
 }
 
+export const calculateDistanceKm = haversineKm;
+
 // ── Proximity Sort ────────────────────────────────────────────────────────────
 
 /**

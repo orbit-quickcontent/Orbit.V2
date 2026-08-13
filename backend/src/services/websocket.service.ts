@@ -3,43 +3,34 @@ import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import cors from 'cors';
 import { LocationService } from './location.service';
-import { dbClient } from './db.service';
-import { removePartnerPresence, setPartnerPresence } from './redis.service';
-import { verifyToken, JWTPayload } from '../lib/security-auth';
+import { firestoreDb } from '../lib/db';
 
+// ── Singleton io reference ─────────────────────────────────────────────────────
 let _io: SocketIOServer | null = null;
-const onlinePartners = new Map<string, Set<string>>();
-const socketSubscriptions = new Map<string, string>();
-const OFFER_TIMEOUT_MS = Number(process.env.DISPATCH_OFFER_TIMEOUT_MS || 15000);
-const MAX_PLAUSIBLE_SPEED_MPS = Number(process.env.MAX_PLAUSIBLE_SPEED_MPS || 100);
 
-function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const earthRadius = 6371000;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a = Math.sin(dLat / 2) ** 2
-    + Math.cos((lat1 * Math.PI) / 180)
-    * Math.cos((lat2 * Math.PI) / 180)
-    * Math.sin(dLng / 2) ** 2;
-  return 2 * earthRadius * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
+/** Returns the active Socket.IO server, or null before initWebSocketService() runs. */
 export function getIo(): SocketIOServer | null {
   return _io;
 }
 
+/**
+ * Returns an array of all currently socket-connected partner IDs.
+ * Used by dispatch handlers to filter for WS-presence before sending booking:dispatched.
+ */
 export function getOnlinePartnerIds(): string[] {
   return Array.from(onlinePartners.keys());
 }
 
-export function notifyPartnerEarningAvailable(partnerId: string, payload: { bookingId: string; partnerEarningAmount: number; currency: string; status: string; availableAt: string }) {
-  if (!_io) return;
-  const sockets = onlinePartners.get(partnerId);
-  sockets?.forEach((socketId) => {
-    _io!.to(socketId).emit('partner:earning-available', payload);
-  });
-}
+// ── Online partner tracking ────────────────────────────────────────────────────
+const onlinePartners = new Map<string, Set<string>>();
+const socketSubscriptions = new Map<string, string>();
 
+// ── Exported notification helpers (called in-process by route handlers) ────────
+
+/**
+ * Push a booking:dispatched event to a list of partners.
+ * No-ops silently if the WS server is not yet initialised.
+ */
 export function notifyDispatch(payload: {
   bookingId: string;
   partnerIds: string[];
@@ -47,42 +38,48 @@ export function notifyDispatch(payload: {
   round: number;
 }) {
   if (!_io) return;
-
   const { bookingId, partnerIds, booking, round } = payload;
-  const partnerEarningAmount = Number(booking?.partnerEarningAmount || 0);
-  const offer = {
+  console.log(`[WS] Dispatch notification: booking:${bookingId} to partners:`, partnerIds);
+
+  const eventPayload = {
+    booking,
     bookingId,
     id: bookingId,
     dispatchId: bookingId,
     round: round || 1,
-    expiresAt: new Date(Date.now() + OFFER_TIMEOUT_MS).toISOString(),
-    clientId: booking?.userId || booking?.clientId || '',
-    serviceType: booking?.package?.name || booking?.serviceType || 'Reel Shoot',
-    clientLatitude: booking?.latitude ?? booking?.lat ?? null,
-    clientLongitude: booking?.longitude ?? booking?.lng ?? null,
-    partnerEarningAmount,
-    earningAmount: partnerEarningAmount,
-    currency: 'INR',
-    payoutStatus: 'PENDING',
-    booking,
+    expiresAt: new Date(Date.now() + 60000).toISOString(),
   };
 
   partnerIds.forEach((partnerId) => {
-    const sockets = onlinePartners.get(partnerId);
-    if (sockets) {
-      sockets.forEach((socketId) => {
-        _io!.to(socketId).emit('booking:dispatched', offer);
-        _io!.to(socketId).emit('booking:offer', offer);
-        _io!.to(socketId).emit('booking_request', offer);
-        _io!.to(socketId).emit('partner_searching', { bookingId, round: round || 1, partnerEarningAmount, currency: 'INR' });
-      });
-    }
+    // Check direct partnerId, profile ID, or user ID
+    const keysToCheck = [
+      partnerId,
+      partnerId.startsWith('prt-') ? partnerId.replace('prt-', 'usr-') : partnerId.startsWith('usr-') ? partnerId.replace('usr-', 'prt-') : partnerId
+    ];
+
+    keysToCheck.forEach(key => {
+      const sockets = onlinePartners.get(key);
+      if (sockets) {
+        sockets.forEach((socketId) => {
+          _io!.to(socketId).emit('booking:dispatched', eventPayload);
+          _io!.to(socketId).emit('booking:offer', eventPayload);
+          _io!.to(socketId).emit('booking_request', eventPayload);
+        });
+      }
+    });
   });
 
-  // Broadcast event on the booking channel
-  _io.to(`booking:${bookingId}`).emit('booking:dispatched', offer);
+  // Broadcast to all connected sockets so partner apps poll/update in real-time
+  _io.emit('booking:dispatched', eventPayload);
+  _io.emit('booking:offer', eventPayload);
+  _io.emit('booking_request', eventPayload);
 }
 
+
+/**
+ * Push booking:partner-assigned to the client room and booking:accepted-by-other
+ * to every other online partner. No-ops if WS not yet initialised.
+ */
 export function notifyAccept(payload: {
   bookingId: string;
   partnerId: string;
@@ -91,258 +88,243 @@ export function notifyAccept(payload: {
 }) {
   if (!_io) return;
   const { bookingId, partnerId, partnerName, booking } = payload;
-
-  _io.to(`booking:${bookingId}`).emit('booking:partner-assigned', {
-    bookingId,
-    partnerId,
-    partnerName,
-    partnerEarningAmount: booking?.partnerEarningAmount ?? null,
-    booking,
-  });
-  _io.to(`booking:${bookingId}`).emit('partner_assigned', {
-    bookingId,
-    partnerId,
-    partnerName,
-    partnerEarningAmount: booking?.partnerEarningAmount ?? null,
-  });
-
+  console.log(`[WS] Accept notification: booking:${bookingId} accepted by partner:${partnerId}`);
+  _io.to(`booking:${bookingId}`).emit('booking:partner-assigned', { bookingId, partnerId, partnerName, booking });
   onlinePartners.forEach((sockets, onlinePartnerId) => {
-    if (onlinePartnerId === partnerId) return;
-    sockets.forEach((socketId) => {
-      _io!.to(socketId).emit('booking:accepted-by-other', {
-        bookingId,
-        acceptedByPartnerId: partnerId,
+    if (onlinePartnerId !== partnerId) {
+      sockets.forEach((socketId) => {
+        _io!.to(socketId).emit('booking:accepted-by-other', { bookingId, acceptedByPartnerId: partnerId });
       });
-    });
+    }
   });
 }
 
+/**
+ * Emit an arbitrary event to the client room for a booking.
+ * No-ops if WS not yet initialised.
+ */
 export function notifyClient(payload: {
   bookingId: string;
   event: string;
   data: any;
 }) {
   if (!_io) return;
-  const room = `booking:${payload.bookingId}`;
-  _io.to(room).emit(payload.event, payload.data);
-
-  if (payload.event === 'booking:status-update') {
-    _io.to(room).emit('booking:statusChanged', payload.data);
-
-    const status = payload.data?.status;
-    const aliases: Record<string, string> = {
-      EN_ROUTE: 'partner_en_route',
-      SHOOTING: 'shoot_started',
-      SYNCING: 'footage_uploading',
-      EDITING: 'editing_started',
-      DELIVERED: 'reel_delivered',
-      CANCELLED: 'booking_cancelled',
-    };
-    const alias = aliases[status];
-    if (alias) _io.to(room).emit(alias, payload.data);
-    if (status === 'SHOOTING') _io.to(room).emit('partner_arrived', payload.data);
-  }
+  const { bookingId, event, data } = payload;
+  console.log(`[WS] Client notification: booking:${bookingId} -> event: ${event}`);
+  _io.to(`booking:${bookingId}`).emit(event, data);
 }
 
-function allowedOrigins(): string[] {
-  return [
-    'https://orbit-quickcontent.com',
-    'https://www.orbit-quickcontent.com',
-    'https://app.orbit-quickcontent.com',
-    process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-    'capacitor://localhost',
-    'http://localhost',
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:5000',
-    'http://10.0.2.2:5000',
-  ];
+/**
+ * Push canonical status change to booking room and associated actors.
+ */
+export function notifyStatusChange(payload: {
+  bookingId: string;
+  status: string;
+  previousStatus?: string;
+  booking?: any;
+}) {
+  if (!_io) return;
+  const { bookingId, status, previousStatus, booking } = payload;
+  console.log(`[WS] Status change notification: booking:${bookingId} -> ${status} (was ${previousStatus})`);
+  _io.to(`booking:${bookingId}`).emit("booking:status-change", { bookingId, status, previousStatus, booking });
+  _io.to(`booking:${bookingId}`).emit("booking_updated", { bookingId, status, booking });
+  _io.emit("booking:status-change", { bookingId, status, previousStatus, booking });
 }
 
-function extractSocketToken(socket: Socket): string | null {
-  const fromAuth = socket.handshake.auth?.token;
-  if (typeof fromAuth === 'string' && fromAuth) return fromAuth;
-  const header = socket.handshake.headers.authorization;
-  if (typeof header === 'string') return header;
-  return null;
+/**
+ * Push master reel delivered event.
+ */
+export function notifyDeliver(payload: {
+  bookingId: string;
+  reelUrl: string;
+  booking?: any;
+}) {
+  if (!_io) return;
+  const { bookingId, reelUrl, booking } = payload;
+  console.log(`[WS] Deliver notification: booking:${bookingId} -> reelUrl: ${reelUrl}`);
+  _io.to(`booking:${bookingId}`).emit("reel_delivered", { bookingId, reelUrl, booking });
+  _io.to(`booking:${bookingId}`).emit("booking:delivered", { bookingId, reelUrl, booking });
 }
 
-async function resolvePartnerId(user: JWTPayload | null, requestedPartnerId: string): Promise<boolean> {
-  if (!user || user.type !== 'access' || user.role !== 'PARTNER') return false;
-  const partner = await dbClient.partner.findUnique({ where: { userId: user.id } });
-  return Boolean(partner && partner.id === requestedPartnerId);
-}
+// ── Main init ──────────────────────────────────────────────────────────────────
+export function initWebSocketService() {
+  const app = express();
+  app.use(cors());
+  app.use(express.json());
 
-export function initWebSocketService(existingServer?: HttpServer) {
-  const app = existingServer ? undefined : express();
-  if (app) {
-    app.use(cors({ origin: allowedOrigins(), credentials: true }));
-    app.use(express.json());
-  }
-
-  const server = existingServer || new HttpServer(app);
+  const server = new HttpServer(app);
   const io = new SocketIOServer(server, {
     cors: {
       origin: (origin, callback) => {
-        if (!origin || process.env.NODE_ENV !== 'production' || allowedOrigins().includes(origin)) {
+        if (!origin || process.env.NODE_ENV !== 'production' || origin.startsWith('http://localhost') || origin.startsWith('http://10.0.2.2')) {
           return callback(null, true);
         }
-        return callback(new Error('CORS policy violation'));
+        return callback(null, true);
       },
       methods: ['GET', 'POST'],
-      credentials: true,
+      credentials: true
     },
     transports: ['websocket', 'polling'],
     pingTimeout: 60000,
     pingInterval: 25000,
-    path: '/socket.io/',
+    path: '/socket.io/'
   });
 
-  io.use((socket, next) => {
-    const rawToken = extractSocketToken(socket);
-    const token = rawToken?.replace(/^Bearer\s+/i, '').trim();
-    const user = token ? verifyToken(token) : null;
-    if (!user || user.type !== 'access') return next(new Error('Unauthorized'));
-    socket.data.user = user;
-    next();
-  });
-
+  // Assign singleton
   _io = io;
 
   io.on('connection', (socket: Socket) => {
-    const user = socket.data.user as JWTPayload;
+    console.log(`[WS] Socket connected: ${socket.id}`);
 
-<<<<<<< HEAD
-    socket.on('partner:online', async ({ partnerId }: { partnerId: string }) => {
-      if (!(await resolvePartnerId(user, partnerId))) {
-        socket.emit('socket:denied', { reason: 'Invalid partner identity' });
-        return;
-=======
     const registerPartner = (partnerId: string) => {
       if (!partnerId) return;
       console.log(`[WS] Partner online/registered: ${partnerId} (socket: ${socket.id})`);
       if (!onlinePartners.has(partnerId)) {
         onlinePartners.set(partnerId, new Set());
->>>>>>> 2857d4d (feat(dispatch): connect 8-step dispatch workflow, socket event listeners, and API routes)
       }
-      if (!onlinePartners.has(partnerId)) onlinePartners.set(partnerId, new Set());
       onlinePartners.get(partnerId)!.add(socket.id);
-<<<<<<< HEAD
-      socket.data.partnerId = partnerId;
-    });
-=======
       (socket as any).partnerId = partnerId;
     };
 
     socket.on('partner:online', ({ partnerId }: { partnerId: string }) => registerPartner(partnerId));
     socket.on('partner:register', ({ partnerId }: { partnerId: string }) => registerPartner(partnerId));
->>>>>>> 2857d4d (feat(dispatch): connect 8-step dispatch workflow, socket event listeners, and API routes)
 
-    socket.on('partner:offline', async ({ partnerId }: { partnerId: string }) => {
-      if (!(await resolvePartnerId(user, partnerId))) return;
+    socket.on('partner:offline', ({ partnerId }: { partnerId: string }) => {
+      if (!partnerId) return;
+      console.log(`[WS] Partner offline: ${partnerId} (socket: ${socket.id})`);
       const sockets = onlinePartners.get(partnerId);
-      sockets?.delete(socket.id);
-      if (sockets && sockets.size === 0) onlinePartners.delete(partnerId);
-      await removePartnerPresence(partnerId).catch(() => undefined);
+      if (sockets) {
+        sockets.delete(socket.id);
+        if (sockets.size === 0) onlinePartners.delete(partnerId);
+      }
     });
 
-    socket.on('client:subscribe', async ({ bookingId }: { bookingId: string }) => {
+    socket.on('client:subscribe', ({ bookingId }: { bookingId: string }) => {
       if (!bookingId) return;
-      if (user.role === 'CLIENT') {
-        const booking = await dbClient.booking.findUnique({ where: { id: bookingId }, select: { userId: true } });
-        if (!booking || booking.userId !== user.id) {
-          socket.emit('socket:denied', { reason: 'Booking subscription denied' });
-          return;
-        }
-      }
-      if (user.role === 'PARTNER') {
-        const booking = await dbClient.booking.findUnique({ where: { id: bookingId }, select: { partnerId: true } });
-        const partner = await dbClient.partner.findUnique({ where: { userId: user.id }, select: { id: true } });
-        if (!booking || !partner || booking.partnerId !== partner.id) {
-          socket.emit('socket:denied', { reason: 'Booking subscription denied' });
-          return;
-        }
-      }
+      console.log(`[WS] Client subscribed to booking: ${bookingId} (socket: ${socket.id})`);
       socket.join(`booking:${bookingId}`);
       socketSubscriptions.set(socket.id, bookingId);
     });
 
-    socket.on('partner:updateLocation', async (payload: {
+    /**
+     * partner:updateLocation — Real-time GPS push from partner mobile app.
+     *
+     * Payload: { partnerId: string, lat: number, lng: number, heading?: number, speed?: number }
+     *
+     * On receipt:
+     *  1. Updates the in-memory LocationService singleton (immediate, synchronous)
+     *  2. Persists lat/lng/lastLocationAt to Firestore partner_profiles (async, non-blocking)
+     *  3. Broadcasts partner:location to all connected clients so the dashboard map updates
+     */
+    socket.on('partner:updateLocation', (payload: {
       partnerId: string;
       lat: number;
       lng: number;
       heading?: number;
       speed?: number;
-      accuracy?: number;
-      timestamp?: number;
     }) => {
-      const { partnerId, lat, lng, heading, speed, accuracy, timestamp } = payload || {};
-      if (!(await resolvePartnerId(user, partnerId))) return;
-      if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
-      if (speed !== undefined && (!Number.isFinite(speed) || speed < 0 || speed > MAX_PLAUSIBLE_SPEED_MPS)) return;
-      if (accuracy !== undefined && (!Number.isFinite(accuracy) || accuracy < 0 || accuracy > Number(process.env.MAX_GPS_ACCURACY_METERS || 100))) return;
+      const { partnerId, lat, lng, heading, speed } = payload;
+      if (!partnerId || lat == null || lng == null) return;
 
-      const nowMs = Date.now();
-      const reportedMs = timestamp === undefined ? nowMs : Number(timestamp);
-      if (!Number.isFinite(reportedMs)) return;
-      if (reportedMs < nowMs - Number(process.env.MAX_GPS_AGE_MS || 15000) || reportedMs > nowMs + Number(process.env.MAX_GPS_FUTURE_SKEW_MS || 10000)) return;
-
-      const previous = await dbClient.partner.findUnique({ where: { id: partnerId }, select: { latitude: true, longitude: true, lastLocationAt: true } });
-      if (previous?.latitude != null && previous.longitude != null && previous.lastLocationAt) {
-        const elapsedMs = Math.max(1000, reportedMs - previous.lastLocationAt.getTime());
-        const derivedSpeed = haversineMeters(previous.latitude, previous.longitude, lat, lng) / (elapsedMs / 1000);
-        if (derivedSpeed > MAX_PLAUSIBLE_SPEED_MPS) return;
-      }
-
-      const lastLocationAt = new Date(reportedMs);
+      // 1. In-memory update (synchronous)
       const locationService = LocationService.getInstance();
       locationService.updateLocation(partnerId, lat, lng, heading, speed);
 
-      await Promise.all([
-        dbClient.partner.update({
-          where: { id: partnerId },
-          data: {
-            latitude: lat,
-            longitude: lng,
-            lastSeenAt: lastLocationAt,
-            lastLocationAt,
-            availability: true,
-          },
-        }),
-        setPartnerPresence(partnerId, lat, lng),
-      ]).catch((error) => {
-        console.warn('[WS] location persistence failed:', error?.message);
-      });
+      // 2. Persist to Firestore (fire-and-forget — don't block the WS event loop)
+      const lastLocationAt = new Date().toISOString();
+      firestoreDb.partners.findFirst({ where: { userId: partnerId } })
+        .then((partner) => {
+          const profileId = partner ? partner.id : partnerId;
+          return firestoreDb.partners.update({
+            where: { id: profileId },
+            data: { latitude: lat, longitude: lng, lastLocationAt, availability: true },
+          });
+        })
+        .catch((err: any) => {
+          console.warn(`[WS] Failed to persist location for partner ${partnerId}:`, err?.message);
+        });
 
-      _io?.emit('partner:location', {
-        partnerId,
-        latitude: lat,
-        longitude: lng,
-        heading,
-        speed,
-        timestamp: lastLocationAt.toISOString(),
-      });
-    });
-
-    socket.on('booking:accepted', async ({ bookingId, partnerId }: { bookingId: string; partnerId: string }) => {
-      if (!(await resolvePartnerId(user, partnerId))) return;
-    });
-
-    socket.on('booking:rejected', async ({ bookingId, partnerId }: { bookingId: string; partnerId: string }) => {
-      if (!(await resolvePartnerId(user, partnerId))) return;
-    });
-
-    socket.on('disconnect', async () => {
-      const partnerId = socket.data.partnerId as string | undefined;
-      if (!partnerId) return;
-      const sockets = onlinePartners.get(partnerId);
-      sockets?.delete(socket.id);
-      if (sockets && sockets.size === 0) {
-        onlinePartners.delete(partnerId);
-        await removePartnerPresence(partnerId).catch(() => undefined);
+      // 3. Broadcast to all connected clients (dashboard map)
+      if (_io) {
+        _io.emit('partner:location', {
+          partnerId,
+          lat,
+          lng,
+          heading: heading ?? null,
+          speed: speed ?? null,
+          timestamp: lastLocationAt,
+        });
       }
+    });
+
+    socket.on('disconnect', () => {
+      console.log(`[WS] Socket disconnected: ${socket.id}`);
+      const partnerId = (socket as any).partnerId;
+      if (partnerId) {
+        const sockets = onlinePartners.get(partnerId);
+        if (sockets) {
+          sockets.delete(socket.id);
+          if (sockets.size === 0) onlinePartners.delete(partnerId);
+        }
+      }
+      socketSubscriptions.delete(socket.id);
     });
   });
 
-  return io;
+  // ── Internal REST shim (for backward-compat with any external callers) ───────
+  // Protected by INTERNAL_WS_SECRET env var when set.
+  const checkSecret = (req: express.Request, res: express.Response): boolean => {
+    const secret = process.env.INTERNAL_WS_SECRET;
+    if (!secret) return true; // not configured — allow (dev/local mode)
+    if (req.headers['x-internal-secret'] === secret) return true;
+    res.status(401).json({ error: 'Unauthorized: Invalid internal secret' });
+    return false;
+  };
+
+  app.post('/internal/dispatch', (req, res) => {
+    if (!checkSecret(req, res)) return;
+    const { bookingId, partnerIds, booking, round } = req.body;
+    notifyDispatch({ bookingId, partnerIds, booking, round });
+    res.json({ success: true });
+  });
+
+  app.post('/internal/accept', (req, res) => {
+    if (!checkSecret(req, res)) return;
+    const { bookingId, partnerId, partnerName, booking } = req.body;
+    notifyAccept({ bookingId, partnerId, partnerName, booking });
+    res.json({ success: true });
+  });
+
+  app.post('/internal/notify-client', (req, res) => {
+    if (!checkSecret(req, res)) return;
+    const { bookingId, event, payload } = req.body;
+    if (!bookingId || !event) {
+      return res.status(400).json({ error: 'Missing bookingId or event' });
+    }
+    notifyClient({ bookingId, event, data: payload });
+    res.json({ success: true });
+  });
+
+  app.get('/internal/partners/:partnerId/status', (req, res) => {
+    const { partnerId } = req.params;
+    const isOnline = onlinePartners.has(partnerId);
+    res.json({ partnerId, isOnline });
+  });
+
+  const WS_PORT = Number(process.env.WS_PORT) || 3003;
+
+  server.on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      console.warn(`[WS Warning] Port ${WS_PORT} is already in use; reusing active WebSocket listener.`);
+    } else {
+      console.error('[WS Error]', err);
+    }
+  });
+
+  server.listen(WS_PORT, () => {
+    console.log(`[WS] WebSocket server running on port ${WS_PORT}`);
+  });
+
+  return { server, io };
 }
+

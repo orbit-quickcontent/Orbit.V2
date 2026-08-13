@@ -3,9 +3,25 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Zap, CalendarCheck, Radar, Package, ArrowRight, CheckCircle2,
-  ChevronRight, ChevronDown, Clock, Star, Flame, TrendingUp,
-  Users, MapPin, Sparkles, Play, Shield,
+  Plus,
+  Dna,
+  FileText,
+  Star,
+  Sparkles,
+  Zap,
+  Calendar,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  Shield,
+  MapPin,
+  Flame,
+  ArrowRight,
+  Play,
+  Film,
+  Camera,
+  Layers,
+  Radio,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/lib/store";
@@ -16,229 +32,291 @@ type BookingTab = "total" | "active" | "done";
 
 function compactStatus(status: string): string {
   const map: Record<string, string> = {
-    PENDING: "Pending", PAID: "Paid", PARTNER_DISPATCHED: "Dispatched",
-    EN_ROUTE: "En Route", SHOOTING: "Shooting", SYNCING: "Syncing",
-    EDITING: "Editing", DELIVERED: "Delivered", CANCELLED: "Cancelled",
+    PENDING: "Pending",
+    PAID: "Paid",
+    PARTNER_DISPATCHED: "Dispatched",
+    EN_ROUTE: "En Route",
+    SHOOTING: "Shooting",
+    SYNCING: "Syncing",
+    EDITING: "Editing",
+    DELIVERED: "Delivered",
+    CANCELLED: "Cancelled",
   };
   return map[status] || status;
 }
 
 export function DashboardHome() {
-  const { currentBooking, bookings, packages, setCurrentView, selectedPackage, setSelectedPackage, setHighlightedPackageId } = useAppStore();
-  const [activeTab, setActiveTab] = useState<BookingTab | null>(null);
-  // Loss Aversion — countdown timer
+  const {
+    currentBooking,
+    bookings,
+    packages,
+    setCurrentView,
+    selectedPackage,
+    setSelectedPackage,
+    setHighlightedPackageId,
+  } = useAppStore();
+
   const [slotSeconds, setSlotSeconds] = useState(299);
   useEffect(() => {
-    const t = setInterval(() => setSlotSeconds(s => Math.max(0, s - 1)), 1000);
+    const t = setInterval(() => setSlotSeconds((s) => Math.max(0, s - 1)), 1000);
     return () => clearInterval(t);
   }, []);
   const slotTimer = `${Math.floor(slotSeconds / 60)}:${String(slotSeconds % 60).padStart(2, "0")}`;
 
-  const completedBookingsList = bookings.filter(b => b.status === "DELIVERED");
-  const activeBookingsList = bookings.filter(b => !["DELIVERED", "CANCELLED"].includes(b.status));
-  const filteredBookings = activeTab === "total" ? bookings : activeTab === "active" ? activeBookingsList : completedBookingsList;
+  const completedBookingsList = bookings.filter((b) => b.status === "DELIVERED");
+  const activeBookingsList = bookings.filter(
+    (b) => !["DELIVERED", "CANCELLED"].includes(b.status)
+  );
+
+  // Active shoot information for the live banner
+  const activeShoot = currentBooking || (activeBookingsList.length > 0 ? activeBookingsList[0] : null);
 
   return (
-    <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-4 sm:space-y-5">
-
-      {/* ── Principle 3: Reciprocity — value before commitment ── */}
-      <motion.div variants={staggerItem}>
-        <div className="relative overflow-hidden bg-gradient-to-r from-cyan-950/60 to-purple-950/40 rounded-2xl p-4 border border-cyan-500/20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
-                <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-cyan-400/40 animate-ping" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-white">Creators available near you right now</p>
-                <p className="text-xs text-slate-400 mt-0.5">Browse portfolios & pricing — no account needed</p>
-              </div>
-            </div>
-            <div className="shrink-0 bg-cyan-400/10 border border-cyan-400/30 rounded-lg px-2.5 py-1">
-              <span className="text-xs font-black text-cyan-400">3 LIVE</span>
-            </div>
-          </div>
-          {/* Loss aversion timer */}
-          <div className="mt-3 flex items-center gap-2 text-xs">
-            <Flame className="w-3.5 h-3.5 text-orange-400" />
-            <span className="text-orange-400 font-bold">Slot expires in {slotTimer}</span>
-            <span className="text-slate-500">— book now to secure your creator</span>
-          </div>
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="show"
+      className="space-y-6 pb-24"
+    >
+      {/* ── 1. Giant Cinematic Editorial Headline ── */}
+      <motion.div variants={staggerItem} className="pt-2">
+        <div className="space-y-1">
+          <h1 className="font-space font-extrabold text-4xl sm:text-5xl text-white tracking-tight leading-none">
+            Shoot
+          </h1>
+          <h2 className="font-playfair italic font-normal text-3xl sm:text-4xl text-[#00BFFF] leading-tight text-glow-cyan">
+            In Progress.
+          </h2>
+          <p className="font-mono text-[10px] sm:text-xs text-zinc-400 uppercase tracking-[0.2em] pt-1">
+            ORBIT V1.0.4 — PREMIUM ACCESS
+          </p>
         </div>
       </motion.div>
 
-      {/* ── Principle 1: Smart Defaults chips ── */}
+      {/* ── 2. 2x2 Aspect-Square Quick Action Grid ── */}
       <motion.div variants={staggerItem}>
-        <div className="bg-[#0A0C14] rounded-2xl p-3.5 border border-white/5">
-          <div className="flex items-center gap-2 mb-2.5">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-[11px] font-black text-cyan-400 tracking-wider uppercase">Recommended for Instagram Reels</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {["30 min", "4K HDR", "Wireless Mic ✓", "UPI Ready ✓", "10 min delivery"].map(chip => (
-              <span key={chip} className="text-[11px] font-semibold text-cyan-300 bg-cyan-950/50 border border-cyan-500/20 rounded-full px-3 py-1">
-                {chip}
-              </span>
-            ))}
-          </div>
-          <p className="text-[10px] text-slate-500 mt-2">Pre-selected based on top creator bookings</p>
+        <div className="grid grid-cols-2 gap-3.5 sm:gap-4">
+          {/* Card 1: Book New Shoot */}
+          <button
+            onClick={() => {
+              if (packages.length > 0 && !selectedPackage) setSelectedPackage(packages[0]);
+              setCurrentView("booking");
+            }}
+            className="group relative aspect-square p-5 rounded-2xl bg-[#0B0B0E] border border-white/10 hover:border-[#00BFFF]/40 transition-all duration-300 active:scale-[0.98] flex flex-col justify-between text-left shadow-lg overflow-hidden"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#00BFFF] text-black flex items-center justify-center font-bold shadow-[0_0_20px_rgba(0,191,255,0.4)] group-hover:scale-105 transition-transform">
+              <Plus className="w-6 h-6 stroke-[3]" />
+            </div>
+            <div>
+              <h3 className="font-space font-bold text-sm sm:text-base text-white uppercase tracking-tight leading-tight">
+                BOOK<br />NEW SHOOT
+              </h3>
+              <p className="font-mono italic text-[10px] sm:text-[11px] text-zinc-400 uppercase tracking-wider mt-1">
+                INSTANT MATCHING
+              </p>
+            </div>
+          </button>
+
+          {/* Card 2: Track Order */}
+          <button
+            onClick={() => setCurrentView("tracking")}
+            className="group relative aspect-square p-5 rounded-2xl bg-[#0B0B0E] border border-white/10 hover:border-[#A020F0]/40 transition-all duration-300 active:scale-[0.98] flex flex-col justify-between text-left shadow-lg overflow-hidden"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#A020F0] text-white flex items-center justify-center font-bold shadow-[0_0_20px_rgba(160,32,240,0.4)] group-hover:scale-105 transition-transform">
+              <Dna className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-space font-bold text-sm sm:text-base text-white uppercase tracking-tight leading-tight">
+                TRACK<br />ORDER
+              </h3>
+              <p className="font-mono italic text-[10px] sm:text-[11px] text-zinc-400 uppercase tracking-wider mt-1">
+                {activeBookingsList.length > 0 ? `${activeBookingsList.length} ACTIVE` : "1 ACTIVE"}
+              </p>
+            </div>
+          </button>
+
+          {/* Card 3: Recent Projects */}
+          <button
+            onClick={() => setCurrentView("profile")}
+            className="group relative aspect-square p-5 rounded-2xl bg-[#0B0B0E] border border-white/10 hover:border-white/25 transition-all duration-300 active:scale-[0.98] flex flex-col justify-between text-left shadow-lg overflow-hidden"
+          >
+            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-zinc-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-space font-bold text-sm sm:text-base text-white uppercase tracking-tight leading-tight">
+                RECENT<br />PROJECTS
+              </h3>
+              <p className="font-mono italic text-[10px] sm:text-[11px] text-zinc-400 uppercase tracking-wider mt-1">
+                {completedBookingsList.length > 0 ? `${completedBookingsList.length} DELIVERED` : "12 DELIVERED"}
+              </p>
+            </div>
+          </button>
+
+          {/* Card 4: Brand Identity */}
+          <button
+            onClick={() => {
+              const ugcPkg = packages.find((p) => p.tier === "PROFESSIONAL" || p.id === "pkg-professional");
+              if (ugcPkg) {
+                setSelectedPackage(ugcPkg);
+                setHighlightedPackageId(ugcPkg.id);
+              }
+              setCurrentView("packages");
+            }}
+            className="group relative aspect-square p-5 rounded-2xl bg-[#0B0B0E] border border-white/10 hover:border-[#F59E0B]/40 transition-all duration-300 active:scale-[0.98] flex flex-col justify-between text-left shadow-lg overflow-hidden"
+          >
+            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-zinc-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Star className="w-5 h-5 text-zinc-300" />
+            </div>
+            <div>
+              <h3 className="font-space font-bold text-sm sm:text-base text-white uppercase tracking-tight leading-tight">
+                BRAND<br />IDENTITY
+              </h3>
+              <p className="font-mono italic text-[10px] sm:text-[11px] text-zinc-400 uppercase tracking-wider mt-1">
+                ASSETS & DNA
+              </p>
+            </div>
+          </button>
         </div>
       </motion.div>
 
-      {/* ── Quick Actions Grid ── */}
+      {/* ── 3. Live Shoot Tracking Card ── */}
       <motion.div variants={staggerItem}>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { icon: <CalendarCheck className="w-5 h-5 text-cyan-400" />, label: "Book Now", desc: "Schedule a session", bg: "bg-cyan-950/40 border-cyan-500/20", onClick: () => { if (packages.length > 0 && !selectedPackage) setSelectedPackage(packages[0]); setCurrentView("booking"); } },
-            { icon: <Radar className="w-5 h-5 text-purple-400" />, label: "Track Order", desc: activeBookingsList.length > 0 ? `${activeBookingsList.length} active` : "No active", bg: "bg-purple-950/40 border-purple-500/20", onClick: () => setCurrentView("tracking") },
-            { icon: <Package className="w-5 h-5 text-emerald-400" />, label: "Packages", desc: "View pricing", bg: "bg-emerald-950/40 border-emerald-500/20", onClick: () => setCurrentView("packages") },
-            { icon: <Zap className="w-5 h-5 text-amber-400" />, label: "Brand DNA", desc: "Customize style", bg: "bg-amber-950/40 border-amber-500/20", onClick: () => { const ugcPkg = packages.find(p => p.tier === "PROFESSIONAL" || p.id === "pkg-professional"); if (ugcPkg) { setSelectedPackage(ugcPkg); setHighlightedPackageId(ugcPkg.id); } setCurrentView("packages"); } },
-          ].map((action, i) => (
-            <button key={i} onClick={action.onClick}
-              className="group bg-[#0D0D11] rounded-2xl p-4 text-left border border-white/5 hover:border-cyan-500/30 transition-all duration-300 active:scale-[0.98] flex flex-col justify-between min-h-[116px]">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center border ${action.bg} group-hover:scale-105 transition-transform duration-300`}>
-                {action.icon}
-              </div>
-              <div className="mt-3">
-                <h3 className="text-sm font-bold text-white truncate">{action.label}</h3>
-                <p className="text-xs text-slate-500 truncate mt-1">{action.desc}</p>
-              </div>
+        <div className="relative overflow-hidden rounded-2xl bg-[#0B0B0E] border border-purple-500/20 p-4 sm:p-5 shadow-[0_0_25px_rgba(160,32,240,0.1)]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-1.5 min-w-0 flex-1">
+              <p className="font-mono text-[10px] font-bold text-[#00BFFF] tracking-widest uppercase flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00BFFF] animate-ping" />
+                LIVE SHOOT TRACKING
+              </p>
+              <h4 className="font-space font-bold text-base text-white truncate">
+                {activeShoot ? `${activeShoot.packageName || "Personalized"} in progress` : "Personalized in progress"}
+              </h4>
+              <p className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
+                <MapPin className="w-3.5 h-3.5 text-[#00BFFF] shrink-0" />
+                <span className="truncate">
+                  {activeShoot?.location || "Kartar Mansion, 35, Dr Dadasaheb Phalke Rd, Dadar..."}
+                </span>
+              </p>
+            </div>
+
+            <button
+              onClick={() => setCurrentView("tracking")}
+              className="shrink-0 bg-[#00BFFF] hover:bg-[#00BFFF]/90 text-black font-space font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,191,255,0.4)] transition-transform active:scale-95 cursor-pointer"
+            >
+              Track <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
             </button>
-          ))}
+          </div>
         </div>
       </motion.div>
 
-      {/* ── Packages with Contrast Effect (Principle 6) ── */}
+      {/* ── 4. Featured Packages Strip ── */}
       <motion.div variants={staggerItem} className="space-y-3 pt-1">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-white">Our Packages</h3>
-          <button onClick={() => setCurrentView("packages")} className="text-xs font-bold text-cyan-400 hover:underline flex items-center gap-1">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-[#00BFFF]" />
+            <h3 className="font-space font-bold text-base sm:text-lg text-white">Featured Packages</h3>
+          </div>
+          <button
+            onClick={() => setCurrentView("packages")}
+            className="text-xs font-bold text-[#00BFFF] hover:underline flex items-center gap-1 cursor-pointer"
+          >
             View All <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button onClick={() => { if (packages[0]) setSelectedPackage(packages[0]); setCurrentView("booking"); }}
-            className="bg-[#0C1014] rounded-2xl p-4 text-left border border-slate-800 hover:border-cyan-500/40 transition-all group">
-            <h4 className="text-base font-bold text-white">Personalized</h4>
-            <p className="text-xl font-black text-cyan-400 mt-1">₹1,999<span className="text-sm font-normal text-slate-500">/session</span></p>
-            <div className="mt-3 space-y-1.5">
-              {["1 Cinematic Reel", "4K HDR", "Wireless Mic"].map(f => (
-                <div key={f} className="flex items-center gap-2 text-xs text-slate-400">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />{f}
-                </div>
-              ))}
-            </div>
-            {/* Contrast Effect add-on */}
-            <div className="mt-3 pt-3 border-t border-white/5">
-              <p className="text-[10px] text-cyan-400 font-semibold">+ Studio Mic for just ₹99 more</p>
-            </div>
-          </button>
 
-          <button onClick={() => { const ugc = packages.find(p => p.tier === "PROFESSIONAL") || packages[1]; if (ugc) setSelectedPackage(ugc); setCurrentView("booking"); }}
-            className="bg-[#130E1A] rounded-2xl p-4 text-left border border-purple-900/60 hover:border-purple-500/40 transition-all group relative overflow-hidden">
-            <div className="absolute top-0 right-0 bg-purple-600 text-white text-[9px] font-black px-2.5 py-1 rounded-bl-xl">POPULAR</div>
-            <h4 className="text-base font-bold text-white pr-16">Professional (UGC)</h4>
-            <p className="text-xl font-black text-cyan-400 mt-1">₹4,999<span className="text-sm font-normal text-slate-500">/session</span></p>
-            <div className="mt-3 space-y-1.5">
-              {["3 Cinematic Reels", "Brand DNA", "Priority Queue"].map(f => (
-                <div key={f} className="flex items-center gap-2 text-xs text-slate-400">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-purple-400 shrink-0" />{f}
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 pt-3 border-t border-purple-900/30">
-              <p className="text-[10px] text-purple-400 font-semibold">+ Cinematic Lighting for just ₹149</p>
-            </div>
-          </button>
-        </div>
-      </motion.div>
-
-      {/* ── Admin Dashboard Psychology: positive framing stats ── */}
-      <motion.div variants={staggerItem}>
-        <div className="bg-[#0D0D10] rounded-2xl p-4 border border-white/5 grid grid-cols-3 text-center divide-x divide-white/5">
-          <div>
-            <p className="text-base font-extrabold text-cyan-400">60 min</p>
-            <p className="text-[10px] text-slate-500">Avg Delivery</p>
-          </div>
-          <div>
-            <p className="text-base font-extrabold text-emerald-400">89%</p>
-            <p className="text-[10px] text-slate-500">SLA Met</p>
-          </div>
-          <div>
-            <p className="text-base font-extrabold text-purple-400">500+</p>
-            <p className="text-[10px] text-slate-500">Reels Delivered</p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* ── Loss Aversion CTA ── */}
-      <motion.div variants={staggerItem}>
-        <div className="rounded-2xl overflow-hidden border border-orange-500/20">
-          <div className="bg-gradient-to-r from-orange-950/60 to-red-950/40 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Flame className="w-4 h-4 text-orange-400" />
-              <span className="text-sm font-black text-white">2 creators nearby may become unavailable</span>
-            </div>
-            <p className="text-xs text-slate-400 mb-3">Current slot expires in <span className="text-orange-400 font-bold">{slotTimer}</span></p>
-            <div className="flex gap-2">
-              <button onClick={() => { if (packages.length > 0 && !selectedPackage) setSelectedPackage(packages[0]); setCurrentView("booking"); }}
-                className="flex-1 bg-gradient-to-r from-cyan-500 to-purple-600 text-white text-sm font-black py-2.5 rounded-xl hover:opacity-90 transition">
-                Book Now →
-              </button>
-              <button onClick={() => { if (packages.length > 0 && !selectedPackage) setSelectedPackage(packages[0]); setCurrentView("booking"); }}
-                className="flex-1 text-slate-500 text-xs font-medium py-2.5 rounded-xl border border-white/5 hover:border-white/10 transition">
-                I'll Risk Missing This Slot
-              </button>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* ── Booking History ── */}
-      <motion.div variants={staggerItem} className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-zinc-400" />
-          <h3 className="text-base font-black text-white">Booking History</h3>
-        </div>
-        {bookings.length === 0 ? (
-          <div className="bg-[#0D0D11] rounded-2xl p-6 border border-white/5 text-center">
-            <Play className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-            <p className="text-sm text-slate-500">No bookings yet — create your first reel</p>
-            <button onClick={() => setCurrentView("booking")} className="mt-3 text-xs font-bold text-cyan-400 hover:underline">Book Now →</button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {(filteredBookings.length ? filteredBookings : bookings).slice(0, 3).map(b => (
-              <div key={b.id} onClick={() => setCurrentView("tracking")}
-                className="bg-[#0D0D11] rounded-xl p-4 border border-white/5 hover:border-cyan-500/20 transition cursor-pointer flex items-center justify-between gap-3">
-                <div className="space-y-0.5 min-w-0">
-                  <p className="text-sm font-bold text-white truncate">{b.packageName || "Shoot"}</p>
-                  <p className="text-xs text-slate-500 truncate">{b.location || "Mumbai"}</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Badge className={`text-[9px] font-bold px-2 py-0.5 rounded-lg ${b.status === "DELIVERED" ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400" : "bg-cyan-500/10 border border-cyan-500/30 text-cyan-400"}`}>
-                    {compactStatus(b.status)}
-                  </Badge>
-                  <ChevronRight className="w-4 h-4 text-slate-600" />
-                </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {/* Card 1: Personalized */}
+          <button
+            onClick={() => {
+              if (packages[0]) setSelectedPackage(packages[0]);
+              setCurrentView("booking");
+            }}
+            className="bg-[#0B0B0E] rounded-2xl p-4 sm:p-5 text-left border border-white/10 hover:border-[#00BFFF]/40 transition-all group relative cursor-pointer"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <h4 className="font-space font-bold text-base text-white">Personalized</h4>
+                <p className="font-mono text-xs text-zinc-500 mt-0.5">60-120 mins delivery</p>
               </div>
-            ))}
-          </div>
-        )}
+              <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400">
+                <Calendar className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="font-space font-black text-2xl text-[#00BFFF] mt-3">
+              ₹1,999<span className="text-xs font-normal text-zinc-500">/session</span>
+            </p>
+            <div className="mt-3 space-y-1.5">
+              {["1 Cinematic Reel", "4K HDR Master", "Wireless Mic Sync"].map((f) => (
+                <div key={f} className="flex items-center gap-2 text-xs text-zinc-400">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
+                  {f}
+                </div>
+              ))}
+            </div>
+          </button>
+
+          {/* Card 2: Professional UGC */}
+          <button
+            onClick={() => {
+              const ugc = packages.find((p) => p.tier === "PROFESSIONAL") || packages[1];
+              if (ugc) setSelectedPackage(ugc);
+              setCurrentView("booking");
+            }}
+            className="bg-[#0D0B12] rounded-2xl p-4 sm:p-5 text-left border border-[#A020F0]/30 hover:border-[#A020F0]/60 transition-all group relative overflow-hidden cursor-pointer"
+          >
+            <div className="absolute top-0 right-0 bg-[#A020F0] text-white text-[9px] font-black px-2.5 py-1 rounded-bl-xl tracking-wider">
+              POPULAR
+            </div>
+            <div className="flex items-start justify-between">
+              <div>
+                <h4 className="font-space font-bold text-base text-white pr-14">Professional (UGC)</h4>
+                <p className="font-mono text-xs text-zinc-500 mt-0.5">60-120 mins delivery</p>
+              </div>
+            </div>
+            <p className="font-space font-black text-2xl text-[#00BFFF] mt-3">
+              ₹4,999<span className="text-xs font-normal text-zinc-500">/session</span>
+            </p>
+            <div className="mt-3 space-y-1.5">
+              {["Up to 3 Cinematic Reels", "Brand DNA Custom Styling", "Priority 60-min Queue"].map((f) => (
+                <div key={f} className="flex items-center gap-2 text-xs text-zinc-400">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#A020F0] shrink-0" />
+                  {f}
+                </div>
+              ))}
+            </div>
+          </button>
+        </div>
       </motion.div>
 
-      {/* ── Trust & Safety ── */}
+      {/* ── 5. HUD Metric Strip ── */}
+      <motion.div variants={staggerItem}>
+        <div className="bg-[#0B0B0E] rounded-2xl p-4 border border-white/10 grid grid-cols-3 text-center divide-x divide-white/10">
+          <div>
+            <p className="font-space text-lg font-extrabold text-[#00BFFF]">60 min</p>
+            <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider">Avg Delivery</p>
+          </div>
+          <div>
+            <p className="font-space text-lg font-extrabold text-[#10B981]">4K HDR</p>
+            <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider">Cinema Grade</p>
+          </div>
+          <div>
+            <p className="font-space text-lg font-extrabold text-[#A020F0]">500+</p>
+            <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider">Projects</p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── 6. Trust & Security Strip ── */}
       <motion.div variants={staggerItem}>
         <div className="flex items-center gap-3 bg-[#0A0F0A] rounded-2xl p-4 border border-emerald-900/30">
-          <Shield className="w-5 h-5 text-emerald-400 shrink-0" />
+          <Shield className="w-5 h-5 text-[#10B981] shrink-0" />
           <div>
-            <p className="text-xs font-bold text-white">Orbit Trust & Safety</p>
-            <p className="text-[10px] text-slate-500">All creators verified • Secure payments • 100% delivery guarantee</p>
+            <p className="font-space text-xs font-bold text-white">Orbit Trust & Delivery Guarantee</p>
+            <p className="text-[10px] text-zinc-400">Verified cinema videographers • Secure escrows • Instant delivery SLA</p>
           </div>
         </div>
       </motion.div>
-
     </motion.div>
   );
 }

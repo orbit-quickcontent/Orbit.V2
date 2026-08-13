@@ -743,107 +743,108 @@ export function TrackingDashboard() {
           )}
         </motion.div>
 
-        {/* Status Pipeline */}
-        <div className="orbit-card rounded-2xl p-3 sm:p-6">
-          <div className="relative">
-            {/* Desktop connecting line */}
-            <div className="hidden lg:block absolute top-5 left-5 right-5 h-0.5 bg-orbit-border">
-              <motion.div
-                className="h-full bg-gradient-to-r from-orbit-cyan to-orbit-purple"
-                initial={{ width: "0%" }}
-                animate={{ width: `${(activeStep / (STATUS_PIPELINE.length - 1)) * 100}%` }}
-                transition={{ duration: 0.8 }}
-              />
-            </div>
+        {/* Status Pipeline Card (Matching Screenshot 1) */}
+        <div className="bg-[#0B0B0E] border border-white/10 rounded-3xl p-5 sm:p-7 shadow-2xl">
+          <div className="space-y-6">
+            {STATUS_PIPELINE.map((step, idx) => {
+              const isActive = idx === activeStep;
+              const isStepCompleted = idx < activeStep || isComplete;
 
-            <div className="flex flex-col lg:flex-row gap-3 lg:gap-0 justify-between">
-              {STATUS_PIPELINE.map((step, idx) => {
-                const isActive = idx === activeStep;
-                const isStepCompleted = idx < activeStep || isComplete;
-                return (
-                  <div key={step.status} className="flex lg:flex-col items-start lg:items-center gap-3 lg:gap-2 relative">
-                    <div className={`relative z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-500 ${
+              return (
+                <div key={step.status} className="flex items-start gap-4 relative">
+                  {/* Step Icon Circle */}
+                  <div
+                    className={`relative z-10 w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all duration-500 ${
                       isActive && !isComplete
-                        ? "bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white orbit-glow"
+                        ? "bg-gradient-to-br from-[#00BFFF] to-[#A020F0] text-white shadow-[0_0_20px_rgba(0,191,255,0.6)] scale-105"
                         : isStepCompleted
-                        ? "bg-orbit-cyan/20 text-orbit-cyan"
-                        : "bg-white/5 text-muted-foreground border border-orbit-border"
-                    }`}>
-                      {(isStepCompleted && !isActive) || isComplete ? <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> : step.icon}
-                      {isActive && !isComplete && <div className="absolute inset-0 rounded-full border-2 border-orbit-cyan animate-pulse-ring" />}
-                    </div>
-                    <div className="lg:text-center">
-                      <div className={`text-[10px] sm:text-xs font-semibold ${isActive ? "text-orbit-cyan" : isStepCompleted ? "text-orbit-cyan/70" : "text-muted-foreground"}`}>
-                        {step.label}
-                      </div>
-                      {isActive && !isComplete && (
-                        <div className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 max-w-[120px] lg:mx-auto">
-                          {step.description}
-                        </div>
-                      )}
-                    </div>
+                        ? "bg-[#00BFFF]/15 border border-[#00BFFF] text-[#00BFFF]"
+                        : "bg-white/[0.04] text-zinc-500 border border-white/10"
+                    }`}
+                  >
+                    {isStepCompleted && !isActive ? (
+                      <CheckCircle2 className="w-5 h-5 text-[#00BFFF]" />
+                    ) : (
+                      step.icon
+                    )}
+                    {isActive && !isComplete && (
+                      <div className="absolute inset-0 rounded-full border-2 border-[#00BFFF] animate-ping opacity-75" />
+                    )}
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* Step Text Info */}
+                  <div className="flex-1 pt-1 min-w-0">
+                    <h4
+                      className={`font-space text-sm sm:text-base font-bold tracking-tight ${
+                        isActive
+                          ? "text-[#00BFFF]"
+                          : isStepCompleted
+                          ? "text-white"
+                          : "text-zinc-500"
+                      }`}
+                    >
+                      {step.label}
+                    </h4>
+                    {isActive && !isComplete && (
+                      <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
+                        {step.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Live Stats — only show when NOT fully downloaded */}
+        {/* Live Stats — 2x2 Metric Cards (Matching Screenshot 2) */}
         {!isDownloaded && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
-            {[
-              // Only show Sync progress during SYNCING phase
-              {
-                icon: <Upload className="w-3.5 h-3.5 text-orbit-cyan" />,
-                label: "Sync",
-                value: isComplete ? "100%" : isSyncingPhase ? `${syncProgress}%` : activeStep > 4 ? "100%" : "—",
-                progress: isComplete ? 100 : isSyncingPhase ? syncProgress : activeStep > 4 ? 100 : undefined,
-                showProgress: isSyncingPhase || isComplete || activeStep > 4,
-              },
-              {
-                icon: <Timer className="w-3.5 h-3.5 text-orbit-cyan" />,
-                label: "ETA",
-                value: `${isComplete ? "0" : activeStep >= 5 ? countdown : "—"}`,
-                suffix: activeStep >= 5 && !isComplete ? " min" : "",
-              },
-              {
-                icon: <Film className="w-3.5 h-3.5 text-orbit-cyan" />,
-                label: "Package",
-                value: currentBooking.packageName,
-              },
-              {
-                icon: <CircleDot className="w-3.5 h-3.5 text-orbit-cyan" />,
-                label: "Status",
-                badge: true,
-                value: isComplete ? "Delivered" : "In Progress",
-              },
-            ].map((stat) => (
-              <motion.div
-                key={stat.label}
-                className="orbit-card rounded-xl p-3 sm:p-4"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  {stat.icon}
-                  <span className="text-[10px] sm:text-xs text-muted-foreground">{stat.label}</span>
-                </div>
-                {stat.badge ? (
-                  <Badge variant="outline" className={`text-[10px] sm:text-xs font-bold ${isComplete ? "border-green-500/30 text-green-400 bg-green-500/10" : "border-orbit-cyan/30 text-orbit-cyan bg-orbit-cyan/10"}`}>
-                    {stat.value}
-                  </Badge>
-                ) : (
-                  <>
-                    <div className="text-sm sm:text-2xl font-black text-foreground">
-                      {stat.value}
-                      <span className="text-[10px] sm:text-sm text-muted-foreground">{stat.suffix || ""}</span>
-                    </div>
-                    {stat.showProgress && stat.progress !== undefined && <Progress value={stat.progress} className="mt-2 h-1 bg-white/5" />}
-                  </>
-                )}
-              </motion.div>
-            ))}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            {/* Sync Metric */}
+            <div className="bg-[#0B0B0E] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between min-h-[96px]">
+              <div className="flex items-center gap-2">
+                <Upload className="w-4 h-4 text-[#00BFFF]" />
+                <span className="font-space text-xs font-semibold text-zinc-400 uppercase tracking-wider">Sync</span>
+              </div>
+              <div className="font-space text-2xl sm:text-3xl font-extrabold text-white">
+                {isComplete ? "100%" : isSyncingPhase ? `${syncProgress}%` : activeStep > 4 ? "100%" : "—"}
+              </div>
+            </div>
+
+            {/* ETA Metric */}
+            <div className="bg-[#0B0B0E] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between min-h-[96px]">
+              <div className="flex items-center gap-2">
+                <Timer className="w-4 h-4 text-[#00BFFF]" />
+                <span className="font-space text-xs font-semibold text-zinc-400 uppercase tracking-wider">ETA</span>
+              </div>
+              <div className="font-space text-2xl sm:text-3xl font-extrabold text-white">
+                {isComplete ? "0 min" : activeStep >= 5 ? `${countdown} min` : "—"}
+              </div>
+            </div>
+
+            {/* Package Name Card */}
+            <div className="bg-[#0B0B0E] border border-white/10 rounded-2xl p-4 sm:p-5 col-span-1">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Film className="w-4 h-4 text-[#00BFFF]" />
+                <span className="font-space text-xs font-semibold text-zinc-400 uppercase tracking-wider">Package</span>
+              </div>
+              <h3 className="font-space text-base sm:text-lg font-bold text-white truncate">
+                {currentBooking.packageName || "Personalized"}
+              </h3>
+            </div>
+
+            {/* Status Card */}
+            <div className="bg-[#0B0B0E] border border-white/10 rounded-2xl p-4 sm:p-5 col-span-1 flex flex-col justify-between">
+              <div className="flex items-center gap-2 mb-1.5">
+                <CircleDot className="w-4 h-4 text-[#00BFFF]" />
+                <span className="font-space text-xs font-semibold text-zinc-400 uppercase tracking-wider">Status</span>
+              </div>
+              <div>
+                <Badge className={`text-xs font-bold px-3 py-1 rounded-full ${isComplete ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" : "bg-[#00BFFF]/10 text-[#00BFFF] border border-[#00BFFF]/30"}`}>
+                  {isComplete ? "Delivered" : "In Progress"}
+                </Badge>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1010,21 +1011,30 @@ export function TrackingDashboard() {
           )}
         </AnimatePresence>
 
-        {/* Booking Details */}
-        <div className="orbit-card rounded-2xl p-4 sm:p-6">
-          <h4 className="text-xs sm:text-sm font-semibold mb-3 sm:mb-4 text-muted-foreground">Booking Details</h4>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
-            {[
-              { label: "Date", value: new Date(currentBooking.bookingDate).toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" }) },
-              { label: "Time", value: currentBooking.timeSlot },
-              { label: "Location", value: currentBooking.location },
-              { label: "Amount", value: formatCurrency(currentBooking.packagePrice) },
-            ].map((d) => (
-              <div key={d.label}>
-                <span className="text-muted-foreground">{d.label}</span>
-                <div className="font-medium">{d.value}</div>
+        {/* Booking Details (Matching Screenshot 2) */}
+        <div className="bg-[#0B0B0E] border border-white/10 rounded-2xl p-5 sm:p-6 shadow-lg">
+          <h4 className="font-space text-base font-bold text-[#00BFFF] mb-4">Booking Details</h4>
+          <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
+            <div>
+              <span className="text-zinc-400 text-xs font-mono uppercase tracking-wider block mb-1">Date</span>
+              <div className="font-space font-bold text-white text-sm sm:text-base">
+                {new Date(currentBooking.bookingDate).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
               </div>
-            ))}
+            </div>
+            <div>
+              <span className="text-zinc-400 text-xs font-mono uppercase tracking-wider block mb-1">Time</span>
+              <div className="font-space font-bold text-white text-sm sm:text-base">{currentBooking.timeSlot || "12:10 AM"}</div>
+            </div>
+            <div>
+              <span className="text-zinc-400 text-xs font-mono uppercase tracking-wider block mb-1">Location</span>
+              <div className="font-space font-bold text-white text-sm sm:text-base truncate">{currentBooking.location || "Mumbai, MH"}</div>
+            </div>
+            <div>
+              <span className="text-zinc-400 text-xs font-mono uppercase tracking-wider block mb-1">Amount</span>
+              <div className="font-space font-black text-[#00BFFF] text-base sm:text-lg">
+                {formatCurrency(currentBooking.packagePrice || 4999)}
+              </div>
+            </div>
           </div>
         </div>
       </div>

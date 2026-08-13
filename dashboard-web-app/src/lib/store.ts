@@ -109,6 +109,7 @@ interface AppState {
   // Auth
   isAuthenticated: boolean;
   userRole: UserRole;
+  setUserRole: (role: UserRole) => void;
   login: (role: UserRole, customUserData?: { email?: string; name?: string; phone?: string }) => Promise<void>;
   logout: () => void;
 
@@ -234,6 +235,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Auth
   isAuthenticated: false,
   userRole: "USER",
+  setUserRole: (role) => {
+    set({ userRole: role });
+    saveToStorage({ ...get(), userRole: role });
+  },
   login: async (role, customUserData) => {
     let pid = get().partnerId;
     const email = customUserData?.email || get().user.email || "creator@orbitlogic.io";

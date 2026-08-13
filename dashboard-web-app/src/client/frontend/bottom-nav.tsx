@@ -70,11 +70,11 @@ export function BottomNav() {
                 {isActive && (
                   <motion.div
                     layoutId="activeNavBackground"
-                    className={`absolute inset-0 bg-white/10 border border-white/20 ${cornerRadiusClass} shadow-[inset_1.5px_1.5px_1px_0_rgba(255,255,255,0.25),0_4px_16px_rgba(0,0,0,0.4)] overflow-hidden`}
+                    className={`absolute inset-0 bg-gradient-to-b from-white/15 to-white/5 border border-white/20 ${cornerRadiusClass} shadow-[0_0_20px_rgba(0,191,255,0.2)] overflow-hidden`}
                     transition={{ type: "spring", stiffness: 500, damping: 38, mass: 0.8 }}
                   >
-                    {/* Top monochrome line indicator */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-9 h-[3px] bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.6)]" />
+                    {/* Top gradient line indicator */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2.5px] bg-gradient-to-r from-[#00BFFF] to-[#A020F0] rounded-full shadow-[0_0_8px_rgba(0,191,255,0.8)]" />
                   </motion.div>
                 )}
 
@@ -84,8 +84,8 @@ export function BottomNav() {
                     <div
                       className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-200 ${
                         isActive
-                          ? "bg-white text-black shadow-[0_0_12px_rgba(255,255,255,0.6)]"
-                          : "bg-[#1E2029] border border-white/10 text-[#8E92A0] group-hover:text-zinc-200"
+                          ? "bg-gradient-to-br from-[#00BFFF] to-[#A020F0] text-white shadow-[0_0_12px_rgba(0,191,255,0.6)] ring-1 ring-white/50"
+                          : "bg-white/10 border border-white/10 text-zinc-400 group-hover:text-zinc-200"
                       }`}
                     >
                       {avatarInitial}
@@ -95,8 +95,8 @@ export function BottomNav() {
                       <Icon
                         className={`w-5 h-5 transition-all duration-200 ${
                           isActive
-                            ? "text-white scale-110 drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]"
-                            : "text-[#8E92A0] group-hover:text-zinc-200"
+                            ? "text-[#00BFFF] scale-110 drop-shadow-[0_0_8px_rgba(0,191,255,0.5)]"
+                            : "text-zinc-400 group-hover:text-zinc-200"
                         }`}
                         strokeWidth={isActive ? 2.5 : 1.8}
                       />
@@ -106,7 +106,7 @@ export function BottomNav() {
                   {/* Label */}
                   <span
                     className={`text-[10px] font-semibold tracking-tight transition-colors duration-200 ${
-                      isActive ? "text-white" : "text-[#8E92A0] group-hover:text-zinc-200"
+                      isActive ? "text-white" : "text-zinc-400 group-hover:text-zinc-200"
                     }`}
                   >
                     {item.label}
@@ -117,7 +117,7 @@ export function BottomNav() {
                 {item.view === "tracking" &&
                   currentBooking &&
                   !["DELIVERED", "CANCELLED"].includes(currentBooking.status) && (
-                    <div className="absolute top-2 right-4 w-2 h-2 rounded-full bg-white animate-ping z-20" />
+                    <div className="absolute top-2 right-3 w-2 h-2 rounded-full bg-[#10B981] shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse z-20" />
                   )}
               </button>
             );

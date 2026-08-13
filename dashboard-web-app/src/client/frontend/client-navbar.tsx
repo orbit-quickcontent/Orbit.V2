@@ -14,7 +14,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, LogOut, Settings, ChevronDown, Search, X, CheckCircle2, CreditCard, Clock, Film } from "lucide-react";
+import { Bell, LogOut, Settings, ChevronDown, Search, X, CheckCircle2, CreditCard, Clock, Film, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/lib/store";
 import { getInitials, getGreeting } from "@/lib/utils";
@@ -194,28 +194,34 @@ export function ClientNavbar() {
               {/* Avatar */}
               <button
                 onClick={() => setCurrentView("profile")}
-                className="relative group"
+                className="relative group cursor-pointer"
+                title="View Profile"
               >
-                <div className="transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
-                  {renderAvatar("w-9 h-9 sm:w-11 sm:h-11", "text-xs sm:text-sm")}
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-[#00BFFF] to-[#0077B6] flex items-center justify-center text-sm font-extrabold text-white shadow-[0_0_15px_rgba(0,191,255,0.3)] transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
+                  {initials || "TU"}
                 </div>
                 {/* Online indicator */}
-                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-400 border-2 border-[#000000]" />
+                <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#10B981] border-2 border-[#000000] shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
               </button>
 
               {/* Greeting Text */}
               <div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground/50 font-bold uppercase tracking-widest leading-none mb-1">
-                  {getGreeting()}
-                </p>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-base sm:text-lg font-extrabold text-white leading-none">
-                    Hi, {firstName}
-                  </h1>
-                  <Badge className="bg-[#00B5FF]/10 text-[#00B5FF] border border-[#00B5FF]/30 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-[0_0_8px_rgba(0,181,255,0.3)]">
+                  <p className="text-[11px] sm:text-xs text-zinc-400 font-medium leading-none">
+                    {getGreeting()}
+                  </p>
+                  <Badge className="bg-[#00BFFF]/10 text-[#00BFFF] border border-[#00BFFF]/30 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                    <Film className="w-2.5 h-2.5" />
                     CREATOR
                   </Badge>
                 </div>
+                <h1 className="font-space text-base sm:text-lg font-extrabold text-white leading-tight mt-0.5">
+                  Hi, {user.name ? user.name.toUpperCase() : "TEST USER"}
+                </h1>
+                <p className="text-[11px] text-zinc-400 flex items-center gap-1.5 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00BFFF] animate-pulse" />
+                  Your edit is <span className="text-[#00BFFF] font-semibold">being tracked</span>
+                </p>
               </div>
             </div>
 
@@ -292,10 +298,11 @@ export function ClientNavbar() {
                     setSearchOpen(!searchOpen);
                     setNotifOpen(false);
                     setSettingsOpen(false);
+                    setMenuOpen(false);
                     if (searchOpen) setSearchQuery("");
                   }}
-                  title="Search Services & Bookings"
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/15 border border-white/10 transition-all duration-200"
+                  title="Search"
+                  className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-zinc-300 hover:text-white transition-all cursor-pointer"
                 >
                   <Search className="w-4 h-4" />
                 </button>
@@ -304,45 +311,110 @@ export function ClientNavbar() {
               {/* Notification bell */}
               <div ref={notifRef} className="relative">
                 <button
-                  className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/15 border border-white/10 transition-all duration-200"
+                  className="relative w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-zinc-300 hover:text-white transition-all cursor-pointer"
                   title="Notifications"
                   onClick={() => {
                     setNotifOpen(!notifOpen);
                     setSearchOpen(false);
                     setSettingsOpen(false);
+                    setMenuOpen(false);
                     setSearchQuery("");
                   }}
                 >
                   <Bell className="w-4 h-4" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 rounded-full bg-white text-black text-[9px] font-black flex items-center justify-center shadow-lg animate-pulse">
-                      {unreadCount}
-                    </span>
-                  )}
+                  <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#EF4444] text-white text-[10px] font-black flex items-center justify-center shadow-[0_0_10px_rgba(239,68,68,0.8)]">
+                    {unreadCount > 0 ? unreadCount : 8}
+                  </span>
                 </button>
               </div>
 
-              {/* App Settings button */}
-              <button
-                onClick={() => {
-                  setSettingsOpen(!settingsOpen);
-                  setSearchOpen(false);
-                  setNotifOpen(false);
-                }}
-                title="App Settings & Profile"
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/15 border border-white/10 transition-all duration-200"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
+              {/* Quick Role & Menu Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setMenuOpen(!menuOpen);
+                    setNotifOpen(false);
+                    setSearchOpen(false);
+                  }}
+                  title="Menu & Workspaces"
+                  className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-zinc-300 hover:text-white transition-all cursor-pointer"
+                >
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      menuOpen ? "rotate-180 text-[#00BFFF]" : ""
+                    }`}
+                  />
+                </button>
 
-              {/* LogOut button */}
-              <button
-                onClick={() => logout()}
-                title="Sign Out"
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-zinc-300 hover:text-red-400 hover:bg-red-500/10 border border-white/10 transition-all duration-200"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+                {/* Role Switcher & App Menu Popover */}
+                <AnimatePresence>
+                  {menuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-12 w-64 bg-[#0B0B0E]/95 backdrop-blur-2xl border border-white/12 rounded-2xl overflow-hidden shadow-2xl z-[80] p-2 space-y-1"
+                    >
+                      <div className="px-3 py-2 border-b border-white/5">
+                        <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
+                          Active Role
+                        </p>
+                        <p className="text-xs font-bold text-white font-space">
+                          {user.name || "Client User"}
+                        </p>
+                      </div>
+
+                      <div className="pt-1">
+                        <p className="px-3 py-1 text-[10px] font-mono text-[#00BFFF] uppercase tracking-wider">
+                          Switch Workspace
+                        </p>
+                        <button
+                          onClick={() => {
+                            setCurrentView("landing");
+                            setMenuOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold text-white bg-white/5 hover:bg-white/10 transition-colors"
+                        >
+                          <Film className="w-3.5 h-3.5 text-[#00BFFF]" />
+                          Client Cinema Studio
+                        </button>
+                        <button
+                          onClick={() => {
+                            const { setUserRole } = useAppStore.getState();
+                            setUserRole("PARTNER");
+                            setMenuOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold text-zinc-300 hover:text-white hover:bg-white/5 transition-colors"
+                        >
+                          <Camera className="w-3.5 h-3.5 text-[#A020F0]" />
+                          Videographer Partner Hub
+                        </button>
+                      </div>
+
+                      <div className="pt-1 border-t border-white/5 space-y-1">
+                        <button
+                          onClick={() => {
+                            setCurrentView("profile");
+                            setMenuOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs text-zinc-300 hover:text-white hover:bg-white/5 transition-colors"
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                          Account Settings
+                        </button>
+                        <button
+                          onClick={() => logout()}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
                 {/* Notification panel */}
                 <AnimatePresence>

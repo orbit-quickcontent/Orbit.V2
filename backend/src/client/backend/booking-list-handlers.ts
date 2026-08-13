@@ -16,6 +16,8 @@ import { generatePresignedUrl } from '@/lib/security'
 import { verifyToken } from '@/lib/security-auth'
 import { notifyDispatch } from '@/services/websocket.service'
 import { findNearestPartners } from '@/services/geo.service'
+import { createFinancialSnapshot } from '@/lib/package-economics'
+import { triggerNearbyPartnerDispatch } from '@/services/dispatch.service'
 
 /**
  * Trigger the dispatch logic in-process without going through localhost HTTP.
@@ -282,6 +284,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Freeze centralized package economics snapshot (guaranteed ₹700 partner payout)
+    const financialSnapshot = createFinancialSnapshot(pkg?.tier || pkg?.price || 1999);
+
+    const initialStatus = razorpayPaymentId ? "PAID" : "PENDING";
+    const initialPaymentStatus = razorpayPaymentId ? "SUCCESS" : "UNPAID";
+
     const booking = await firestoreDb.bookings.create({
       data: {
         userId,
@@ -291,30 +299,37 @@ export async function POST(request: NextRequest) {
         location: location || null,
         notes: notes || null,
         // GPS coordinates — stored for proximity-based partner dispatch
+        latitude: lat != null ? Number(lat) : null,
+        longitude: lng != null ? Number(lng) : null,
         lat: lat != null ? Number(lat) : null,
         lng: lng != null ? Number(lng) : null,
-        status: 'PAID',
-        paymentStatus: 'SUCCESS',
+        status: initialStatus,
+        paymentStatus: initialPaymentStatus,
         paymentId: razorpayPaymentId || null,
-        paymentMethod: razorpayPaymentId ? 'razorpay' : null,
+        paymentMethod: razorpayPaymentId ? "razorpay" : null,
+        // Immutable Financial Snapshot (Frozen)
+        grossAmount: financialSnapshot.grossAmount,
+        partnerEarningAmount: financialSnapshot.partnerEarningAmount, // Guaranteed ₹700
+        editorPayoutAmount: financialSnapshot.editorPayoutAmount,
+        taxAmount: financialSnapshot.taxAmount,
+        platformCommissionAmount: financialSnapshot.platformCommissionAmount,
+        partnerEarningStatus: "PENDING",
         syncPercentage: 0,
       },
     });
 
-    // Automatically trigger partner dispatch immediately upon creation (in-process, no HTTP)
-    ;(async () => {
-      try {
-        const bookingLat = lat != null ? Number(lat) : null;
-        const bookingLng = lng != null ? Number(lng) : null;
-        await triggerDispatch(booking.id, bookingLat, bookingLng)
-      } catch (dispatchErr) {
-        console.error('Failed to trigger automatic dispatch:', dispatchErr)
-      }
-    })()
+    // If already paid, automatically trigger nearby partner dispatch
+    if (initialStatus === "PAID") {
+      triggerNearbyPartnerDispatch(booking.id).catch((dispatchErr) => {
+        console.error("Failed to trigger automatic dispatch:", dispatchErr);
+      });
+    }
 
-    // Map relationships to match original payload
+    // Map relationships to match payload with backward compatible aliases
     const bookingWithRelations = {
       ...booking,
+      partnerEarningAmount: financialSnapshot.partnerEarningAmount,
+      earningAmount: financialSnapshot.partnerEarningAmount, // Compatibility alias
       user: {
         id: user.id,
         name: user.name,
@@ -330,11 +345,10 @@ export async function POST(request: NextRequest) {
       action: "CREATE_BOOKING",
       entity: "Booking",
       entityId: booking.id,
-      details: { packageId, bookingDate, timeSlot },
-      req: request,
-    })
+      details: { packageId, bookingDate, timeSlot, financialSnapshot },
+    });
 
-    return NextResponse.json({ booking: bookingWithRelations }, { status: 201 })
+    return NextResponse.json({ booking: bookingWithRelations, success: true }, { status: 201 });
   } catch (error) {
     console.error('Error creating booking:', error)
     return NextResponse.json(

@@ -406,24 +406,24 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setSelectedRole("USER")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                   selectedRole === "USER"
-                    ? "bg-[#00B5FF] text-black shadow-[0_0_12px_rgba(0,181,255,0.4)]"
+                    ? "bg-[#00BFFF] text-black shadow-[0_0_12px_rgba(0,191,255,0.4)]"
                     : "text-[#8E92A0] hover:text-white"
                 }`}
               >
-                👤 Client Account
+                <User className="w-3.5 h-3.5" /> Client Account
               </button>
               <button
                 type="button"
                 onClick={() => setSelectedRole("PARTNER")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                   selectedRole === "PARTNER"
-                    ? "bg-[#A832FF] text-white shadow-[0_0_12px_rgba(168,50,255,0.4)]"
+                    ? "bg-[#A020F0] text-white shadow-[0_0_12px_rgba(160,32,240,0.4)]"
                     : "text-[#8E92A0] hover:text-white"
                 }`}
               >
-                🎥 Partner Account
+                <Camera className="w-3.5 h-3.5" /> Partner Account
               </button>
             </div>
 

@@ -13,7 +13,8 @@
     "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*", "dist/*"],
+      "next/server": ["src/lib/next-shim.ts", "dist/lib/next-shim.js"]
     }
   },
   "include": ["src/**/*"]
