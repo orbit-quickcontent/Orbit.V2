@@ -5,9 +5,9 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node -r tsconfig-paths/register --transpile-only src/server.ts",
-    "build": "prisma generate && tsc --noEmit",
-    "start": "ts-node -r tsconfig-paths/register --transpile-only src/server.ts",
-    "render-build": "npm install && prisma generate && tsc --noEmit",
+    "build": "prisma generate && tsc",
+    "start": "node -r tsconfig-paths/register dist/server.js",
+    "render-build": "prisma generate && tsc",
     "test": "vitest run --config ./vitest.config.ts",
     "lint": "tsc --noEmit",
     "db:generate": "prisma generate",

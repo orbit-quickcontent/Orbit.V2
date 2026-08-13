@@ -19,7 +19,7 @@ export async function assignEditor(bookingId: string): Promise<string> {
 
   await dbClient.booking.update({
     where: { id: bookingId },
-    data: { editorId: selected.id, editorAssignedAt: new Date() },
+    data: { editorId: selected.id },
   });
 
   notifyClient({

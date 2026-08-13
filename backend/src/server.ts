@@ -1,12 +1,10 @@
 import express from "express";
-import { createServer as createHttpServer } from "http";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import helmet from "helmet";
 import apiRouter from "./routes/api.router";
 import { initWebSocketService } from "./services/websocket.service";
-import { startDispatchTimeoutWorker } from "./services/dispatch.service";
 import { validateEnv } from "./lib/env-validator";
 import { requestLogger, logger } from "./lib/logger";
 import { validatePresignedToken } from "./lib/security";
@@ -114,10 +112,10 @@ if (process.env.NODE_ENV !== "production" && process.env.LOCAL_UPLOADS_ENABLED !
 
 app.use("/api", apiRouter);
 
-const httpServer = createHttpServer(app);
-initWebSocketService(httpServer);
-startDispatchTimeoutWorker();
+// Initialize WebSocket service on port 3003
+initWebSocketService();
 
-httpServer.listen(Number(PORT), "0.0.0.0", () => {
-  logger.info(`[API + WS] Unified REST & WebSocket server running on http://0.0.0.0:${PORT}`);
+// Start standalone REST API server on port 5000
+app.listen(Number(PORT), "0.0.0.0", () => {
+  logger.info(`[API] Standalone REST API server running on http://0.0.0.0:${PORT}`);
 });
