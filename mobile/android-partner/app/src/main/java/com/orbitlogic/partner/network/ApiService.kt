@@ -43,6 +43,17 @@ data class BookingDto(
     val etaMinutes: Int? = null
 )
 
+data class AvailableBookingItemDto(
+    val dispatchId: String? = null,
+    val round: Int? = null,
+    val dispatchedAt: String? = null,
+    val booking: BookingDto? = null
+)
+
+data class AvailableBookingsResponse(
+    val availableBookings: List<AvailableBookingItemDto> = emptyList()
+)
+
 // Location update request — sent every 5s while partner is online
 data class LocationUpdateRequest(
     val latitude: Double = 0.0,
@@ -193,7 +204,7 @@ interface ApiService {
     suspend fun getAvailableBookings(
         @Header("Authorization") token: String,
         @Query("partnerId") partnerId: String
-    ): List<BookingDto>
+    ): AvailableBookingsResponse
 
     @POST("partner/location")
     suspend fun updateLocation(

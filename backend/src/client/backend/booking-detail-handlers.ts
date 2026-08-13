@@ -261,6 +261,20 @@ export async function PATCH(
       updateData.deliveredAt = new Date().toISOString()
     }
 
+    if (body.status === 'CANCELLED') {
+      updateData.cancelledBy = body.cancelledBy || 'CLIENT'
+      await firestoreDb.workDispatches.updateMany({
+        where: {
+          bookingId: id,
+          status: 'PENDING',
+        },
+        data: {
+          status: 'CANCELLED',
+          respondedAt: new Date().toISOString(),
+        },
+      })
+    }
+
     const updatedRaw = await firestoreDb.bookings.update({
       where: { id },
       data: updateData,

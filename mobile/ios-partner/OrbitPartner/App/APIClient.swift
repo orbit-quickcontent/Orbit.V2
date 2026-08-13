@@ -23,8 +23,22 @@ struct Booking: Codable, Identifiable {
     let timeSlot: String
     let location: String?
     let notes: String?
-    let syncPercentage: Int
-    let createdAt: String
+    let syncPercentage: Int?
+    let createdAt: String?
+    let clientName: String?
+    let packageName: String?
+    let packagePrice: Double?
+}
+
+struct AvailableBookingItem: Codable {
+    let dispatchId: String?
+    let round: Int?
+    let dispatchedAt: String?
+    let booking: Booking?
+}
+
+struct AvailableBookingsResponse: Codable {
+    let availableBookings: [AvailableBookingItem]?
 }
 
 struct PartnerProfile: Codable, Identifiable {
@@ -89,5 +103,14 @@ class APIClient {
         } catch {
             throw APIError.requestFailed(error)
         }
+    }
+    
+    func getAvailableBookings(partnerId: String, token: String) async throws -> [Booking] {
+        let res: AvailableBookingsResponse = try await request(
+            endpoint: "bookings/available?partnerId=\(partnerId)",
+            method: "GET",
+            token: token
+        )
+        return res.availableBookings?.compactMap { $0.booking } ?? []
     }
 }

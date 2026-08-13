@@ -56,6 +56,33 @@ fun MainPartnerNavigationHost() {
     var isAppLoading by remember { mutableStateOf(true) }
     var isAuthenticated by remember { mutableStateOf(prefsManager.isLoggedIn()) }
     var currentTab by remember { mutableStateOf("home") }
+    val tabStack = remember { mutableStateListOf("home") }
+
+    fun navigateToTab(newTab: String) {
+        if (newTab != currentTab) {
+            if (tabStack.lastOrNull() != newTab) {
+                tabStack.add(newTab)
+            }
+            currentTab = newTab
+        }
+    }
+
+    val canGoBack = showPermissionModal || tabStack.size > 1 || currentTab != "home"
+
+    androidx.activity.compose.BackHandler(enabled = canGoBack) {
+        when {
+            showPermissionModal -> showPermissionModal = false
+            tabStack.size > 1 -> {
+                tabStack.removeAt(tabStack.lastIndex)
+                currentTab = tabStack.last()
+            }
+            currentTab != "home" -> {
+                tabStack.clear()
+                tabStack.add("home")
+                currentTab = "home"
+            }
+        }
+    }
     val coroutineScope = rememberCoroutineScope()
 
     val requiredPermissions = remember {
@@ -98,7 +125,7 @@ fun MainPartnerNavigationHost() {
             PartnerLoginScreen(onLoginSuccess = { token, partnerId ->
                 prefsManager.saveAuthSession(token, partnerId)
                 isAuthenticated = true
-                currentTab = "home"
+                navigateToTab("home")
                 // Fetch partner profile after login to confirm the session is valid
                 coroutineScope.launch {
                     try {
@@ -121,7 +148,7 @@ fun MainPartnerNavigationHost() {
                     ) {
                         PartnerBottomNavigationBar(
                             currentTab = currentTab,
-                            onSelectTab = { currentTab = it }
+                            onSelectTab = { navigateToTab(it) }
                         )
                     }
                 }
@@ -144,12 +171,12 @@ fun MainPartnerNavigationHost() {
                     ) { targetTab ->
                         when (targetTab) {
                             "home" -> PartnerDashboardScreen(
-                                onAcceptDispatch = { currentTab = "nav" },
-                                onNavigateToWork = { currentTab = "nav" }
+                                onAcceptDispatch = { navigateToTab("nav") },
+                                onNavigateToWork = { navigateToTab("nav") }
                             )
                             "work" -> PartnerWorkHistoryScreen()
                             "earnings" -> PartnerWalletScreen(
-                                onGoToSettings = { currentTab = "profile" }
+                                onGoToSettings = { navigateToTab("profile") }
                             )
                             "profile" -> PartnerProfileScreen(
                                 onLogout = {
@@ -158,13 +185,13 @@ fun MainPartnerNavigationHost() {
                                 }
                             )
                             "nav" -> MapNavigationScreen(
-                                onStartShooting = { currentTab = "camera" }
+                                onStartShooting = { navigateToTab("camera") }
                             )
                             "camera" -> CameraScreen(
-                                onCompleteShoot = { currentTab = "sync" }
+                                onCompleteShoot = { navigateToTab("sync") }
                             )
                             "sync" -> VideoSyncScreen(
-                                onSyncFinish = { currentTab = "earnings" }
+                                onSyncFinish = { navigateToTab("earnings") }
                             )
                         }
                     }

@@ -80,6 +80,9 @@ struct ClientTopAppBar: View {
     var userInitials: String = "TU"
     var roleBadge: String = "CREATOR"
     var onProfileClick: () -> Void = {}
+    var onSearchClick: () -> Void = {}
+    var onNotifClick: () -> Void = {}
+    var onSettingsClick: () -> Void = {}
     
     var body: some View {
         HStack {
@@ -105,7 +108,7 @@ struct ClientTopAppBar: View {
                             .font(.system(size: 9, weight: .bold))
                             .foregroundColor(Theme.secondaryText)
                             .tracking(1)
-                        Text("🎁 \(roleBadge)")
+                        Text(roleBadge)
                             .font(.system(size: 8, weight: .black))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -122,15 +125,27 @@ struct ClientTopAppBar: View {
             
             Spacer()
             
-            HStack(spacing: 12) {
-                Text("🔍").font(.system(size: 16))
+            HStack(spacing: 14) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(Theme.secondaryText)
+                    .onTapGesture { onSearchClick() }
+                
                 ZStack(alignment: .topTrailing) {
-                    Text("🔔").font(.system(size: 16))
+                    Image(systemName: "bell.fill")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(Theme.secondaryText)
                     Circle()
                         .fill(Theme.orbitCyan)
                         .frame(width: 8, height: 8)
+                        .offset(x: 2, y: -2)
                 }
-                Text("▾").font(.system(size: 14)).foregroundColor(.white)
+                .onTapGesture { onNotifClick() }
+                
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(Theme.secondaryText)
+                    .onTapGesture { onSettingsClick() }
             }
         }
         .padding(.horizontal, 16)
@@ -843,6 +858,8 @@ struct BookingFlowView: View {
 
 struct TrackingView: View {
     let bookingId: String
+    var onClose: (() -> Void)? = nil
+    @State private var isCancelling = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -850,7 +867,7 @@ struct TrackingView: View {
             
             ScrollView {
                 VStack(spacing: 20) {
-                    OrbitHeader(title = "Shoot Status Tracker", subtitle = "Booking ID: \(bookingId)")
+                    OrbitHeader(title: "Shoot Status Tracker", subtitle: "Booking ID: \(bookingId)")
                     
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Booking Status: SHOOTING IN PROGRESS")
@@ -872,6 +889,27 @@ struct TrackingView: View {
                         }
                     }
                     .glassCardStyle()
+                    
+                    Button(action: {
+                        isCancelling = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                            onClose?()
+                        }
+                    }) {
+                        HStack {
+                            Text("✕")
+                                .bold()
+                            Text(isCancelling ? "Cancelling..." : "Cancel Booking")
+                                .bold()
+                        }
+                        .foregroundColor(Theme.destructive)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(Theme.destructive.opacity(0.15))
+                        .cornerRadius(12)
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.destructive.opacity(0.4), lineWidth: 1))
+                    }
+                    .disabled(isCancelling)
                 }
                 .padding(16)
             }
@@ -1161,7 +1199,7 @@ public struct ClientMainNavigationHost: View {
                     }
                     
                     Tab("Track", systemImage: "scope", value: "tracking") {
-                        TrackingScreen(bookingId: activeBookingId)
+                        TrackingScreen(bookingId: activeBookingId, onClose: { currentTab = "home" })
                     }
                     
                     Tab("Profile", systemImage: "person.crop.circle", value: "profile") {
@@ -1195,7 +1233,7 @@ public struct ClientMainNavigationHost: View {
                                 currentTab = "tracking"
                             })
                         case "tracking":
-                            TrackingScreen(bookingId: activeBookingId)
+                            TrackingScreen(bookingId: activeBookingId, onClose: { currentTab = "home" })
                         case "profile":
                             ProfileScreen(onLogout: { isAuthenticated = false })
                         default:
@@ -1211,6 +1249,7 @@ public struct ClientMainNavigationHost: View {
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .animation(.spring(response: 0.35, dampingFraction: 0.82), value: currentTab)
                     
                     ClientBottomNavigationBar(currentTab: $currentTab)
                 }

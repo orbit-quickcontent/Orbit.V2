@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -685,7 +686,10 @@ fun PartnerSplashScreen(onSplashFinished: () -> Unit) {
         ) {
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.scale(pulseScale)
+                modifier = Modifier.graphicsLayer {
+                    scaleX = pulseScale
+                    scaleY = pulseScale
+                }
             ) {
                 Box(
                     modifier = Modifier
@@ -842,8 +846,9 @@ fun PartnerDashboardScreen(
                     val token = "Bearer ${prefsManager.getAuthToken()}"
                     val pid = prefsManager.getPartnerId() ?: ""
                     if (pid.isBlank()) { activeDispatch = null; return@launch }
-                    val available = ApiClient.apiService.getAvailableBookings(token, pid)
-                    if (activeDispatch == null) activeDispatch = available.firstOrNull()
+                    val response = ApiClient.apiService.getAvailableBookings(token, pid)
+                    val availableList = response.availableBookings.mapNotNull { it.booking }
+                    if (activeDispatch == null) activeDispatch = availableList.firstOrNull()
                 } else {
                     activeDispatch = null
                 }
@@ -1773,7 +1778,7 @@ fun SafeMapView(
     val context = androidx.compose.ui.platform.LocalContext.current
     var hasWebViewError by remember { mutableStateOf(false) }
 
-    val htmlContent = remember(location, title) {
+    val htmlContent = remember(location.latitude, location.longitude, title) {
         """
         <!DOCTYPE html>
         <html>
@@ -1851,6 +1856,7 @@ fun SafeMapView(
             modifier = modifier,
             factory = { ctx ->
                 WebView(ctx).apply {
+                    setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.setGeolocationEnabled(true)

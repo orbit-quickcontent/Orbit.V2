@@ -150,10 +150,15 @@ struct PartnerDashboardView: View {
                             .font(.title2)
                             .bold()
                             .foregroundColor(.white)
-                        Text(isOnline ? "🟢 ONLINE - Receiving Dispatches" : "🔴 OFFLINE")
-                            .font(.caption)
-                            .bold()
-                            .foregroundColor(isOnline ? Theme.orbitCyan : Theme.secondaryText)
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(isOnline ? Color.green : Color.red)
+                                .frame(width: 8, height: 8)
+                            Text(isOnline ? "ONLINE - Receiving Dispatches" : "OFFLINE")
+                                .font(.caption)
+                                .bold()
+                                .foregroundColor(isOnline ? Theme.orbitCyan : Theme.secondaryText)
+                        }
                     }
                     Spacer()
                     Toggle("", isOn: $isOnline)
@@ -165,11 +170,14 @@ struct PartnerDashboardView: View {
                 if isOnline && activeDispatchId != nil {
                     VStack(alignment: .leading, spacing: 14) {
                         HStack {
-                            Text("⚡ NEW SHOOT DISPATCH ALERT")
-                                .font(.caption2)
-                                .bold()
-                                .foregroundColor(Theme.orbitPurple)
-                                .tracking(1)
+                            HStack(spacing: 4) {
+                                Image(systemName: "bolt.fill")
+                                Text("NEW SHOOT DISPATCH ALERT")
+                            }
+                            .font(.caption2)
+                            .bold()
+                            .foregroundColor(Theme.orbitPurple)
+                            .tracking(1)
                             Spacer()
                             Text("\(countdownSeconds)s")
                                 .font(.caption)
@@ -280,10 +288,13 @@ struct MapNavigationView: View {
                     .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.border, lineWidth: 1))
                 
                 VStack(spacing: 8) {
-                    Text("🗺️ MapKit Native Navigation")
-                        .font(.headline)
-                        .bold()
-                        .foregroundColor(Theme.orbitCyan)
+                    HStack(spacing: 6) {
+                        Image(systemName: "map.fill")
+                        Text("MapKit Native Navigation")
+                    }
+                    .font(.headline)
+                    .bold()
+                    .foregroundColor(Theme.orbitCyan)
                     Text("Route simulation to client shoot location")
                         .font(.caption)
                         .foregroundColor(Theme.secondaryText)

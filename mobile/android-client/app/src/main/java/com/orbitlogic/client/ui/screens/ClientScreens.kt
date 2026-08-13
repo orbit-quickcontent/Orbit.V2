@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -37,6 +38,8 @@ import android.webkit.WebViewClient
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import com.orbitlogic.client.R
 import com.orbitlogic.client.ui.theme.*
 
@@ -201,7 +204,12 @@ fun ClientTopAppBar(
                     .clickable { onSearchClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Text("🔍", fontSize = 15.sp)
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = headerText,
+                    modifier = Modifier.size(18.dp)
+                )
             }
             // Notifications
             Box(
@@ -213,7 +221,12 @@ fun ClientTopAppBar(
                     .clickable { onNotifClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Text("🔔", fontSize = 15.sp)
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = "Notifications",
+                    tint = headerText,
+                    modifier = Modifier.size(18.dp)
+                )
             }
             // Settings
             Box(
@@ -225,7 +238,12 @@ fun ClientTopAppBar(
                     .clickable { onSettingsClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Text("⚙️", fontSize = 14.sp)
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = headerText,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
@@ -1159,13 +1177,24 @@ fun DashboardHomeScreen(
 // ─── Screen 3: Packages Selection ─────────────────────────────────────────────
 
 @Composable
-fun PackagesScreen(onSelectPackage: (String) -> Unit) {
+fun PackagesScreen(
+    onSelectPackage: (String) -> Unit,
+    onSearchClick: () -> Unit = {},
+    onNotifClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {}
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(SpaceNavy)
     ) {
-        ClientTopAppBar()
+        ClientTopAppBar(
+            onSearchClick = onSearchClick,
+            onNotifClick = onNotifClick,
+            onSettingsClick = onSettingsClick,
+            onProfileClick = onProfileClick
+        )
 
         Column(
             modifier = Modifier
@@ -2392,7 +2421,7 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("💳", fontSize = 14.sp)
+                            Icon(imageVector = Icons.Default.CreditCard, contentDescription = null, tint = OrbitCyan, modifier = Modifier.size(16.dp))
                             Text("Choose Payment Method", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
 
@@ -2403,7 +2432,7 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                                 border = BorderStroke(1.dp, if (selectedPaymentMethod == "upi") OrbitCyan else Color.White.copy(alpha = 0.1f)),
                                 modifier = Modifier.weight(1f).clickable { selectedPaymentMethod = "upi" }
                             ) {
-                                Text("UPI EXPRESS ⚡", color = if (selectedPaymentMethod == "upi") OrbitCyan else MutedText, fontSize = 12.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.padding(14.dp))
+                                Text("UPI EXPRESS", color = if (selectedPaymentMethod == "upi") OrbitCyan else MutedText, fontSize = 12.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.padding(14.dp))
                             }
 
                             Surface(
@@ -2416,7 +2445,7 @@ fun BookingFlowScreen(packageId: String, onBookingComplete: () -> Unit) {
                             }
                         }
 
-                        Text("🔐 All simulated payments are completely dummy checkouts and process state instantly.", color = Color(0xFF71717A), fontSize = 11.sp)
+                        Text("All simulated payments are completely dummy checkouts and process state instantly.", color = Color(0xFF71717A), fontSize = 11.sp)
                     }
                 }
 
@@ -2634,7 +2663,10 @@ fun ClientSplashScreen(onSplashFinished: () -> Unit) {
         ) {
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.scale(pulseScale)
+                modifier = Modifier.graphicsLayer {
+                    scaleX = pulseScale
+                    scaleY = pulseScale
+                }
             ) {
                 Box(
                     modifier = Modifier
@@ -2729,7 +2761,14 @@ fun ClientSplashScreen(onSplashFinished: () -> Unit) {
 // ─── Screen 5: Live Booking Tracker (Web App Parity & MapTiler Maps) ────────────
 
 @Composable
-fun TrackingScreen(bookingId: String) {
+fun TrackingScreen(
+    bookingId: String,
+    onClose: () -> Unit = {},
+    onSearchClick: () -> Unit = {},
+    onNotifClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {}
+) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var isCancelled by remember { mutableStateOf(false) }
     var currentStatus by remember { mutableStateOf("DISPATCHED") }
@@ -2742,6 +2781,7 @@ fun TrackingScreen(bookingId: String) {
                 currentStatus = status
                 if (status == "CANCELLED") {
                     isCancelled = true
+                    onClose()
                 }
             }
         }
@@ -2774,7 +2814,12 @@ fun TrackingScreen(bookingId: String) {
             .fillMaxSize()
             .background(Color(0xFF05060A))
     ) {
-        ClientTopAppBar()
+        ClientTopAppBar(
+            onSearchClick = onSearchClick,
+            onNotifClick = onNotifClick,
+            onSettingsClick = onSettingsClick,
+            onProfileClick = onProfileClick
+        )
 
         Column(
             modifier = Modifier
@@ -2825,6 +2870,8 @@ fun TrackingScreen(bookingId: String) {
                                     isCancelled = true
                                     currentStatus = "CANCELLED"
                                     android.widget.Toast.makeText(context, "Booking successfully cancelled.", android.widget.Toast.LENGTH_SHORT).show()
+                                    kotlinx.coroutines.delay(400)
+                                    onClose()
                                 } catch (e: Exception) {
                                     android.util.Log.e("TrackingScreen", "Error cancelling booking", e)
                                     android.widget.Toast.makeText(context, "Failed to cancel booking. Please try again.", android.widget.Toast.LENGTH_SHORT).show()
@@ -2883,7 +2930,7 @@ fun TrackingScreen(bookingId: String) {
                                         .border(1.dp, OrbitCyan, CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("🌊", fontSize = 16.sp)
+                                    Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = OrbitCyan, modifier = Modifier.size(18.dp))
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
@@ -2904,7 +2951,10 @@ fun TrackingScreen(bookingId: String) {
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .scale(pulseScale)
+                                        .graphicsLayer {
+                                            scaleX = pulseScale
+                                            scaleY = pulseScale
+                                        }
                                         .size(46.dp)
                                         .clip(CircleShape)
                                         .background(
@@ -2915,7 +2965,7 @@ fun TrackingScreen(bookingId: String) {
                                         .border(2.dp, Color(0xFF00F0FF), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("👥", fontSize = 20.sp)
+                                    Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
@@ -2949,7 +2999,7 @@ fun TrackingScreen(bookingId: String) {
                                         .border(1.dp, Color(0xFF282C40), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("🧭", fontSize = 14.sp)
+                                    Icon(imageVector = Icons.Default.Navigation, contentDescription = null, tint = MutedText, modifier = Modifier.size(16.dp))
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
@@ -2976,7 +3026,7 @@ fun TrackingScreen(bookingId: String) {
                                         .border(1.dp, Color(0xFF282C40), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("📷", fontSize = 14.sp)
+                                    Icon(imageVector = Icons.Default.CameraAlt, contentDescription = null, tint = MutedText, modifier = Modifier.size(16.dp))
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
@@ -3003,7 +3053,7 @@ fun TrackingScreen(bookingId: String) {
                                         .border(1.dp, Color(0xFF282C40), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("📤", fontSize = 14.sp)
+                                    Icon(imageVector = Icons.Default.CloudUpload, contentDescription = null, tint = MutedText, modifier = Modifier.size(16.dp))
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
@@ -3030,7 +3080,7 @@ fun TrackingScreen(bookingId: String) {
                                         .border(1.dp, Color(0xFF282C40), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("🎬", fontSize = 14.sp)
+                                    Icon(imageVector = Icons.Default.Movie, contentDescription = null, tint = MutedText, modifier = Modifier.size(16.dp))
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
@@ -3094,7 +3144,7 @@ fun TrackingScreen(bookingId: String) {
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text("📤", fontSize = 12.sp)
+                                Icon(imageVector = Icons.Default.CloudUpload, contentDescription = null, tint = MutedText, modifier = Modifier.size(14.dp))
                                 Text("Sync", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                             }
                             Spacer(modifier = Modifier.height(6.dp))
@@ -3111,7 +3161,7 @@ fun TrackingScreen(bookingId: String) {
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text("⏱", fontSize = 12.sp)
+                                Icon(imageVector = Icons.Default.Schedule, contentDescription = null, tint = MutedText, modifier = Modifier.size(14.dp))
                                 Text("ETA", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                             }
                             Spacer(modifier = Modifier.height(6.dp))
@@ -3134,7 +3184,7 @@ fun TrackingScreen(bookingId: String) {
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text("🎬", fontSize = 12.sp)
+                                Icon(imageVector = Icons.Default.Movie, contentDescription = null, tint = MutedText, modifier = Modifier.size(14.dp))
                                 Text("Package", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                             }
                             Spacer(modifier = Modifier.height(6.dp))
@@ -3283,7 +3333,9 @@ fun TrackingScreen(bookingId: String) {
 @Composable
 fun ProfileScreen(
     onLogout: () -> Unit,
-    onOpenSettings: () -> Unit = {}
+    onOpenSettings: () -> Unit = {},
+    onSearchClick: () -> Unit = {},
+    onNotifClick: () -> Unit = {}
 ) {
     val isLight = com.orbitlogic.client.ui.theme.LocalOrbitIsLight.current
     val bg = if (isLight) com.orbitlogic.client.ui.theme.LightBg else SpaceNavy
@@ -3299,7 +3351,9 @@ fun ProfileScreen(
             .background(bg)
     ) {
         ClientTopAppBar(
-            onSettingsClick = onOpenSettings
+            onSettingsClick = onOpenSettings,
+            onSearchClick = onSearchClick,
+            onNotifClick = onNotifClick
         )
 
         Column(
@@ -3501,7 +3555,7 @@ fun SafeMapView(
     val context = androidx.compose.ui.platform.LocalContext.current
     var hasWebViewError by remember { mutableStateOf(false) }
 
-    val htmlContent = remember(location, title) {
+    val htmlContent = remember(location.latitude, location.longitude, title) {
         """
         <!DOCTYPE html>
         <html>
@@ -3579,6 +3633,7 @@ fun SafeMapView(
             modifier = modifier,
             factory = { ctx ->
                 WebView(ctx).apply {
+                    setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.setGeolocationEnabled(true)
@@ -3698,7 +3753,12 @@ fun SearchOverlayScreen(
                         .padding(horizontal = 16.dp, vertical = 14.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("🔍", fontSize = 16.sp)
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = textSecondary,
+                            modifier = Modifier.size(18.dp)
+                        )
                         androidx.compose.foundation.text.BasicTextField(
                             value = query,
                             onValueChange = { query = it },
@@ -3760,7 +3820,12 @@ fun SearchOverlayScreen(
                                         .background(if (isLight) com.orbitlogic.client.ui.theme.LightPrimaryTint else accentColor.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("🎬", fontSize = 16.sp)
+                                    Icon(
+                                        imageVector = Icons.Default.Movie,
+                                        contentDescription = null,
+                                        tint = accentColor,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(title, color = textPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -3790,11 +3855,11 @@ fun NotificationsOverlayScreen(
     val successColor = if (isLight) com.orbitlogic.client.ui.theme.LightSuccess else OrbitGreen
 
     val notifications = listOf(
-        Triple("Booking Confirmed", "Your shoot is scheduled for today at 2:00 PM", "✅"),
-        Triple("Creator En Route", "Your creator is 10 minutes away", "🚗"),
-        Triple("Shoot Started", "Your session has begun. Great content incoming!", "🎬"),
-        Triple("Editing in Progress", "Your footage is being edited by our team", "✂️"),
-        Triple("Content Delivered", "Your reels are ready to download!", "🎉")
+        Triple("Booking Confirmed", "Your shoot is scheduled for today at 2:00 PM", Icons.Default.CheckCircle),
+        Triple("Creator En Route", "Your creator is 10 minutes away", Icons.Default.DirectionsCar),
+        Triple("Shoot Started", "Your session has begun. Great content incoming!", Icons.Default.Movie),
+        Triple("Editing in Progress", "Your footage is being edited by our team", Icons.Default.Build),
+        Triple("Content Delivered", "Your reels are ready to download!", Icons.Default.CloudDownload)
     )
 
     Box(
@@ -3859,7 +3924,12 @@ fun NotificationsOverlayScreen(
                                         .background(if (isLight) com.orbitlogic.client.ui.theme.LightPrimaryTint else accentColor.copy(alpha = 0.1f)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(icon, fontSize = 20.sp)
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = accentColor,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(title, color = textPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)

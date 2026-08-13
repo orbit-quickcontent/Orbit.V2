@@ -199,4 +199,7 @@ interface ApiService {
     ): BookingDto
 }
 
-data class UpdateBookingStatusRequest(val status: String)
+data class UpdateBookingStatusRequest(
+    val status: String,
+    val cancelledBy: String? = "CLIENT"
+)

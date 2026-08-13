@@ -81,6 +81,10 @@ export async function GET(request: NextRequest) {
           where: { id: dispatch.bookingId },
         })
 
+        if (!booking || booking.status === 'CANCELLED') {
+          return null
+        }
+
         let resolvedBooking = null
         if (booking) {
           const pkg = await firestoreDb.packages.findUnique({
@@ -91,6 +95,13 @@ export async function GET(request: NextRequest) {
           })
           resolvedBooking = {
             ...booking,
+            clientLatitude: booking.lat != null ? Number(booking.lat) : (booking as any).latitude != null ? Number((booking as any).latitude) : null,
+            clientLongitude: booking.lng != null ? Number(booking.lng) : (booking as any).longitude != null ? Number((booking as any).longitude) : null,
+            clientName: user?.name || 'Creative Client',
+            clientPhone: user?.phone || null,
+            packageName: pkg?.name || 'UGC Brand Reel Shoot',
+            packagePrice: pkg?.price || 1500,
+            distanceKm: dispatch.distanceKm != null ? Number(dispatch.distanceKm) : null,
             package: pkg,
             user: user ? {
               id: user.id,
@@ -114,8 +125,8 @@ export async function GET(request: NextRequest) {
         }
       })
     )
-
-    return NextResponse.json({ availableBookings })
+    const validAvailableBookings = availableBookings.filter((item): item is NonNullable<typeof item> => item !== null && item.booking !== null)
+    return NextResponse.json({ availableBookings: validAvailableBookings })
   } catch (error) {
     console.error('Error fetching available bookings:', error)
     return NextResponse.json(

@@ -22,10 +22,10 @@
     "express": "^4.19.2",
     "express-rate-limit": "^8.6.2",
     "firebase": "^12.17.1",
-    "firebase-admin": "^14.2.0",
+    "firebase-admin": "^10.3.0",
     "googleapis": "^173.0.0",
     "helmet": "^8.3.0",
-    "nodemailer": "^7.0.13",
+    "nodemailer": "^9.0.5",
     "pino": "^10.3.1",
     "prisma": "^6.11.1",
     "socket.io": "^4.7.5",
@@ -38,7 +38,7 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/nodemailer": "^6.4.14",
-    "next": "^14.2.15",
+    "next": "^16.3.0",
     "next-auth": "^4.24.14",
     "vitest": "^4.1.10"
   }

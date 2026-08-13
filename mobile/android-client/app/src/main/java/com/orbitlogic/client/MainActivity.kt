@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -69,6 +70,37 @@ fun MainClientNavigationHost(
     var isAppLoading by remember { mutableStateOf(true) }
     var isAuthenticated by remember { mutableStateOf(prefsManager.isLoggedIn()) }
     var currentTab by remember { mutableStateOf("home") }
+    val tabStack = remember { mutableStateListOf("home") }
+
+    fun navigateToTab(newTab: String) {
+        if (newTab != currentTab) {
+            if (tabStack.lastOrNull() != newTab) {
+                tabStack.add(newTab)
+            }
+            currentTab = newTab
+        }
+    }
+
+    val canGoBack = showSearch || showNotifications || showSettings || showPermissionModal || tabStack.size > 1 || currentTab != "home"
+
+    androidx.activity.compose.BackHandler(enabled = canGoBack) {
+        when {
+            showSearch -> showSearch = false
+            showNotifications -> showNotifications = false
+            showSettings -> showSettings = false
+            showPermissionModal -> showPermissionModal = false
+            tabStack.size > 1 -> {
+                tabStack.removeAt(tabStack.lastIndex)
+                currentTab = tabStack.last()
+            }
+            currentTab != "home" -> {
+                tabStack.clear()
+                tabStack.add("home")
+                currentTab = "home"
+            }
+        }
+    }
+
     var selectedPackageId by remember { mutableStateOf("pkg-professional") }
     var activeBookingId by remember { mutableStateOf("bk_active_901") }
     val coroutineScope = rememberCoroutineScope()
@@ -130,7 +162,7 @@ fun MainClientNavigationHost(
             LoginScreen(onLoginSuccess = { token ->
                 prefsManager.saveAuthSession(token, "CLIENT")
                 isAuthenticated = true
-                currentTab = "home"
+                navigateToTab("home")
                 coroutineScope.launch {
                     try {
                         val authToken = "Bearer $token"
@@ -146,7 +178,7 @@ fun MainClientNavigationHost(
                     ClientBottomNavigationBar(
                         currentTab = currentTab,
                         isLight = isLightTheme,
-                        onSelectTab = { currentTab = it }
+                        onSelectTab = { navigateToTab(it) }
                     )
                 },
                 containerColor = if (isLightTheme) LightBg else SpaceNavy
@@ -159,22 +191,20 @@ fun MainClientNavigationHost(
                     AnimatedContent(
                         targetState = currentTab,
                         transitionSpec = {
-                            ContentTransform(
-                                targetContentEnter = fadeIn(animationSpec = tween(180)),
-                                initialContentExit = fadeOut(animationSpec = tween(180))
-                            )
+                            (fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + slideInVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy), initialOffsetY = { it / 25 }))
+                                .togetherWith(fadeOut(animationSpec = tween(140, easing = FastOutLinearInEasing)) + slideOutVertically(animationSpec = tween(140), targetOffsetY = { -it / 25 }))
                         },
                         label = "ScreenTransition"
                     ) { targetTab ->
                         when (targetTab) {
                             "home" -> DashboardHomeScreen(
-                                onNavigateToBooking = { currentTab = "booking" },
-                                onNavigateToPackages = { currentTab = "packages" },
+                                onNavigateToBooking = { navigateToTab("booking") },
+                                onNavigateToPackages = { navigateToTab("packages") },
                                 onNavigateToTracking = { id ->
                                     activeBookingId = id
-                                    currentTab = "tracking"
+                                    navigateToTab("tracking")
                                 },
-                                onNavigateToProfile = { currentTab = "profile" },
+                                onNavigateToProfile = { navigateToTab("profile") },
                                 onSearchClick = { showSearch = true },
                                 onNotifClick = { showNotifications = true },
                                 onSettingsClick = { showSettings = true }
@@ -182,20 +212,33 @@ fun MainClientNavigationHost(
                             "packages" -> PackagesScreen(
                                 onSelectPackage = { pkgId ->
                                     selectedPackageId = pkgId
-                                    currentTab = "booking"
-                                }
+                                    navigateToTab("booking")
+                                },
+                                onSearchClick = { showSearch = true },
+                                onNotifClick = { showNotifications = true },
+                                onSettingsClick = { showSettings = true },
+                                onProfileClick = { navigateToTab("profile") }
                             )
                             "booking" -> BookingFlowScreen(
                                 packageId = selectedPackageId,
-                                onBookingComplete = { currentTab = "tracking" }
+                                onBookingComplete = { navigateToTab("tracking") }
                             )
-                            "tracking" -> TrackingScreen(bookingId = activeBookingId)
+                            "tracking" -> TrackingScreen(
+                                bookingId = activeBookingId,
+                                onClose = { navigateToTab("home") },
+                                onSearchClick = { showSearch = true },
+                                onNotifClick = { showNotifications = true },
+                                onSettingsClick = { showSettings = true },
+                                onProfileClick = { navigateToTab("profile") }
+                            )
                             "profile" -> ProfileScreen(
                                 onLogout = {
                                     prefsManager.clearSession()
                                     isAuthenticated = false
                                 },
-                                onOpenSettings = { showSettings = true }
+                                onOpenSettings = { showSettings = true },
+                                onSearchClick = { showSearch = true },
+                                onNotifClick = { showNotifications = true }
                             )
                         }
                     }
@@ -204,7 +247,11 @@ fun MainClientNavigationHost(
         }
 
         // ── Overlay Panels ──────────────────────────────────────────────────
-        if (showSearch) {
+        AnimatedVisibility(
+            visible = showSearch,
+            enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + slideInVertically(initialOffsetY = { -it / 3 }, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
+            exit = fadeOut(animationSpec = tween(150)) + slideOutVertically(targetOffsetY = { -it / 3 }, animationSpec = tween(150))
+        ) {
             SearchOverlayScreen(
                 isLight = isLightTheme,
                 onDismiss = { showSearch = false },
@@ -215,14 +262,22 @@ fun MainClientNavigationHost(
             )
         }
 
-        if (showNotifications) {
+        AnimatedVisibility(
+            visible = showNotifications,
+            enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + slideInVertically(initialOffsetY = { -it / 3 }, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
+            exit = fadeOut(animationSpec = tween(150)) + slideOutVertically(targetOffsetY = { -it / 3 }, animationSpec = tween(150))
+        ) {
             NotificationsOverlayScreen(
                 isLight = isLightTheme,
                 onDismiss = { showNotifications = false }
             )
         }
 
-        if (showSettings) {
+        AnimatedVisibility(
+            visible = showSettings,
+            enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + slideInVertically(initialOffsetY = { -it / 3 }, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
+            exit = fadeOut(animationSpec = tween(150)) + slideOutVertically(targetOffsetY = { -it / 3 }, animationSpec = tween(150))
+        ) {
             AppSettingsOverlayScreen(
                 isLight = isLightTheme,
                 onDismiss = { showSettings = false },
@@ -544,7 +599,10 @@ fun RowScope.BottomNavItem(
         modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
-            .scale(tabScale)
+            .graphicsLayer {
+                scaleX = tabScale
+                scaleY = tabScale
+            }
             .clip(RoundedCornerShape(24.dp))
             .clickable { onClick() },
         contentAlignment = Alignment.Center
