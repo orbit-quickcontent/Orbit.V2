@@ -6,6 +6,7 @@ import {
   claimDueDispatchTimeouts,
 } from './redis.service';
 import { notifyDispatch } from './websocket.service';
+import { ensurePartnerEarningSnapshot } from './partner-earnings.service';
 
 const OFFER_TIMEOUT_MS = Number(process.env.DISPATCH_OFFER_TIMEOUT_MS || 15000);
 const MAX_ROUNDS = Number(process.env.DISPATCH_MAX_ROUNDS || 5);
@@ -30,6 +31,7 @@ function parseDeclined(value: string | null | undefined): string[] {
 }
 
 export async function dispatchBooking(bookingId: string, lat: number, lng: number): Promise<DispatchResult> {
+  await ensurePartnerEarningSnapshot(bookingId);
   const booking = await dbClient.booking.findUnique({ where: { id: bookingId } });
   if (!booking) throw new Error('Booking not found');
   if (!['PAID', 'DISPATCHED'].includes(booking.status)) {
