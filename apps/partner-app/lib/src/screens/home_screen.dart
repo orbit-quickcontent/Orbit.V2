@@ -7,7 +7,7 @@ import '../widgets/booking_offer_sheet.dart';
 import '../widgets/floating_bottom_bar.dart';
 
 class HomeScreen extends ConsumerWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -17,7 +17,6 @@ class HomeScreen extends ConsumerWidget {
         ? state.name!
         : (state.email?.split('@')[0] ?? 'Partner');
 
-    // Show booking offer modal when active offer arrives
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (state.activeOffer != null) {
         showModalBottomSheet(
@@ -69,8 +68,8 @@ class HomeScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: isOnline
-                  ? const Color(0xFF10B981).withOpacity(0.2)
-                  : const Color(0xFF64748B).withOpacity(0.2),
+                  ? const Color(0xFF10B981).withValues(alpha: 0.2)
+                  : const Color(0xFF64748B).withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: isOnline ? const Color(0xFF10B981) : const Color(0xFF64748B),
@@ -99,7 +98,6 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: Stack(
         children: [
-          // Google Map live view with error handling fallback
           GoogleMap(
             initialCameraPosition: CameraPosition(
               target: LatLng(currentLat, currentLng),
@@ -119,8 +117,6 @@ class HomeScreen extends ConsumerWidget {
               ),
             },
           ),
-
-          // Floating Online Toggle & Location Telemetry Control
           Positioned(
             bottom: 32,
             left: 24,
@@ -132,60 +128,55 @@ class HomeScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.4),
+                    color: Colors.black.withValues(alpha: 0.4),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            displayName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            isOnline
-                                ? 'Broadcasting Location (5s Interval)'
-                                : 'You are currently offline',
-                            style: TextStyle(
-                              color: isOnline ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
-                              fontSize: 12,
-                            ),
-                          ),
-                          if (state.address != null && state.address!.isNotEmpty) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              '📍 ${state.address!}',
-                              style: const TextStyle(
-                                color: Color(0xFFCBD5E1),
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ],
+                      Text(
+                        displayName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
-                      Switch.adaptive(
-                        value: isOnline,
-                        activeColor: const Color(0xFF6366F1),
-                        activeTrackColor: const Color(0xFF6366F1).withOpacity(0.4),
-                        onChanged: (val) {
-                          ref.read(partnerProvider.notifier).toggleOnlineStatus(val);
-                        },
+                      const SizedBox(height: 2),
+                      Text(
+                        isOnline
+                            ? 'Broadcasting Location (5s Interval)'
+                            : 'You are currently offline',
+                        style: TextStyle(
+                          color: isOnline ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                          fontSize: 12,
+                        ),
                       ),
+                      if (state.address != null && state.address!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          '📍 ${state.address!}',
+                          style: const TextStyle(
+                            color: Color(0xFFCBD5E1),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
                     ],
+                  ),
+                  Switch.adaptive(
+                    value: isOnline,
+                    activeThumbColor: const Color(0xFF6366F1),
+                    activeTrackColor: const Color(0xFF6366F1).withValues(alpha: 0.4),
+                    onChanged: (val) {
+                      ref.read(partnerProvider.notifier).toggleOnlineStatus(val);
+                    },
                   ),
                 ],
               ),
