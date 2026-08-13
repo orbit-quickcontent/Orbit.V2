@@ -84,8 +84,9 @@ class _TrackingScreenState extends ConsumerState<TrackingScreen> {
   Widget build(BuildContext context) {
     final steps = ['PENDING', 'PAID', 'DISPATCHED', 'EN_ROUTE', 'SHOOTING', 'SYNCING', 'EDITING', 'DELIVERED'];
     final currentIndex = steps.indexOf(status);
+    final shortId = (bookingId ?? '').length > 8 ? bookingId!.substring(0, 8) : (bookingId ?? '');
     return Scaffold(
-      appBar: AppBar(title: Text('Booking ${(bookingId ?? '').substring(0, (bookingId ?? '').length.clamp(0, 8))}')),
+      appBar: AppBar(title: Text('Booking $shortId')),
       body: loading ? const Center(child: CircularProgressIndicator()) : ListView(padding: const EdgeInsets.all(20), children: [
         Container(padding: const EdgeInsets.all(22), decoration: BoxDecoration(color: _statusColor().withValues(alpha: .12), borderRadius: BorderRadius.circular(24), border: Border.all(color: _statusColor().withValues(alpha: .35))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(status.replaceAll('_', ' '), style: TextStyle(color: _statusColor(), fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.1)),
