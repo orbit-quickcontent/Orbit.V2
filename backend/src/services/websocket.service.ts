@@ -32,6 +32,14 @@ export function getOnlinePartnerIds(): string[] {
   return Array.from(onlinePartners.keys());
 }
 
+export function notifyPartnerEarningAvailable(partnerId: string, payload: { bookingId: string; partnerEarningAmount: number; currency: string; status: string; availableAt: string }) {
+  if (!_io) return;
+  const sockets = onlinePartners.get(partnerId);
+  sockets?.forEach((socketId) => {
+    _io!.to(socketId).emit('partner:earning-available', payload);
+  });
+}
+
 export function notifyDispatch(payload: {
   bookingId: string;
   partnerIds: string[];
