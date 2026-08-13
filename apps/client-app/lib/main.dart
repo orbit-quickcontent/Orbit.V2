@@ -12,7 +12,10 @@ Future<void> main() async {
 }
 
 class OrbitClientApp extends ConsumerStatefulWidget {
-  const OrbitClientApp({super.key});
+  const OrbitClientApp({super.key, this.restoreSession = true});
+
+  final bool restoreSession;
+
   @override
   ConsumerState<OrbitClientApp> createState() => _OrbitClientAppState();
 }
@@ -21,7 +24,9 @@ class _OrbitClientAppState extends ConsumerState<OrbitClientApp> {
   @override
   void initState() {
     super.initState();
-    ref.read(sessionProvider.notifier).restore();
+    if (widget.restoreSession) {
+      ref.read(sessionProvider.notifier).restore();
+    }
   }
 
   @override
