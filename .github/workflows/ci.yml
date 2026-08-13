@@ -101,13 +101,16 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: '3.24.0'
+      - name: Verify Flutter toolchain
+        run: flutter --version
       - name: Repair Flutter Android project scaffolding
         working-directory: apps/partner-app
         run: flutter create --project-name partner_app --platforms=android --org com.orbit .
-      - working-directory: apps/partner-app
-        run: flutter pub get
+      - name: Upgrade Flutter dependencies
+        working-directory: apps/partner-app
+        run: flutter pub upgrade
+      - name: Ensure Android SDK 35 is selected
+        working-directory: apps/partner-app
+        run: flutter build apk --debug
       - working-directory: apps/partner-app
         run: flutter analyze
-      - working-directory: apps/partner-app
-        run: flutter build apk --debug
