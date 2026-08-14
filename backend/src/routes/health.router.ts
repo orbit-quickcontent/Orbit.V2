@@ -11,9 +11,13 @@ import { firestoreDb } from "../lib/db";
 
 const router = Router();
 
+import { isRedisConnected } from "../utils/redis";
+
 router.get("/health", (_req: Request, res: Response) => {
+  const redisConnected = isRedisConnected();
   res.status(200).json({
-    status: "healthy",
+    status: redisConnected ? "ok" : "degraded",
+    redis: redisConnected ? "connected" : "disconnected",
     service: "Orbit Standalone Backend",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),

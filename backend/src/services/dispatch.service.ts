@@ -1,38 +1,31 @@
 /**
- * ORBIT QuickContent — Redis GEO Nearby Partner Dispatch Engine
+ * ORBIT QuickContent — Production Uber/Ola-Style Nearby Partner Dispatch Engine
  *
- * Real-time Uber/Ola-style nearby partner dispatch system:
- * 1. Redis GEO coordinates + TTL heartbeat tracking.
- * 2. Multi-factor candidate ranking (Distance, Rating, Workload, Availability).
- * 3. 15-second countdown offer loop.
- * 4. Partner sees guaranteed ₹700 earnings BEFORE accepting.
- * 5. Distributed mutex lock preventing two partners from accepting the same booking.
- * 6. Automatic waterfall re-dispatching on rejection or timeout.
+ * 1. Redis GEO candidate search & multi-round waterfall (0-2km, 2-5km, 5-10km).
+ * 2. 20-second offer timeout queue per candidate.
+ * 3. Guaranteed ₹700 partner payout contract.
+ * 4. Atomic Redis locks (dispatch:partner:{id} & dispatch:booking:{id}) with NX EX 900.
+ * 5. Automatic waterfall on rejection/timeout.
  */
 
 import { firestoreDb } from "../lib/db";
-import { findNearestPartners, calculateDistanceKm } from "./geo.service";
-import { notifyDispatch } from "./websocket.service";
+import { PartnerLocationService } from "./partner-location.service";
+import { connectRedis } from "../utils/redis";
+import { notifyDispatch, notifyAccept, notifyStatusChange, notifyClient } from "./websocket.service";
 import { transitionBookingState } from "./booking-state-machine";
 import { logAudit } from "./audit.service";
+import { RouteService } from "./route.service";
+import { ENV } from "../config/env";
 
-// In-memory Redis-like distributed lock simulator & candidate state
-const activeLocks = new Map<string, number>();
 const activeTimers = new Map<string, NodeJS.Timeout>();
 
-const DISPATCH_RADIUS_KM = Number(process.env.DISPATCH_RADIUS_KM || 5);
-const OFFER_TIMEOUT_SECONDS = Number(process.env.DISPATCH_TIMEOUT_SECONDS || 15);
-const MAX_DISPATCH_ROUNDS = Number(process.env.MAX_DISPATCH_ROUNDS || 5);
-
 export interface DispatchCandidate {
-  id: string;
-  userId: string;
-  name: string;
-  rating: number;
+  partnerId: string;
   distanceKm: number;
-  latitude: number;
-  longitude: number;
-  deviceInfo?: string;
+  lat: number;
+  lng: number;
+  availability: string;
+  rating?: number;
 }
 
 export interface DispatchOfferPayload {
@@ -47,27 +40,6 @@ export interface DispatchOfferPayload {
   distanceKm: number;
   etaMinutes: number;
   booking: any;
-}
-
-/**
- * Acquire a distributed mutex lock for a booking ID.
- * Returns true if lock acquired, false if already locked.
- */
-function acquireLock(bookingId: string, ttlMs: number = 5000): boolean {
-  const now = Date.now();
-  const existingExpiry = activeLocks.get(bookingId);
-  if (existingExpiry && existingExpiry > now) {
-    return false;
-  }
-  activeLocks.set(bookingId, now + ttlMs);
-  return true;
-}
-
-/**
- * Release a distributed lock.
- */
-function releaseLock(bookingId: string): void {
-  activeLocks.delete(bookingId);
 }
 
 /**
@@ -91,18 +63,25 @@ export async function triggerNearbyPartnerDispatch(bookingId: string): Promise<v
     });
   }
 
-  // 2. Fetch all online, verified partners
-  let onlinePartners = await firestoreDb.partners.findMany({
-    where: {
-      availability: true,
-      isVerified: true,
-    },
-  });
+  const currentRound = (booking.dispatchRound || 0) + 1;
 
-  // Fallback: if no verified available partners, query all verified partners
-  if (onlinePartners.length === 0) {
-    onlinePartners = await firestoreDb.partners.findMany({ where: { isVerified: true } });
-  }
+  // 2. Multi-round radius: Round 1 (2km), Round 2 (5km), Round 3+ (10km)
+  let searchRadiusKm = ENV.NEARBY_RADIUS_KM;
+  if (currentRound === 1) searchRadiusKm = 2;
+  else if (currentRound === 2) searchRadiusKm = 5;
+  else searchRadiusKm = 10;
+
+  // 3. Resolve shoot coordinates
+  const shootLat = booking.latitude ?? 28.6139;
+  const shootLng = booking.longitude ?? 77.209;
+
+  // 4. Query Redis GEO for nearby available partners
+  const candidates = await PartnerLocationService.searchNearby(
+    shootLat,
+    shootLng,
+    searchRadiusKm,
+    ENV.MAX_NEARBY_PARTNERS
+  );
 
   // Parse declined partners list
   let declinedBy: string[] = [];
@@ -116,45 +95,71 @@ export async function triggerNearbyPartnerDispatch(bookingId: string): Promise<v
     declinedBy = [];
   }
 
-  // Filter out declined partners
-  const eligiblePartners = onlinePartners.filter((p) => !declinedBy.includes(p.id));
-  if (eligiblePartners.length === 0) {
-    console.warn(`[Dispatch] No eligible partners available for booking ${bookingId}`);
+  // Filter out declined partners and check Redis partner locks
+  const redis = await connectRedis();
+  const eligibleCandidates: DispatchCandidate[] = [];
+
+  for (const cand of candidates) {
+    if (declinedBy.includes(cand.partnerId)) continue;
+    if (redis) {
+      const isLocked = await redis.get(`dispatch:partner:${cand.partnerId}`);
+      if (isLocked) continue; // Partner already reserved for another booking
+    }
+    eligibleCandidates.push(cand);
+  }
+
+  if (eligibleCandidates.length === 0) {
+    console.warn(`[Dispatch] No eligible partners available for booking ${bookingId} in round ${currentRound} (${searchRadiusKm}km)`);
+    if (currentRound < 4) {
+      // Expand radius immediately in next round
+      await firestoreDb.bookings.update({
+        where: { id: bookingId },
+        data: { dispatchRound: currentRound },
+      });
+      setTimeout(() => triggerNearbyPartnerDispatch(bookingId), 3000);
+    } else {
+      notifyClient({
+        bookingId,
+        event: "dispatch_failed",
+        data: { bookingId, reason: "No nearby partners available in area" },
+      });
+    }
     return;
   }
 
-  // 3. Resolve shoot coordinates (default to Delhi coordinates if null)
-  const shootLat = booking.latitude ?? 28.6139;
-  const shootLng = booking.longitude ?? 77.209;
+  // 5. Select batch of candidates (up to DISPATCH_BATCH_SIZE)
+  const batchCandidates = eligibleCandidates.slice(0, ENV.DISPATCH_BATCH_SIZE);
+  const targetPartner = batchCandidates[0];
+  const distanceKm = targetPartner.distanceKm;
 
-  // 4. Rank candidates by Distance, Availability & Rating
-  const rankedPartners = findNearestPartners(
-    eligiblePartners,
-    shootLat,
-    shootLng,
-    5, // top 5 candidates
-    null,
-    DISPATCH_RADIUS_KM
-  );
+  // Calculate ETA
+  let etaMinutes = Math.max(5, Math.round(distanceKm * 3));
+  try {
+    const route = await RouteService.getRoute(targetPartner.lat, targetPartner.lng, shootLat, shootLng);
+    etaMinutes = route.estimatedMinutes;
+  } catch {}
 
-  if (rankedPartners.length === 0) {
-    console.warn(`[Dispatch] No partners found within ${DISPATCH_RADIUS_KM}km for booking ${bookingId}`);
-    return;
+  // 6. Create dispatch offer in Redis with 20s TTL
+  const expiresAtMs = Date.now() + ENV.DISPATCH_OFFER_SECONDS * 1000;
+  const expiresAt = new Date(expiresAtMs).toISOString();
+
+  if (redis) {
+    const offerPipeline = redis.pipeline();
+    batchCandidates.forEach((c) => {
+      offerPipeline.set(
+        `dispatch:offer:${bookingId}:${c.partnerId}`,
+        JSON.stringify({ bookingId, partnerId: c.partnerId, expiresAt: expiresAtMs }),
+        "EX",
+        ENV.DISPATCH_OFFER_SECONDS
+      );
+    });
+    await offerPipeline.exec();
   }
 
-  const currentRound = (booking.dispatchRound || 0) + 1;
-  const targetPartner = rankedPartners[0];
-  const distanceKm = Number(
-    (targetPartner as any).distanceKm || calculateDistanceKm(shootLat, shootLng, targetPartner.latitude || shootLat, targetPartner.longitude || shootLng).toFixed(1)
-  );
-  const etaMinutes = Math.max(5, Math.round(distanceKm * 3));
-
-  // 5. Create WorkDispatch record
-  const expiresAt = new Date(Date.now() + OFFER_TIMEOUT_SECONDS * 1000).toISOString();
   await firestoreDb.workDispatches.create({
     data: {
       bookingId,
-      partnerId: targetPartner.id,
+      partnerId: targetPartner.partnerId,
       status: "PENDING",
       round: currentRound,
       distanceKm,
@@ -168,16 +173,16 @@ export async function triggerNearbyPartnerDispatch(bookingId: string): Promise<v
     data: { dispatchRound: currentRound },
   });
 
-  // 6. Build Offer Payload with guaranteed ₹700 earnings
+  // 7. Build Offer Payload with guaranteed ₹700 earnings
   const offerPayload: DispatchOfferPayload = {
     bookingId,
     dispatchId: `${bookingId}-rnd-${currentRound}`,
     round: currentRound,
-    partnerEarningAmount: booking.partnerEarningAmount || 700, // Explicitly ₹700
-    earningAmount: booking.partnerEarningAmount || 700,        // Backward compatibility
+    partnerEarningAmount: booking.partnerEarningAmount || 700,
+    earningAmount: booking.partnerEarningAmount || 700,
     currency: "INR",
     expiresAt,
-    timeoutSeconds: OFFER_TIMEOUT_SECONDS,
+    timeoutSeconds: ENV.DISPATCH_OFFER_SECONDS,
     distanceKm,
     etaMinutes,
     booking: {
@@ -187,36 +192,36 @@ export async function triggerNearbyPartnerDispatch(bookingId: string): Promise<v
     },
   };
 
-  // 7. Emit offer via WebSocket
+  // 8. Emit offer via WebSocket to candidate partners
   notifyDispatch({
     bookingId,
-    partnerIds: [targetPartner.id],
+    partnerIds: batchCandidates.map((c) => c.partnerId),
     booking: offerPayload,
     round: currentRound,
   });
 
-  // 8. Schedule 15-second offer timeout
+  // 9. Schedule 20-second offer timeout
   if (activeTimers.has(bookingId)) {
     clearTimeout(activeTimers.get(bookingId)!);
   }
 
   const timer = setTimeout(async () => {
-    await handleDispatchTimeout(bookingId, targetPartner.id, currentRound);
-  }, OFFER_TIMEOUT_SECONDS * 1000);
+    await handleDispatchTimeout(bookingId, batchCandidates.map((c) => c.partnerId), currentRound);
+  }, ENV.DISPATCH_OFFER_SECONDS * 1000);
 
   activeTimers.set(bookingId, timer);
 }
 
 /**
- * Handle 15-second offer expiration -> waterfall to next candidate.
+ * Handle 20-second offer expiration -> waterfall to next candidate.
  */
-export async function handleDispatchTimeout(bookingId: string, partnerId: string, round: number): Promise<void> {
+export async function handleDispatchTimeout(bookingId: string, partnerIds: string[], round: number): Promise<void> {
   const booking = await firestoreDb.bookings.findUnique({ where: { id: bookingId } });
   if (!booking || booking.partnerId || booking.status !== "DISPATCHED") {
     return;
   }
 
-  // Append partner to declined list
+  // Append partners to declined list
   let declinedBy: string[] = [];
   try {
     declinedBy = booking.declinedBy
@@ -228,9 +233,9 @@ export async function handleDispatchTimeout(bookingId: string, partnerId: string
     declinedBy = [];
   }
 
-  if (!declinedBy.includes(partnerId)) {
-    declinedBy.push(partnerId);
-  }
+  partnerIds.forEach((id) => {
+    if (!declinedBy.includes(id)) declinedBy.push(id);
+  });
 
   await firestoreDb.bookings.update({
     where: { id: bookingId },
@@ -238,33 +243,53 @@ export async function handleDispatchTimeout(bookingId: string, partnerId: string
   });
 
   // Waterfall to next candidate if under max rounds
-  if (round < MAX_DISPATCH_ROUNDS) {
-    console.log(`[Dispatch] Booking ${bookingId} round ${round} timed out. Waterfalling to next partner...`);
+  if (round < 4) {
+    console.log(`[Dispatch] Booking ${bookingId} round ${round} timed out. Waterfalling to next candidates...`);
     await triggerNearbyPartnerDispatch(bookingId);
   } else {
-    console.warn(`[Dispatch] Booking ${bookingId} reached max dispatch rounds (${MAX_DISPATCH_ROUNDS}) with no acceptance.`);
+    console.warn(`[Dispatch] Booking ${bookingId} reached max dispatch rounds with no acceptance.`);
+    notifyClient({
+      bookingId,
+      event: "dispatch_failed",
+      data: { bookingId, reason: "Dispatch timed out with no partner acceptance" },
+    });
   }
 }
 
 /**
- * Partner accepts offer with atomic double-acceptance prevention.
+ * Partner accepts offer with atomic double-lock (dispatch:booking & dispatch:partner).
  */
 export async function acceptPartnerOffer(
   bookingId: string,
   partnerId: string,
-  partnerName: string = "Assigned Partner"
+  partnerName = "Assigned Partner"
 ): Promise<{ success: boolean; message: string; booking?: any }> {
-  // 1. Acquire mutex lock
-  const locked = acquireLock(bookingId, 5000);
-  if (!locked) {
-    return {
-      success: false,
-      message: "Another partner is currently claiming this booking. Please try another request.",
-    };
+  const redis = await connectRedis();
+
+  // 1. Atomic Redis Booking Lock: only one partner wins
+  if (redis) {
+    try {
+      const bookingLock = await redis.set(`dispatch:booking:${bookingId}`, partnerId, "EX", 900, "NX");
+      if (bookingLock !== "OK") {
+        return {
+          success: false,
+          message: "Another partner has already accepted this booking.",
+        };
+      }
+
+      // Atomic Redis Partner Lock: partner cannot take 2 simultaneous bookings
+      const partnerLock = await redis.set(`dispatch:partner:${partnerId}`, bookingId, "EX", 900, "NX");
+      if (partnerLock !== "OK") {
+        await redis.del(`dispatch:booking:${bookingId}`).catch(() => {});
+        return {
+          success: false,
+          message: "You are currently assigned to another active booking.",
+        };
+      }
+    } catch {}
   }
 
   try {
-    // 2. Query booking state atomically
     const booking = await firestoreDb.bookings.findUnique({ where: { id: bookingId } });
     if (!booking) {
       return { success: false, message: "Booking not found." };
@@ -277,20 +302,13 @@ export async function acceptPartnerOffer(
       };
     }
 
-    if (booking.status !== "DISPATCHED") {
-      return {
-        success: false,
-        message: `Booking is in ${booking.status} state and cannot be accepted.`,
-      };
-    }
-
     // Clear active timeout
     if (activeTimers.has(bookingId)) {
       clearTimeout(activeTimers.get(bookingId)!);
       activeTimers.delete(bookingId);
     }
 
-    // 3. Atomically transition state to EN_ROUTE
+    // 2. Atomically transition state to EN_ROUTE
     const transitionRes = await transitionBookingState(
       bookingId,
       "EN_ROUTE",
@@ -306,13 +324,17 @@ export async function acceptPartnerOffer(
     );
 
     if (!transitionRes.success) {
+      if (redis) {
+        await redis.del(`dispatch:booking:${bookingId}`);
+        await redis.del(`dispatch:partner:${partnerId}`);
+      }
       return {
         success: false,
         message: transitionRes.error?.message || "Failed to accept booking offer.",
       };
     }
 
-    // 4. Update PartnerEarning record with PENDING status
+    // 3. Update PartnerEarning record with PENDING status (Guaranteed ₹700)
     await firestoreDb.partnerEarnings.upsert({
       where: { bookingId },
       create: {
@@ -329,6 +351,29 @@ export async function acceptPartnerOffer(
         partnerId,
         status: "PENDING",
       },
+    });
+
+    // 4. Clean up all dispatch offers for this booking
+    if (redis) {
+      const offerKeys = await redis.keys(`dispatch:offer:${bookingId}:*`);
+      if (offerKeys.length > 0) {
+        await redis.del(...offerKeys);
+      }
+    }
+
+    // 5. Notify client and partner via Socket.IO
+    notifyAccept({
+      bookingId,
+      partnerId,
+      partnerName,
+      booking: transitionRes.booking,
+    });
+
+    notifyStatusChange({
+      bookingId,
+      status: "EN_ROUTE",
+      previousStatus: "DISPATCHED",
+      booking: transitionRes.booking,
     });
 
     await logAudit({
@@ -348,13 +393,17 @@ export async function acceptPartnerOffer(
       message: "Booking offer successfully accepted.",
       booking: transitionRes.booking,
     };
-  } finally {
-    releaseLock(bookingId);
+  } catch (err: any) {
+    if (redis) {
+      await redis.del(`dispatch:booking:${bookingId}`);
+      await redis.del(`dispatch:partner:${partnerId}`);
+    }
+    return { success: false, message: err.message || "Internal error during acceptance" };
   }
 }
 
 /**
- * Partner explicitly declines offer -> waterfall to next candidate immediately.
+ * Partner declines offer -> waterfall immediately.
  */
 export async function declinePartnerOffer(
   bookingId: string,
@@ -383,6 +432,11 @@ export async function declinePartnerOffer(
     data: { declinedBy: JSON.stringify(declinedBy) },
   });
 
+  const redis = await connectRedis();
+  if (redis) {
+    await redis.del(`dispatch:offer:${bookingId}:${partnerId}`);
+  }
+
   // Clear timeout and waterfall immediately
   if (activeTimers.has(bookingId)) {
     clearTimeout(activeTimers.get(bookingId)!);
@@ -394,4 +448,43 @@ export async function declinePartnerOffer(
   );
 
   return { success: true, message: "Offer declined successfully." };
+}
+
+/**
+ * Partner arrived at client shoot location -> status becomes SHOOTING.
+ */
+export async function partnerArrivedAtLocation(bookingId: string, partnerId: string): Promise<{ success: boolean; message: string }> {
+  const transitionRes = await transitionBookingState(bookingId, "SHOOTING", {
+    actorId: partnerId,
+    actorRole: "PARTNER",
+    reason: "Partner arrived at location and initiated shooting",
+  });
+
+  if (!transitionRes.success) {
+    return { success: false, message: transitionRes.error?.message || "Failed to mark arrival." };
+  }
+
+  notifyStatusChange({
+    bookingId,
+    status: "SHOOTING",
+    previousStatus: "EN_ROUTE",
+    booking: transitionRes.booking,
+  });
+
+  return { success: true, message: "Partner arrival confirmed. Shoot started." };
+}
+
+/**
+ * Release partner lock upon booking completion / cancellation.
+ */
+export async function releasePartnerLock(bookingId: string, partnerId?: string): Promise<void> {
+  const redis = await connectRedis();
+  if (!redis) return;
+
+  const pipeline = redis.pipeline();
+  pipeline.del(`dispatch:booking:${bookingId}`);
+  if (partnerId) {
+    pipeline.del(`dispatch:partner:${partnerId}`);
+  }
+  await pipeline.exec();
 }

@@ -52,9 +52,17 @@ const rawParser = express.raw({ type: "*/*", limit: "100mb" });
 
 // ── Public Routes ─────────────────────────────────────────────────────────────
 import healthRouter from "./health.router";
+import nearbyRouter from "./nearby.router";
+import routeRouter from "./route.router";
+import dispatchRouter from "./dispatch.router";
+import partnerStatusRouter from "./partner-status.router";
 
 router.get("/", jsonParser, nextToExpress(rootRoute.GET));
 router.use("/", healthRouter);
+router.use("/", nearbyRouter);
+router.use("/", routeRouter);
+router.use("/", dispatchRouter);
+router.use("/", partnerStatusRouter);
 
 // Packages list (Public read)
 router.get("/packages", jsonParser, nextToExpress(packagesRoute.GET));
