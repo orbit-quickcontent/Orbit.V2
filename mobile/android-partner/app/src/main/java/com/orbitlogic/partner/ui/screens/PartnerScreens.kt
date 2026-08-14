@@ -1476,7 +1476,7 @@ fun PartnerWalletScreen(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 GlassCard(modifier = Modifier.weight(1f).height(100.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Schedule, contentDescription = null, tint = OrbitCyan, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.DateRange, contentDescription = null, tint = OrbitCyan, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("WEEK", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
