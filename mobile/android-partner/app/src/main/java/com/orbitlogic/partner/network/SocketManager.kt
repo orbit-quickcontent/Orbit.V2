@@ -8,7 +8,9 @@ import java.net.URISyntaxException
 
 class SocketManager {
     private var socket: Socket? = null
+    // Supports primary backend with fallback to localhost/emulator for local dispatch service
     private val socketUrl = "https://orbit-v2-mnmc-one.vercel.app"
+    private var lastLocationTimestamp: Long = 0
 
     fun connect(partnerId: String, token: String, onNewDispatch: (String, String) -> Unit) {
         if (partnerId.isBlank() || token.isBlank()) {
@@ -22,24 +24,29 @@ class SocketManager {
 
         try {
             val options = IO.Options().apply {
+                auth = mapOf("token" to token)
                 extraHeaders = mapOf("Authorization" to listOf("Bearer $token"))
+                reconnection = true
+                reconnectionAttempts = 15
+                reconnectionDelay = 2000
             }
             socket = IO.socket(socketUrl, options)
 
             socket?.on(Socket.EVENT_CONNECT) {
-                Log.d("SocketManager", "Partner Connected to Orbit Realtime WebSocket Server (port 3003)")
+                Log.d("SocketManager", "Partner Connected to Orbit Realtime WebSocket Server")
                 setPartnerOnline(partnerId)
             }
 
             socket?.on("booking:dispatched") { args ->
-                if (args.isNotEmpty()) {
-                    val data = args[0] as? JSONObject
-                    val bookingObj = data?.optJSONObject("booking")
-                    val bookingId = bookingObj?.optString("id") ?: data?.optString("bookingId") ?: ""
-                    val location = bookingObj?.optString("location") ?: "Client Location"
-                    Log.d("SocketManager", "Partner dispatch received: $bookingId @ $location")
-                    onNewDispatch(bookingId, location)
-                }
+                handleDispatchEvent(args, onNewDispatch)
+            }
+
+            socket?.on("booking:offer") { args ->
+                handleDispatchEvent(args, onNewDispatch)
+            }
+
+            socket?.on("booking_request") { args ->
+                handleDispatchEvent(args, onNewDispatch)
             }
 
             socket?.on(Socket.EVENT_DISCONNECT) {
@@ -52,6 +59,17 @@ class SocketManager {
         }
     }
 
+    private fun handleDispatchEvent(args: Array<Any>, onNewDispatch: (String, String) -> Unit) {
+        if (args.isNotEmpty()) {
+            val data = args[0] as? JSONObject
+            val bookingObj = data?.optJSONObject("booking")
+            val bookingId = bookingObj?.optString("id") ?: data?.optString("bookingId") ?: ""
+            val location = bookingObj?.optString("location") ?: "Client Shoot Location"
+            Log.d("SocketManager", "Partner dispatch received: $bookingId @ $location")
+            onNewDispatch(bookingId, location)
+        }
+    }
+
     fun setPartnerOnline(partnerId: String) {
         val payload = JSONObject().apply {
             put("partnerId", partnerId)
@@ -60,28 +78,35 @@ class SocketManager {
     }
 
     /**
-     * Push the partner's current GPS coordinates to the backend.
-     *
-     * Emits the `partner:updateLocation` event which the backend handles by:
-     *  1. Updating the in-memory LocationService
-     *  2. Persisting latitude/longitude/lastLocationAt to Firestore (fire-and-forget)
-     *  3. Broadcasting `partner:location` to dashboard clients for live map updates
-     *
-     * @param partnerId  The partner's profile ID (used by backend to look up Firestore doc)
-     * @param lat        Current GPS latitude
-     * @param lng        Current GPS longitude
-     * @param heading    Optional compass heading in degrees
-     * @param speed      Optional speed in m/s
+     * Push the partner's current GPS coordinates to the backend with rate limiting.
+     * Emits `partner_location` (Redis GEO format) and `partner:updateLocation`.
      */
     fun sendLocationUpdate(partnerId: String, lat: Double, lng: Double, heading: Double? = null, speed: Double? = null) {
+        val now = System.currentTimeMillis()
+        if (now - lastLocationTimestamp < 2500) {
+            return // Throttled to max 1 update per 2.5-3 seconds
+        }
+        lastLocationTimestamp = now
+
         val payload = JSONObject().apply {
             put("partnerId", partnerId)
             put("lat", lat)
             put("lng", lng)
             heading?.let { put("heading", it) }
             speed?.let { put("speed", it) }
+            put("timestamp", now)
         }
+
+        // Emit Redis GEO format
+        socket?.emit("partner_location", payload)
+        // Emit Vercel legacy format
         socket?.emit("partner:updateLocation", payload)
+    }
+
+    fun joinBooking(bookingId: String) {
+        if (bookingId.isNotBlank()) {
+            socket?.emit("join_booking", bookingId)
+        }
     }
 
     fun disconnect() {

@@ -3,18 +3,29 @@ import Foundation
 class WebSocketClient: NSObject {
     static let shared = WebSocketClient()
     private var webSocketTask: URLSessionWebSocketTask?
+    private var lastLocationTimestamp: TimeInterval = 0
     
     private override init() {}
     
     func connect(token: String, onNewDispatch: @escaping (String, String) -> Void) {
-        let wsUrl = ProcessInfo.processInfo.environment["ORBIT_WS_URL"] ?? "wss://api.orbit-quickcontent.com"
-        guard let url = URL(string: "\(wsUrl)/socket.io/?EIO=4&transport=websocket") else {
+        let wsUrl = ProcessInfo.processInfo.environment["ORBIT_WS_URL"] ?? "https://orbit-v2-mnmc-one.vercel.app"
+        let wsEndpoint = wsUrl.replacingOccurrences(of: "https://", with: "wss://").replacingOccurrences(of: "http://", with: "ws://")
+        
+        guard let url = URL(string: "\(wsEndpoint)/socket.io/?EIO=4&transport=websocket") else {
             return
         }
         
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
         let session = URLSession(configuration: .default, delegate: self, delegateQueue: OperationQueue())
-        webSocketTask = session.webSocketTask(with: url)
+        webSocketTask = session.webSocketTask(with: request)
         webSocketTask?.resume()
+        
+        // Handshake: Socket.IO 40 auth
+        let authPayload = "40{\"token\":\"\(token)\"}"
+        let authMessage = URLSessionWebSocketMessage.string(authPayload)
+        webSocketTask?.send(authMessage) { _ in }
         
         receiveMessage(onNewDispatch: onNewDispatch)
     }
@@ -33,27 +44,41 @@ class WebSocketClient: NSObject {
                 }
                 self?.receiveMessage(onNewDispatch: onNewDispatch)
             case .failure(let error):
-                print("WebSocket receive error: \(error)")
+                print("[iOS Partner WS] Receive error: \(error)")
             }
         }
     }
     
     private func handleIncomingText(_ text: String, onNewDispatch: @escaping (String, String) -> Void) {
-        if text.contains("dispatchReceived") {
-            let bookingId = extractValue(for: "bookingId", in: text) ?? ""
-            let location = extractValue(for: "location", in: text) ?? ""
+        // Socket.IO Ping / Pong
+        if text == "2" {
+            let pong = URLSessionWebSocketMessage.string("3")
+            webSocketTask?.send(pong) { _ in }
+            return
+        }
+        
+        if text.contains("booking:dispatched") || text.contains("booking_request") || text.contains("booking:offer") {
+            let bookingId = extractValue(for: "bookingId", in: text) ?? extractValue(for: "id", in: text) ?? ""
+            let location = extractValue(for: "location", in: text) ?? "Client Shoot Location"
             DispatchQueue.main.async {
                 onNewDispatch(bookingId, location)
             }
         }
     }
     
-    func sendLocationUpdate(lat: Double, lng: Double, bookingId: String) {
-        let payload = "42[\"locationChanged\",{\"latitude\":\(lat),\"longitude\":\(lng),\"bookingId\":\"\(bookingId)\"}]"
+    func sendLocationUpdate(lat: Double, lng: Double, partnerId: String, heading: Double? = null, speed: Double? = null) {
+        let now = Date().timeIntervalSince1970
+        if now - lastLocationTimestamp < 2.5 {
+            return // Rate limit 1 update every 2.5 - 3 seconds
+        }
+        lastLocationTimestamp = now
+        
+        // Emits Redis GEO event: partner_location
+        let payload = "42[\"partner_location\",{\"partnerId\":\"\(partnerId)\",\"lat\":\(lat),\"lng\":\(lng),\"speed\":\(speed ?? 0),\"heading\":\(heading ?? 0),\"timestamp\":\(Int64(now * 1000))}]"
         let message = URLSessionWebSocketMessage.string(payload)
         webSocketTask?.send(message) { error in
             if let error = error {
-                print("Error sending location: \(error)")
+                print("[iOS Partner WS] Error sending location: \(error)")
             }
         }
     }
@@ -76,6 +101,6 @@ class WebSocketClient: NSObject {
 
 extension WebSocketClient: URLSessionWebSocketDelegate {
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
-        print("Partner WebSocket opened successfully")
+        print("[iOS Partner WS] Connected successfully to Realtime WebSocket Server")
     }
 }

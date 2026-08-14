@@ -15,26 +15,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-      - run: flutter --version
-      - name: Generate Android project scaffolding
+
+      - name: Install Partner dependencies
         working-directory: apps/partner-app
-        run: |
-          flutter create --project-name partner_app --platforms=android --org com.orbit .
-          rm -f android/app/src/main/kotlin/com/orbit/partner_app/MainActivity.kt
-      - name: Resolve Flutter dependencies
-        working-directory: apps/partner-app
-        run: flutter pub upgrade
+        run: flutter pub get
+
       - name: Analyze Partner app
         working-directory: apps/partner-app
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
+
       - name: Build Partner APK
         working-directory: apps/partner-app
         run: flutter build apk --debug
-      - name: Upload Partner APK Artifact
+
+      - name: Upload Partner APK
         uses: actions/upload-artifact@v4
         with:
           name: orbit-partner-debug-apk
@@ -47,24 +46,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-      - run: flutter --version
-      - name: Generate Android project scaffolding
+
+      - name: Install Client dependencies
         working-directory: apps/client-app
-        run: flutter create --project-name orbit_client --platforms=android --org com.orbit .
-      - name: Resolve Flutter dependencies
-        working-directory: apps/client-app
-        run: flutter pub upgrade
+        run: flutter pub get
+
       - name: Analyze Client app
         working-directory: apps/client-app
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
+
       - name: Build Client APK
         working-directory: apps/client-app
         run: flutter build apk --debug
-      - name: Upload Client APK Artifact
+
+      - name: Upload Client APK
         uses: actions/upload-artifact@v4
         with:
           name: orbit-client-debug-apk

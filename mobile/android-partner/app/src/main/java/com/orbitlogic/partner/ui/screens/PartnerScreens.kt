@@ -864,11 +864,29 @@ fun PartnerDashboardScreen(
         }
     }
 
-    val locationManager = remember {
-        context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+    val fusedLocationClient = remember {
+        com.google.android.gms.location.LocationServices.getFusedLocationProviderClient(context)
     }
 
     val socketManager = remember { SocketManager() }
+
+    // Foreground location service management
+    LaunchedEffect(isOnline) {
+        val serviceIntent = android.content.Intent(context, com.orbitlogic.partner.service.LocationForegroundService::class.java)
+        if (isOnline) {
+            try {
+                androidx.core.content.ContextCompat.startForegroundService(context, serviceIntent)
+            } catch (e: Exception) {
+                android.util.Log.w("PartnerDash", "Foreground service start: ${e.message}")
+            }
+        } else {
+            try {
+                context.stopService(serviceIntent)
+            } catch (e: Exception) {
+                android.util.Log.w("PartnerDash", "Foreground service stop: ${e.message}")
+            }
+        }
+    }
 
     // Connect WebSocket & listen for dispatches while online
     LaunchedEffect(isOnline) {
@@ -882,16 +900,16 @@ fun PartnerDashboardScreen(
                 }
             }
             while (isOnline) {
-                delay(15000)
+                delay(5000)
                 if (isOnline && pid.isNotBlank()) {
-                    socketManager.sendLocationUpdate(pid, 19.0760, 72.8777)
+                    socketManager.sendLocationUpdate(pid, partnerLat, partnerLng)
                     try {
                         ApiClient.apiService.updatePartnerLocation(
                             "Bearer $token",
-                            LocationUpdateRequest(lat = 19.0760, lng = 72.8777)
+                            LocationUpdateRequest(lat = partnerLat, lng = partnerLng)
                         )
                     } catch (e: Exception) {
-                        android.util.Log.e("PartnerDash", "HTTP location update fallback error: ${e.message}")
+                        android.util.Log.w("PartnerDash", "HTTP location update fallback: ${e.message}")
                     }
                 }
             }
@@ -905,23 +923,27 @@ fun PartnerDashboardScreen(
             socketManager.disconnect()
         }
     }
+
+    // Continuous Real GPS Location Updates
     LaunchedEffect(isOnline) {
         if (!isOnline) return@LaunchedEffect
-        // Try to get real GPS
         try {
             val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
                 context, android.Manifest.permission.ACCESS_FINE_LOCATION
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
             if (hasPermission) {
-                val loc = locationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
-                    ?: locationManager.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
-                if (loc != null) { partnerLat = loc.latitude; partnerLng = loc.longitude }
+                fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                    if (loc != null) {
+                        partnerLat = loc.latitude
+                        partnerLng = loc.longitude
+                    }
+                }
             }
         } catch (_: Exception) {}
     }
 
     // ── GPS ping every 5s while online ────────────────────────────────────
-    LaunchedEffect(isOnline) {
+    LaunchedEffect(isOnline, partnerLat, partnerLng) {
         while (isOnline) {
             sendLocationPing(partnerLat, partnerLng)
             delay(5000)
@@ -937,7 +959,15 @@ fun PartnerDashboardScreen(
         }
     }
 
-    val shootLocation = remember { LatLng(partnerLat, partnerLng) }
+    val shootLocation = remember(activeDispatch, partnerLat, partnerLng) {
+        val clientLat = activeDispatch?.clientLatitude
+        val clientLng = activeDispatch?.clientLongitude
+        if (clientLat != null && clientLng != null && clientLat != 0.0) {
+            LatLng(clientLat, clientLng)
+        } else {
+            LatLng(partnerLat, partnerLng)
+        }
+    }
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(shootLocation, 14f)
     }
@@ -1783,10 +1813,17 @@ fun SafeMapView(
     modifier: Modifier = Modifier,
     cameraPositionState: CameraPositionState? = null,
     location: LatLng = LatLng(19.0760, 72.8777),
+    partnerLocation: LatLng? = null,
+    routeGeoJson: String? = null,
+    etaMinutes: Int? = null,
     title: String = "Location"
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var hasWebViewError by remember { mutableStateOf(false) }
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+
+    val pLat = partnerLocation?.latitude
+    val pLng = partnerLocation?.longitude
 
     val htmlContent = remember(location.latitude, location.longitude, title) {
         """
@@ -1800,13 +1837,25 @@ fun SafeMapView(
             <style>
                 body, html { margin: 0; padding: 0; height: 100%; width: 100%; background-color: #05060A; }
                 #map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100%; }
-                .marker {
-                    width: 14px;
-                    height: 14px;
-                    background-color: #00BFFF;
+                .client-marker {
+                    width: 20px;
+                    height: 20px;
+                    background-color: #00F0FF;
+                    border: 3px solid #FFFFFF;
+                    border-radius: 50%;
+                    box-shadow: 0 0 14px #00F0FF;
+                }
+                .partner-marker {
+                    width: 24px;
+                    height: 24px;
+                    background: linear-gradient(135deg, #A855F7, #00F0FF);
                     border: 2px solid #FFFFFF;
                     border-radius: 50%;
-                    box-shadow: 0 0 10px #00BFFF;
+                    box-shadow: 0 0 16px #A855F7;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
                 }
                 .locate-btn {
                     position: absolute;
@@ -1814,11 +1863,11 @@ fun SafeMapView(
                     right: 12px;
                     z-index: 10;
                     background: rgba(13, 15, 23, 0.9);
-                    color: #00BFFF;
-                    border: 1px solid rgba(0, 191, 255, 0.4);
+                    color: #00F0FF;
+                    border: 1px solid rgba(0, 240, 255, 0.4);
                     border-radius: 20px;
                     padding: 6px 14px;
-                    font-size: 12px;
+                    font-size: 11px;
                     font-weight: bold;
                     cursor: pointer;
                     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
@@ -1827,10 +1876,12 @@ fun SafeMapView(
         </head>
         <body>
             <div id="map"></div>
-            <button id="locateBtn" class="locate-btn">📍 Locate Me</button>
+            <button id="locateBtn" class="locate-btn">📍 Locate</button>
             <script>
+                let map;
+                let partnerMarker = null;
                 try {
-                    const map = new maplibregl.Map({
+                    map = new maplibregl.Map({
                         container: 'map',
                         style: 'https://tiles.openfreemap.org/styles/liberty',
                         center: [${location.longitude}, ${location.latitude}],
@@ -1845,15 +1896,50 @@ fun SafeMapView(
                     });
                     map.addControl(geolocate, 'top-right');
 
-                    const el = document.createElement('div');
-                    el.className = 'marker';
-                    new maplibregl.Marker({ element: el })
+                    const clientEl = document.createElement('div');
+                    clientEl.className = 'client-marker';
+                    new maplibregl.Marker({ element: clientEl })
                         .setLngLat([${location.longitude}, ${location.latitude}])
                         .addTo(map);
 
                     document.getElementById('locateBtn').addEventListener('click', function() {
                         geolocate.trigger();
                     });
+
+                    window.updatePartnerLocation = function(lat, lng) {
+                        if (!partnerMarker) {
+                            const el = document.createElement('div');
+                            el.className = 'partner-marker';
+                            el.innerHTML = '🎬';
+                            partnerMarker = new maplibregl.Marker({ element: el })
+                                .setLngLat([lng, lat])
+                                .addTo(map);
+                        } else {
+                            partnerMarker.setLngLat([lng, lat]);
+                        }
+                    };
+
+                    window.drawRoute = function(geojsonStr) {
+                        try {
+                            const geojson = typeof geojsonStr === 'string' ? JSON.parse(geojsonStr) : geojsonStr;
+                            if (map.getSource('osrm_route')) {
+                                map.getSource('osrm_route').setData(geojson);
+                            } else {
+                                map.addSource('osrm_route', { type: 'geojson', data: geojson });
+                                map.addLayer({
+                                    id: 'osrm_route_line',
+                                    type: 'line',
+                                    source: 'osrm_route',
+                                    layout: { 'line-join': 'round', 'line-cap': 'round' },
+                                    paint: {
+                                        'line-color': '#00F0FF',
+                                        'line-width': 4.5,
+                                        'line-opacity': 0.95
+                                    }
+                                });
+                            }
+                        } catch(e) { console.warn('Route draw error:', e); }
+                    };
                 } catch(e) { console.error(e); }
             </script>
         </body>
@@ -1861,23 +1947,33 @@ fun SafeMapView(
         """.trimIndent()
     }
 
+    // Push partner location updates to JS bridge dynamically
+    LaunchedEffect(pLat, pLng) {
+        if (pLat != null && pLng != null && webViewRef != null) {
+            webViewRef?.evaluateJavascript("if (window.updatePartnerLocation) { window.updatePartnerLocation($pLat, $pLng); }", null)
+        }
+    }
+
+    // Push route GeoJSON to JS bridge dynamically
+    LaunchedEffect(routeGeoJson) {
+        if (!routeGeoJson.isNullOrBlank() && webViewRef != null) {
+            val escapedJson = routeGeoJson.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "")
+            webViewRef?.evaluateJavascript("if (window.drawRoute) { window.drawRoute(\"$escapedJson\"); }", null)
+        }
+    }
+
     if (!hasWebViewError) {
         AndroidView(
             modifier = modifier,
             factory = { ctx ->
                 WebView(ctx).apply {
+                    webViewRef = this
                     setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.setGeolocationEnabled(true)
                     webChromeClient = object : android.webkit.WebChromeClient() {
                         override fun onGeolocationPermissionsShowPrompt(origin: String?, callback: android.webkit.GeolocationPermissions.Callback?) {
-                            // Only grant the WebView's internal geolocation request if the
-                            // app actually holds the Android runtime permission. Blindly
-                            // passing `true` here used to make "Locate Me" fail silently
-                            // whenever the user had skipped the native permission prompt —
-                            // the OS permission is what actually gates GPS access, this
-                            // callback alone can't override that.
                             val hasLocationPermission = androidx.core.content.ContextCompat.checkSelfPermission(
                                 context, android.Manifest.permission.ACCESS_FINE_LOCATION
                             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -1893,7 +1989,7 @@ fun SafeMapView(
                 }
             },
             update = { webView ->
-                // Smooth WebView performance: avoid reloading HTML string on every Compose animation frame
+                webViewRef = webView
             }
         )
     } else {

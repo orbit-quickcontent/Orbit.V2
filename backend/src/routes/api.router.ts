@@ -43,6 +43,8 @@ import * as adminSeedRoute from "../api/admin/seed/route";
 import * as adminAuditLogsRoute from "../api/admin/audit-logs/route";
 import * as packagesRoute from "../api/packages/route";
 import * as rootRoute from "../api/route";
+import * as nearbyRoute from "../api/partners/nearby/route";
+import * as osrmRoute from "../api/route/route";
 
 const router = Router();
 
@@ -55,6 +57,10 @@ import healthRouter from "./health.router";
 
 router.get("/", jsonParser, nextToExpress(rootRoute.GET));
 router.use("/", healthRouter);
+
+// Nearby partners and routing (Free OpenStreetMap / OSRM / Redis GEO stack)
+router.get("/partners/nearby", jsonParser, nextToExpress(nearbyRoute.GET));
+router.get("/route", jsonParser, nextToExpress(osrmRoute.GET));
 
 // Packages list (Public read)
 router.get("/packages", jsonParser, nextToExpress(packagesRoute.GET));

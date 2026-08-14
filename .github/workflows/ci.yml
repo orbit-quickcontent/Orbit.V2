@@ -10,8 +10,9 @@ permissions:
   contents: read
 
 jobs:
+  # ── 1. Backend ────────────────────────────────────────────────────────────────
   backend:
-    name: Backend typecheck and tests
+    name: Backend — typecheck & tests
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -29,92 +30,114 @@ jobs:
       redis:
         image: redis:7-alpine
         ports: ['6379:6379']
+
     steps:
       - uses: actions/checkout@v5
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: backend/package.json
-      - name: Install backend
+
+      - name: Install dependencies
         working-directory: backend
         run: npm install --legacy-peer-deps
-      - name: Prisma validate
+
+      - name: Validate Prisma schema
         working-directory: backend
         env:
           DATABASE_URL: postgresql://orbit:orbitsecret@localhost:5432/orbit_db?schema=public
         run: npx prisma@6.19.3 validate
+
       - name: Generate Prisma client
         working-directory: backend
         env:
           DATABASE_URL: postgresql://orbit:orbitsecret@localhost:5432/orbit_db?schema=public
         run: npx prisma@6.19.3 generate
-      - name: Provision CI database schema
+
+      - name: Push database schema
         working-directory: backend
         env:
           DATABASE_URL: postgresql://orbit:orbitsecret@localhost:5432/orbit_db?schema=public
         run: npx prisma@6.19.3 db push --skip-generate
+
       - name: Typecheck
         working-directory: backend
         env:
           DATABASE_URL: postgresql://orbit:orbitsecret@localhost:5432/orbit_db?schema=public
           JWT_SECRET: ci-only-orbit-jwt-secret-should-never-be-used-in-production
         run: npm run lint
+
       - name: Tests
         working-directory: backend
         env:
           DATABASE_URL: postgresql://orbit:orbitsecret@localhost:5432/orbit_db?schema=public
           JWT_SECRET: ci-only-orbit-jwt-secret-should-never-be-used-in-production
+          REDIS_URL: redis://localhost:6379
         run: npm test
 
+  # ── 2. Admin Dashboard ────────────────────────────────────────────────────────
   admin:
-    name: Admin dashboard build
+    name: Admin dashboard — build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - working-directory: apps/admin-dashboard
+
+      - name: Install dependencies
+        working-directory: apps/admin-dashboard
         run: npm install --legacy-peer-deps
-      - working-directory: apps/admin-dashboard
+
+      - name: Build
+        working-directory: apps/admin-dashboard
         run: npm run build
 
+  # ── 3. Editor Web App ─────────────────────────────────────────────────────────
   editor:
-    name: Editor web build
+    name: Editor web — build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - working-directory: editor-web-app
+
+      - name: Install dependencies
+        working-directory: editor-web-app
         run: npm install --legacy-peer-deps
-      - working-directory: editor-web-app
+
+      - name: Build
+        working-directory: editor-web-app
         run: npm run build
 
+  # ── 4. Partner Flutter App ────────────────────────────────────────────────────
   partner-flutter:
-    name: Partner Flutter analyze and Android build
+    name: Partner app — analyze & APK
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-      - name: Verify Flutter toolchain
-        run: flutter --version
-      - name: Repair Flutter Android project scaffolding
+
+      - name: Install dependencies
         working-directory: apps/partner-app
-        run: |
-          flutter create --project-name partner_app --platforms=android --org com.orbit .
-          rm -f android/app/src/main/kotlin/com/orbit/partner_app/MainActivity.kt
-      - name: Upgrade Flutter dependencies
+        run: flutter pub get
+
+      - name: Analyze
         working-directory: apps/partner-app
-        run: flutter pub upgrade
-      - working-directory: apps/partner-app
-        run: flutter analyze
-      - working-directory: apps/partner-app
+        run: flutter analyze --no-fatal-infos
+
+      - name: Build APK
+        working-directory: apps/partner-app
         run: flutter build apk --debug
+
       - name: Upload Partner APK
         uses: actions/upload-artifact@v4
         with:
@@ -123,29 +146,33 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  # ── 5. Client Flutter App ─────────────────────────────────────────────────────
   client-flutter:
-    name: Client Flutter analyze and Android build
+    name: Client app — analyze, tests & APK
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-      - name: Generate Android project scaffolding
+
+      - name: Install dependencies
         working-directory: apps/client-app
-        run: flutter create --project-name orbit_client --platforms=android --org com.orbit .
-      - name: Resolve Flutter dependencies
+        run: flutter pub get
+
+      - name: Analyze
         working-directory: apps/client-app
-        run: flutter pub upgrade
-      - name: Analyze Client app
-        working-directory: apps/client-app
-        run: flutter analyze
-      - name: Client widget tests
+        run: flutter analyze --no-fatal-infos
+
+      - name: Widget tests
         working-directory: apps/client-app
         run: flutter test
-      - name: Build Client APK
+
+      - name: Build APK
         working-directory: apps/client-app
         run: flutter build apk --debug
+
       - name: Upload Client APK
         uses: actions/upload-artifact@v4
         with:

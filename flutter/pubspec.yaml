@@ -1,0 +1,27 @@
+name: orbit_dispatch_app
+description: Orbit Free Uber/Ola-style Map, Nearby Scan & Live Tracking Flutter App
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_map: ^8.2.1
+  latlong2: ^0.9.1
+  socket_io_client: ^3.1.2
+  geolocator: ^14.0.2
+  http: ^1.2.2
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/

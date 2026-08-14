@@ -15,7 +15,8 @@ dependencies:
   geolocator: ^14.0.3
   permission_handler: ^11.3.0
   flutter_background_service: ^5.0.5
-  google_maps_flutter: ^2.6.0
+  flutter_map: ^8.2.1
+  latlong2: ^0.9.1
   http: ^1.2.0
   shared_preferences: ^2.2.2
   cupertino_icons: ^1.0.6

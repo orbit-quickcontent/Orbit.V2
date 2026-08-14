@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../models/partner_model.dart';
 import '../providers/partner_provider.dart';
 import '../widgets/booking_offer_sheet.dart';
@@ -98,25 +99,47 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: Stack(
         children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: LatLng(currentLat, currentLng),
-              zoom: 15.0,
+          // Free OSM map via flutter_map — no API key required
+          FlutterMap(
+            options: MapOptions(
+              initialCenter: LatLng(currentLat, currentLng),
+              initialZoom: 15.0,
             ),
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
-            markers: {
-              Marker(
-                markerId: const MarkerId('current_partner_pos'),
-                position: LatLng(currentLat, currentLng),
-                infoWindow: InfoWindow(
-                  title: displayName,
-                  snippet: 'Status: ${state.status.toShortString()}',
-                ),
-                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.orbit.partner_app',
+                maxZoom: 19,
               ),
-            },
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: LatLng(currentLat, currentLng),
+                    width: 48,
+                    height: 48,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isOnline ? const Color(0xFF6366F1) : const Color(0xFF64748B),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (isOnline ? const Color(0xFF6366F1) : const Color(0xFF64748B))
+                                .withValues(alpha: 0.6),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.videocam, color: Colors.white, size: 22),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
+
+          // Status / Online toggle card
           Positioned(
             bottom: 32,
             left: 24,

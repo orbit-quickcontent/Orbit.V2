@@ -2774,8 +2774,75 @@ fun TrackingScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     var isCancelled by remember { mutableStateOf(false) }
     var currentStatus by remember { mutableStateOf("DISPATCHED") }
+    var partnerLat by remember { mutableStateOf<Double?>(null) }
+    var partnerLng by remember { mutableStateOf<Double?>(null) }
+    var etaMinutes by remember { mutableStateOf<Int?>(12) }
+    var distanceKm by remember { mutableStateOf<Double?>(2.4) }
+    var routeGeoJson by remember { mutableStateOf<String?>(null) }
+
     val unifiedHub = remember { com.orbitlogic.client.data.UnifiedOrbitHub() }
+    val socketManager = remember { com.orbitlogic.client.network.SocketManager() }
+    val prefsManager = remember { com.orbitlogic.client.storage.PrefsManager(context) }
     val coroutineScope = rememberCoroutineScope()
+
+    val bookingLocation = remember { LatLng(18.95823563155963, 72.81710824) }
+
+    // Connect Socket.IO for live partner tracking
+    LaunchedEffect(bookingId) {
+        val rawToken = prefsManager.getAuthToken() ?: "client_demo_token"
+        val token = if (rawToken.startsWith("Bearer ")) rawToken.removePrefix("Bearer ") else rawToken
+
+        socketManager.connect(
+            token = token,
+            bookingId = bookingId,
+            onBookingUpdate = { bId, status ->
+                if (bId == bookingId && status.isNotBlank()) {
+                    currentStatus = status
+                    if (status == "CANCELLED") {
+                        isCancelled = true
+                        onClose()
+                    }
+                }
+            },
+            onPartnerLocationUpdate = { pid, lat, lng ->
+                partnerLat = lat
+                partnerLng = lng
+
+                // Fetch OSRM route & ETA on partner movement
+                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    try {
+                        val osrmUrl = "https://router.project-osrm.org/route/v1/driving/${lng},${lat};${bookingLocation.longitude},${bookingLocation.latitude}?overview=full&geometries=geojson"
+                        val conn = java.net.URL(osrmUrl).openConnection() as java.net.HttpURLConnection
+                        conn.connectTimeout = 4000
+                        conn.readTimeout = 4000
+                        if (conn.responseCode == 200) {
+                            val resp = conn.inputStream.bufferedReader().use { it.readText() }
+                            val json = org.json.JSONObject(resp)
+                            val routes = json.optJSONArray("routes")
+                            if (routes != null && routes.length() > 0) {
+                                val route = routes.getJSONObject(0)
+                                val durationSec = route.optDouble("duration", 0.0)
+                                val distM = route.optDouble("distance", 0.0)
+                                val geom = route.optJSONObject("geometry")
+
+                                etaMinutes = Math.max(1, Math.ceil(durationSec / 60.0).toInt())
+                                distanceKm = Math.round((distM / 1000.0) * 10.0) / 10.0
+                                routeGeoJson = geom?.toString()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.w("TrackingScreen", "OSRM fetch: ${e.message}")
+                    }
+                }
+            }
+        )
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            socketManager.disconnect()
+        }
+    }
 
     LaunchedEffect(bookingId) {
         unifiedHub.listenToBookingUpdates(bookingId) { status, _ ->
@@ -3163,11 +3230,16 @@ fun TrackingScreen(
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Icon(imageVector = Icons.Default.Schedule, contentDescription = null, tint = MutedText, modifier = Modifier.size(14.dp))
+                                Icon(imageVector = Icons.Default.Schedule, contentDescription = null, tint = OrbitCyan, modifier = Modifier.size(14.dp))
                                 Text("ETA", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                             }
                             Spacer(modifier = Modifier.height(6.dp))
-                            Text("—", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(
+                                text = if (etaMinutes != null) "${etaMinutes}m" else "Nearby",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = OrbitCyan
+                            )
                         }
                     }
                 }
@@ -3225,7 +3297,20 @@ fun TrackingScreen(
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(OrbitCyan))
-                                    Text("In Progress", color = OrbitCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        text = when (currentStatus) {
+                                            "DISPATCHED" -> "En Route"
+                                            "ACCEPTED" -> "Assigned"
+                                            "SHOOTING" -> "Shooting"
+                                            "SYNCING" -> "Syncing"
+                                            "EDITING" -> "Editing"
+                                            "DELIVERED" -> "Delivered"
+                                            else -> "In Progress"
+                                        },
+                                        color = OrbitCyan,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
                         }
@@ -3233,14 +3318,14 @@ fun TrackingScreen(
                 }
             }
 
-            // 4. Live Map Card (MapTiler openstreetmap-dark Integration)
+            // 4. Live Map Card (MapLibre OpenStreetMap Integration with Real-time Moving Marker & Route)
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF090A10)),
                 shape = RoundedCornerShape(20.dp),
                 border = BorderStroke(1.dp, Color(0xFF1E2132)),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
+                    .height(220.dp)
                     .padding(bottom = 16.dp)
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -3248,6 +3333,9 @@ fun TrackingScreen(
                         modifier = Modifier.fillMaxSize(),
                         cameraPositionState = cameraPositionState,
                         location = bookingLocation,
+                        partnerLocation = if (partnerLat != null && partnerLng != null) LatLng(partnerLat!!, partnerLng!!) else null,
+                        routeGeoJson = routeGeoJson,
+                        etaMinutes = etaMinutes,
                         title = "Shoot Location"
                     )
 
@@ -3552,10 +3640,17 @@ fun SafeMapView(
     modifier: Modifier = Modifier,
     cameraPositionState: CameraPositionState? = null,
     location: LatLng = LatLng(19.0760, 72.8777),
+    partnerLocation: LatLng? = null,
+    routeGeoJson: String? = null,
+    etaMinutes: Int? = null,
     title: String = "Location"
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var hasWebViewError by remember { mutableStateOf(false) }
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+
+    val pLat = partnerLocation?.latitude
+    val pLng = partnerLocation?.longitude
 
     val htmlContent = remember(location.latitude, location.longitude, title) {
         """
@@ -3569,13 +3664,25 @@ fun SafeMapView(
             <style>
                 body, html { margin: 0; padding: 0; height: 100%; width: 100%; background-color: #05060A; }
                 #map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100%; }
-                .marker {
-                    width: 14px;
-                    height: 14px;
-                    background-color: #00BFFF;
+                .client-marker {
+                    width: 20px;
+                    height: 20px;
+                    background-color: #00F0FF;
+                    border: 3px solid #FFFFFF;
+                    border-radius: 50%;
+                    box-shadow: 0 0 14px #00F0FF;
+                }
+                .partner-marker {
+                    width: 24px;
+                    height: 24px;
+                    background: linear-gradient(135deg, #A855F7, #00F0FF);
                     border: 2px solid #FFFFFF;
                     border-radius: 50%;
-                    box-shadow: 0 0 10px #00BFFF;
+                    box-shadow: 0 0 16px #A855F7;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
                 }
                 .locate-btn {
                     position: absolute;
@@ -3583,11 +3690,11 @@ fun SafeMapView(
                     right: 12px;
                     z-index: 10;
                     background: rgba(13, 15, 23, 0.9);
-                    color: #00BFFF;
-                    border: 1px solid rgba(0, 191, 255, 0.4);
+                    color: #00F0FF;
+                    border: 1px solid rgba(0, 240, 255, 0.4);
                     border-radius: 20px;
                     padding: 6px 14px;
-                    font-size: 12px;
+                    font-size: 11px;
                     font-weight: bold;
                     cursor: pointer;
                     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
@@ -3596,10 +3703,12 @@ fun SafeMapView(
         </head>
         <body>
             <div id="map"></div>
-            <button id="locateBtn" class="locate-btn">📍 Locate Me</button>
+            <button id="locateBtn" class="locate-btn">📍 Locate</button>
             <script>
+                let map;
+                let partnerMarker = null;
                 try {
-                    const map = new maplibregl.Map({
+                    map = new maplibregl.Map({
                         container: 'map',
                         style: 'https://tiles.openfreemap.org/styles/liberty',
                         center: [${location.longitude}, ${location.latitude}],
@@ -3614,15 +3723,50 @@ fun SafeMapView(
                     });
                     map.addControl(geolocate, 'top-right');
 
-                    const el = document.createElement('div');
-                    el.className = 'marker';
-                    new maplibregl.Marker({ element: el })
+                    const clientEl = document.createElement('div');
+                    clientEl.className = 'client-marker';
+                    new maplibregl.Marker({ element: clientEl })
                         .setLngLat([${location.longitude}, ${location.latitude}])
                         .addTo(map);
 
                     document.getElementById('locateBtn').addEventListener('click', function() {
                         geolocate.trigger();
                     });
+
+                    window.updatePartnerLocation = function(lat, lng) {
+                        if (!partnerMarker) {
+                            const el = document.createElement('div');
+                            el.className = 'partner-marker';
+                            el.innerHTML = '🎬';
+                            partnerMarker = new maplibregl.Marker({ element: el })
+                                .setLngLat([lng, lat])
+                                .addTo(map);
+                        } else {
+                            partnerMarker.setLngLat([lng, lat]);
+                        }
+                    };
+
+                    window.drawRoute = function(geojsonStr) {
+                        try {
+                            const geojson = typeof geojsonStr === 'string' ? JSON.parse(geojsonStr) : geojsonStr;
+                            if (map.getSource('osrm_route')) {
+                                map.getSource('osrm_route').setData(geojson);
+                            } else {
+                                map.addSource('osrm_route', { type: 'geojson', data: geojson });
+                                map.addLayer({
+                                    id: 'osrm_route_line',
+                                    type: 'line',
+                                    source: 'osrm_route',
+                                    layout: { 'line-join': 'round', 'line-cap': 'round' },
+                                    paint: {
+                                        'line-color': '#00F0FF',
+                                        'line-width': 4.5,
+                                        'line-opacity': 0.95
+                                    }
+                                });
+                            }
+                        } catch(e) { console.warn('Route draw error:', e); }
+                    };
                 } catch(e) { console.error(e); }
             </script>
         </body>
@@ -3630,19 +3774,33 @@ fun SafeMapView(
         """.trimIndent()
     }
 
+    // Push partner location updates to JS bridge dynamically
+    LaunchedEffect(pLat, pLng) {
+        if (pLat != null && pLng != null && webViewRef != null) {
+            webViewRef?.evaluateJavascript("if (window.updatePartnerLocation) { window.updatePartnerLocation($pLat, $pLng); }", null)
+        }
+    }
+
+    // Push route GeoJSON to JS bridge dynamically
+    LaunchedEffect(routeGeoJson) {
+        if (!routeGeoJson.isNullOrBlank() && webViewRef != null) {
+            val escapedJson = routeGeoJson.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "")
+            webViewRef?.evaluateJavascript("if (window.drawRoute) { window.drawRoute(\"$escapedJson\"); }", null)
+        }
+    }
+
     if (!hasWebViewError) {
         AndroidView(
             modifier = modifier,
             factory = { ctx ->
                 WebView(ctx).apply {
+                    webViewRef = this
                     setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.setGeolocationEnabled(true)
                     webChromeClient = object : android.webkit.WebChromeClient() {
                         override fun onGeolocationPermissionsShowPrompt(origin: String?, callback: android.webkit.GeolocationPermissions.Callback?) {
-                            // Only grant if Android actually holds the runtime permission —
-                            // see partner app's SafeMapView for the full explanation.
                             val hasLocationPermission = androidx.core.content.ContextCompat.checkSelfPermission(
                                 context, android.Manifest.permission.ACCESS_FINE_LOCATION
                             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -3658,7 +3816,7 @@ fun SafeMapView(
                 }
             },
             update = { webView ->
-                // Smooth WebView performance: avoid reloading HTML string on every Compose animation frame
+                webViewRef = webView
             }
         )
     } else {
